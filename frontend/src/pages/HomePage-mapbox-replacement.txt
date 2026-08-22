@@ -1,0 +1,29 @@
+// 1. Add this import near your other imports:
+import BikeRideMap from "../components/BikeRideMap";
+
+// 2. Replace ONLY the current fake map block:
+//    <div className="br-map-card" aria-label="BikeRide route preview">
+//      ...
+//    </div>
+//
+//    with this:
+<div className="br-map-card" aria-label="BikeRide live Mapbox route preview">
+  <div className="br-map-top">
+    <div>
+      <span className="br-map-label">LIVE ROUTE PREVIEW</span>
+      <strong>Explore rides near you</strong>
+    </div>
+    <span className="br-map-status"><span /> Live</span>
+  </div>
+
+  <BikeRideMap onViewAll={findRide} />
+
+  <div className="br-map-bottom">
+    <span>
+      <EnvironmentOutlined /> Live Mapbox data
+    </span>
+    <button onClick={findRide}>
+      View all <ArrowRightOutlined />
+    </button>
+  </div>
+</div>

@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run migrate",
+  "buildCommand": "npm install",
   "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "runtime": "nodejs@20.x"
 }

@@ -28,6 +28,7 @@ import NotFoundPage from "./pages/NotFoundPage.jsx";
 export default function App() {
   return (
     <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

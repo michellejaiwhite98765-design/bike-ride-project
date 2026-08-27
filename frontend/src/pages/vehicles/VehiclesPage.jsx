@@ -166,7 +166,9 @@ export default function VehiclesPage() {
       <PageHeader>
         <h1>My Vehicles</h1>
         <Link to="/vehicles/add">
-          <Button type="primary" icon={<PlusOutlined />} style={{ background: colors.primary }}>
+          <Button 
+          style={{ backgroundColor: "#2563e3" }}
+          type="primary" icon={<PlusOutlined />} >
             Add Vehicle
           </Button>
         </Link>

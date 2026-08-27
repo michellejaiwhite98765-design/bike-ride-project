@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import "leaflet/dist/leaflet.css";
 import "./index.css";
 import App from "./App.jsx";
@@ -11,11 +11,13 @@ import { antDesignTheme } from "./theme/theme.js";
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ConfigProvider theme={antDesignTheme}>
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
+      <AntdApp>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </AntdApp>
     </ConfigProvider>
   </StrictMode>
 );

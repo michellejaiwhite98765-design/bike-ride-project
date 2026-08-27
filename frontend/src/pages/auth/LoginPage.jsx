@@ -515,7 +515,7 @@ export default function LoginPage() {
   async function onFinish(values) {
     try {
       await login(values);
-      const redirectTo = location.state?.from?.pathname || "/dashboard";
+      const redirectTo = location.state?.from?.pathname || "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
       message.error(err.message);

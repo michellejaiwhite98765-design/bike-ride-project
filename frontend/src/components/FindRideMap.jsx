@@ -38,10 +38,12 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
   const markersRef = useRef({ start: null, end: null });
   const rideMarkersRef = useRef([]);
   const routeLayerRef = useRef(null);
+  const connectorLayerRef = useRef(null);
   const [activePin, setActivePin] = useState("source");
   const activePinRef = useRef("source");
   const [routeInfo, setRouteInfo] = useState(null);
   const [reverseLoading, setReverseLoading] = useState(false);
+const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -57,11 +59,19 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
       boxZoom: false,
       keyboard: true,
     });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
+L.tileLayer(
+  `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${cartoKey}`,
+  {
+    attribution:
+      '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: "abcd",
+    maxZoom: 20,
+  }
+).addTo(map);
+    // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    //   maxZoom: 19,
+    //   attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    // }).addTo(map);
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
     mapRef.current = map;
@@ -180,11 +190,17 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
         routeLayerRef.current.remove();
         routeLayerRef.current = null;
       }
+      if (connectorLayerRef.current) {
+        connectorLayerRef.current.remove();
+        connectorLayerRef.current = null;
+      }
       return;
     }
 
     let cancelled = false;
     const drawRoute = async () => {
+      connectorLayerRef.current?.remove();
+      connectorLayerRef.current = null;
       try {
         const url = `https://router.project-osrm.org/route/v1/driving/${source.lng},${source.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
         const response = await fetch(url);
@@ -199,13 +215,27 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
         routeLayerRef.current = L.geoJSON(route.geometry, {
           style: {
             color: "#2563eb",
-            weight: 3,
-            opacity: 0.95,
-            dashArray: "7 9",
+            weight: 5,
+            opacity: 0.88,
             lineCap: "round",
             lineJoin: "round",
           },
         }).addTo(map);
+
+        connectorLayerRef.current?.remove();
+        connectorLayerRef.current = L.polyline(
+          [
+            [Number(destination.lat), Number(destination.lng)],
+            [Number(source.lat), Number(source.lng)],
+          ],
+          {
+            color: "#2563eb",
+            weight: 3,
+            opacity: 0.95,
+            dashArray: "4 9",
+            lineCap: "round",
+          }
+        ).addTo(map);
       } catch {
         if (!cancelled) setRouteInfo(null);
       }

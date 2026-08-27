@@ -42,4 +42,15 @@ export const env = {
     timeWindowMinutes: Number(process.env.DEFAULT_TIME_WINDOW_MINUTES || 30),
   },
   platformFeeFlat: Number(process.env.PLATFORM_FEE_FLAT || 5),
+  way2Api: {
+    baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",
+    apiKey: process.env.WAY2API_API_KEY || "",
+    timeoutMs: Number(process.env.WAY2API_TIMEOUT_MS || 15000),
+  },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+    apiKey: process.env.CLOUDINARY_API_KEY || "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET || "",
+    folder: process.env.CLOUDINARY_FOLDER || "bikeride",
+  },
 };

@@ -4,7 +4,7 @@ import { ok, created } from "../utils/apiResponse.js";
 export const vehicleController = {
   async create(req, res) {
     const vehicle = await vehicleService.create(req.user.id, req.body);
-    created(res, vehicle, "Vehicle added");
+    created(res, vehicle, "Vehicle verified and added");
   },
 
   async list(req, res) {
@@ -20,6 +20,16 @@ export const vehicleController = {
   async update(req, res) {
     const vehicle = await vehicleService.update(req.user.id, req.params.id, req.body);
     ok(res, vehicle, "Vehicle updated");
+  },
+
+  async uploadRcDocument(req, res) {
+    const vehicle = await vehicleService.uploadRcDocument(req.user.id, req.params.id, req.file);
+    ok(res, vehicle, "RC document uploaded");
+  },
+
+  async verify(req, res) {
+    const result = await vehicleService.verify(req.user.id, req.params.id);
+    ok(res, result, result.cached ? "Vehicle verification already completed" : result.rejected ? "Vehicle verification failed" : "Vehicle verified");
   },
 
   async remove(req, res) {

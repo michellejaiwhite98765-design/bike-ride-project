@@ -165,11 +165,11 @@ export default function SearchPage() {
   return (
     <main className="br-findride-page">
       <section className="br-findride-hero">
-        <div>
+        {/* <div>
           <span className="br-findride-kicker">SMART RIDE SEARCH</span>
           <h1>Find a Ride</h1>
           <p>Choose your pickup and destination. Explore nearby rides before you book.</p>
-        </div>
+        </div> */}
         <div className="br-findride-hero-badge"><span /> Live network</div>
       </section>
 

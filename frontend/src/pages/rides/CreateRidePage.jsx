@@ -204,7 +204,8 @@ export default function CreateRidePage() {
         message="Add a vehicle first"
         description="You need at least one vehicle before you can create a ride."
         action={
-          <Button size="small" onClick={() => navigate("/vehicles/add")}>
+          <Button
+style={{ backgroundColor: "#2563e3" }}           size="small" onClick={() => navigate("/vehicles/add")}>
             Add Vehicle
           </Button>
         }

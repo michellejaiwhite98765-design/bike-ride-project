@@ -13,6 +13,16 @@ export const vehicleService = {
   update(id, payload) {
     return api.put(`/vehicles/${id}`, payload).then((res) => res.data);
   },
+  uploadRcDocument(id, file) {
+    const formData = new FormData();
+    formData.append("rcDocument", file);
+    return api.post(`/vehicles/${id}/rc-document`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((res) => res.data);
+  },
+  verify(id) {
+    return api.post(`/vehicles/${id}/verify`).then((res) => res.data);
+  },
   remove(id) {
     return api.delete(`/vehicles/${id}`);
   },

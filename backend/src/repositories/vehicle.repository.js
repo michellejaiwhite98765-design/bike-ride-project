@@ -1,20 +1,34 @@
 import crypto from "node:crypto";
 import { pool } from "../config/db.js";
 import { toCamelRow, toCamelRows, insertRow, updateRow } from "../utils/sqlRows.js";
+import { normalizeRegistrationNumber } from "../utils/vehicle.utils.js";
 
 export const vehicleRepository = {
   async create(ownerId, data) {
     const now = new Date();
+    const normalizedData = {
+      ...data,
+      registrationNumber: normalizeRegistrationNumber(data.registrationNumber),
+    };
     const { text, values } = insertRow("vehicles", {
       id: crypto.randomUUID(),
-      ...data,
+      ...normalizedData,
       ownerId,
       createdAt: now,
       updatedAt: now,
     });
-    const { rows } = await pool.query(text, values);
-    return toCamelRow(rows[0]);
+
+    try {
+      const { rows } = await pool.query(text, values);
+      return toCamelRow(rows[0]);
+    } catch (error) {
+      if (error?.code === "23505" && error?.constraint === "vehicles_registration_number_key") {
+        throw new Error("Vehicle is already registered");
+      }
+      throw error;
+    }
   },
+
   async findByOwner(ownerId) {
     const { rows } = await pool.query(
       'SELECT * FROM "vehicles" WHERE "owner_id" = $1 ORDER BY "created_at" DESC',
@@ -22,15 +36,49 @@ export const vehicleRepository = {
     );
     return toCamelRows(rows);
   },
+
+  async findByRegistrationNumber(registrationNumber) {
+    const normalizedRegistrationNumber = normalizeRegistrationNumber(registrationNumber);
+
+    if (!normalizedRegistrationNumber) return null;
+
+    const { rows } = await pool.query(
+      `SELECT *
+       FROM "vehicles"
+       WHERE UPPER(REPLACE(REPLACE("registration_number", ' ', ''), '-', '')) = $1
+       AND "is_active" = true
+       LIMIT 1`,
+      [normalizedRegistrationNumber]
+    );
+
+    return rows.length ? toCamelRow(rows[0]) : null;
+  },
+
   async findById(id) {
     const { rows } = await pool.query('SELECT * FROM "vehicles" WHERE "id" = $1 LIMIT 1', [id]);
     return toCamelRow(rows[0]);
   },
+
   async update(id, data) {
-    const { text, values } = updateRow("vehicles", id, { ...data, updatedAt: new Date() });
-    const { rows } = await pool.query(text, values);
-    return toCamelRow(rows[0]);
+    const normalizedData = { ...data };
+
+    if (normalizedData.registrationNumber !== undefined) {
+      normalizedData.registrationNumber = normalizeRegistrationNumber(normalizedData.registrationNumber);
+    }
+
+    const { text, values } = updateRow("vehicles", id, { ...normalizedData, updatedAt: new Date() });
+
+    try {
+      const { rows } = await pool.query(text, values);
+      return toCamelRow(rows[0]);
+    } catch (error) {
+      if (error?.code === "23505" && error?.constraint === "vehicles_registration_number_key") {
+        throw new Error("Vehicle is already registered");
+      }
+      throw error;
+    }
   },
+
   async countActiveRides(vehicleId) {
     const { rows } = await pool.query(
       'SELECT COUNT(*) AS "count" FROM "rides" WHERE "vehicle_id" = $1 AND "status" = ANY($2::"RideStatus"[])',

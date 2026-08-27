@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: bikeride-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bikeride
+      POSTGRES_USER: bikeride
+      POSTGRES_PASSWORD: bikeride
+    ports:
+      - "5433:5432"
+    volumes:
+      - bikeride_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikeride -d bikeride"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bikeride_db_data:

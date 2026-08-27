@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [react()],
   preview: {
     host: '0.0.0.0',
-    allowedHosts: 'all'
+    allowedHosts: [
+      'happy-quietude-production-cdea.up.railway.app',
+      'localhost',
+      '127.0.0.1'
+    ]
   }
 })

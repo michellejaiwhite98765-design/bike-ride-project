@@ -10,6 +10,6 @@ COPY . .
 
 RUN npm run build
 
-EXPOSE 5173
+EXPOSE 8080
 
-CMD ["npm", "run", "preview", "--", "--host"]
+CMD ["sh", "-c", "npm run preview -- --host 0.0.0.0 --port ${PORT:-8080}"]

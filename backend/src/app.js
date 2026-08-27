@@ -14,6 +14,7 @@ import { paymentController } from "./controllers/payment.controller.js";
 
 export const app = express();
 
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: env.clientUrls || env.clientUrl, credentials: true }));
 

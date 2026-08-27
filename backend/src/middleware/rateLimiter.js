@@ -5,6 +5,12 @@ export const apiLimiter = rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    return req.ip || req.connection.remoteAddress;
+  },
+  skip: (req, res) => {
+    return !req.ip && !req.connection.remoteAddress;
+  },
 });
 
 export const authLimiter = rateLimit({
@@ -13,4 +19,10 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many attempts. Please try again later." },
+  keyGenerator: (req, res) => {
+    return req.ip || req.connection.remoteAddress;
+  },
+  skip: (req, res) => {
+    return !req.ip && !req.connection.remoteAddress;
+  },
 });

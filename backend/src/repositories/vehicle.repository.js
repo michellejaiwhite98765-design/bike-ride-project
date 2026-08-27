@@ -31,7 +31,7 @@ export const vehicleRepository = {
 
   async findByOwner(ownerId) {
     const { rows } = await pool.query(
-      'SELECT * FROM "vehicles" WHERE "owner_id" = $1 ORDER BY "created_at" DESC',
+      'SELECT * FROM "vehicles" WHERE "owner_id" = $1 AND "is_active" = true ORDER BY "created_at" DESC',
       [ownerId]
     );
     return toCamelRows(rows);

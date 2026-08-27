@@ -8,10 +8,16 @@ export const tokenStorage = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL 
-});
+// export const api = axios.create({
+//   baseURL: import.meta.env.VITE_API_BASE_URL 
+// });
+import axios from "axios";
 
+export const api = axios.create({
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ||
+    "https://bike-ride-project-production-d81f.up.railway.app/api",
+});
 api.interceptors.request.use((config) => {
   const token = tokenStorage.get();
   if (token) config.headers.Authorization = `Bearer ${token}`;

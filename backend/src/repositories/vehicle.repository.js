@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { pool } from "../config/db.js";
 import { toCamelRow, toCamelRows, insertRow, updateRow } from "../utils/sqlRows.js";
 import { normalizeRegistrationNumber } from "../utils/vehicle.utils.js";
+import { ApiError } from "../utils/ApiError.js";
 
 export const vehicleRepository = {
   async create(ownerId, data) {
@@ -23,7 +24,7 @@ export const vehicleRepository = {
       return toCamelRow(rows[0]);
     } catch (error) {
       if (error?.code === "23505" && error?.constraint === "vehicles_registration_number_key") {
-        throw new Error("Vehicle is already registered");
+        throw ApiError.conflict("Vehicle is already registered");
       }
       throw error;
     }
@@ -54,6 +55,27 @@ export const vehicleRepository = {
     return rows.length ? toCamelRow(rows[0]) : null;
   },
 
+  /**
+   * Same lookup as findByRegistrationNumber but ignores is_active, so callers
+   * can detect a soft-deleted row before hitting the DB's unique constraint
+   * on registration_number (which applies regardless of active status).
+   */
+  async findAnyByRegistrationNumber(registrationNumber) {
+    const normalizedRegistrationNumber = normalizeRegistrationNumber(registrationNumber);
+
+    if (!normalizedRegistrationNumber) return null;
+
+    const { rows } = await pool.query(
+      `SELECT *
+       FROM "vehicles"
+       WHERE UPPER(REPLACE(REPLACE("registration_number", ' ', ''), '-', '')) = $1
+       LIMIT 1`,
+      [normalizedRegistrationNumber]
+    );
+
+    return rows.length ? toCamelRow(rows[0]) : null;
+  },
+
   async findById(id) {
     const { rows } = await pool.query('SELECT * FROM "vehicles" WHERE "id" = $1 LIMIT 1', [id]);
     return toCamelRow(rows[0]);
@@ -73,7 +95,7 @@ export const vehicleRepository = {
       return toCamelRow(rows[0]);
     } catch (error) {
       if (error?.code === "23505" && error?.constraint === "vehicles_registration_number_key") {
-        throw new Error("Vehicle is already registered");
+        throw ApiError.conflict("Vehicle is already registered");
       }
       throw error;
     }

@@ -18,7 +18,7 @@ export const rideService = {
   async create(riderId, data) {
     const vehicle = await vehicleRepository.findById(data.vehicleId);
     if (!vehicle || vehicle.ownerId !== riderId) throw ApiError.badRequest("Vehicle not found");
-    if (!vehicle.isActive) throw ApiError.badRequest("This vehicle is not active");
+    if (!vehicle.isActive) throw ApiError.badRequest("This vehicle has been removed. Please select another vehicle.");
 
     const ride = await rideRepository.create(riderId, data);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });

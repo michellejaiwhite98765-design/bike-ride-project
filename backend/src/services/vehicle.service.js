@@ -13,6 +13,40 @@ async function assertOwner(vehicleId, userId) {
 
 export const vehicleService = {
   async create(userId, data) {
+    const existing = await vehicleRepository.findAnyByRegistrationNumber(data.registrationNumber);
+
+    if (existing) {
+      if (existing.ownerId !== userId) {
+        throw ApiError.conflict("This registration number is already registered to another account");
+      }
+      if (existing.isActive) {
+        throw ApiError.conflict("You have already added this vehicle");
+      }
+
+      // Same owner, previously removed vehicle with this plate: reactivate
+      // the existing row instead of trying to insert a duplicate, which
+      // would otherwise fail the DB's unique constraint on
+      // registration_number (that constraint applies regardless of
+      // is_active, so soft-deleted rows still occupy the plate).
+      const reactivated = await vehicleRepository.update(existing.id, {
+        vehicleType: data.vehicleType,
+        color: data.color,
+        brand: data.brand,
+        model: data.model,
+        manufacturingYear: data.manufacturingYear,
+        isActive: true,
+        verificationStatus: "PENDING",
+        verificationProvider: null,
+        verificationOrderId: null,
+        verificationData: null,
+        verificationCheckedAt: null,
+        verificationFailureReason: null,
+        verifiedAt: null,
+      });
+      await audit(null, { userId, action: "VEHICLE_REACTIVATED", entityType: "Vehicle", entityId: reactivated.id });
+      return reactivated;
+    }
+
     const vehicle = await vehicleRepository.create(userId, data);
     await audit(null, { userId, action: "VEHICLE_CREATED", entityType: "Vehicle", entityId: vehicle.id });
     return vehicle;
@@ -68,6 +102,10 @@ export const vehicleService = {
 
   async verify(userId, vehicleId) {
     const vehicle = await assertOwner(vehicleId, userId);
+
+    if (!vehicle.rcDocumentUrl) {
+      throw ApiError.badRequest("Please upload your RC document before verifying this vehicle");
+    }
 
     if (vehicle.verificationStatus === "VERIFIED" && vehicle.verificationData) {
       return { vehicle, cached: true, providerResult: vehicle.verificationData };

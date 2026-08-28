@@ -567,8 +567,8 @@ export default function VehicleFormPage() {
             {!verifyResult && (
               <>
                 <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 16 }}>
-                  We'll check <strong>{vehicle?.registrationNumber}</strong> against VAHAN records. This confirms the vehicle is
-                  real and matches what you entered.
+                  We'll check <strong>{vehicle?.registrationNumber}</strong> against VAHAN government records to confirm
+                  this registration number is real and active.
                 </div>
                 <NavRow>
                   <SecondaryBtn block onClick={() => setStepIndex(1)}>

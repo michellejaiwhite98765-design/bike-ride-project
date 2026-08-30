@@ -290,7 +290,7 @@ L.tileLayer(
           <h3>Find nearby rides</h3>
           <p>Pick a place on the map or choose a suggestion.</p>
         </div>
-        <div className="br-findride-live-pill"><i /> {nearby.length || 3} nearby</div>
+        <div className="br-findride-live-pill"><i /> {nearby.length} nearby</div>
       </div>
 
       <div className="br-findride-map-toolbar">
@@ -312,10 +312,10 @@ L.tileLayer(
         </div>
 
         <div className="br-findride-floating-rides">
-          {(nearby.length ? nearby : [{ id: 1 }, { id: 2 }, { id: 3 }]).map((ride, index) => (
+          {(nearby).map((ride, index) => (
             <div className="br-car-pill" key={ride.id || index} style={{ "--delay": `${index * 1.2}s` }}>
               <span className="car-dot">●</span>
-              {ride.rider?.firstName || ["Arun", "Maya", "Vijay"][index] || "Rider"}
+              {ride.rider?.firstName || "Rider"}
               <b>{ride.availableSeats ?? index + 1} seats</b>
             </div>
           ))}
@@ -331,7 +331,7 @@ L.tileLayer(
       </div>
 
       <div className="br-findride-map-stats">
-        <div><span>⌁</span><strong>{nearby.length || 3}</strong><small>rides nearby</small></div>
+        <div><span>⌁</span><strong>{nearby.length}</strong><small>rides nearby</small></div>
         <div><span>◷</span><strong>{routeInfo ? fmtDuration(routeInfo.duration) : "—"}</strong><small>travel time</small></div>
         <div><span>↗</span><strong>{routeInfo ? formatDistance(routeInfo.distance) : "—"}</strong><small>route distance</small></div>
       </div>

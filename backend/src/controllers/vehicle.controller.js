@@ -4,7 +4,7 @@ import { ok, created } from "../utils/apiResponse.js";
 export const vehicleController = {
   async create(req, res) {
     const vehicle = await vehicleService.create(req.user.id, req.body);
-    created(res, vehicle, "Vehicle verified and added");
+    created(res, vehicle, "Vehicle added. Upload the RC and complete verification before using it for rides.");
   },
 
   async list(req, res) {

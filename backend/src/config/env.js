@@ -46,6 +46,9 @@ export const env = {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",
     apiKey: process.env.WAY2API_API_KEY || "",
     timeoutMs: Number(process.env.WAY2API_TIMEOUT_MS || 15000),
+  },rcOcr: {
+    timeoutMs: Number(process.env.RC_OCR_TIMEOUT_MS || 45000),
+    maxPages: Number(process.env.RC_OCR_MAX_PAGES || 3),
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",

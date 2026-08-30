@@ -97,7 +97,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, seats, rideType, pickupRadiusM, destinationRadiusM }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30 }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -107,26 +107,38 @@ export const rideRepository = {
     const sourcePoint = () => `ST_SetSRID(ST_MakePoint(${p(sourceLongitude)}::float8, ${p(sourceLatitude)}::float8), 4326)::geography`;
     const destinationPoint = () => `ST_SetSRID(ST_MakePoint(${p(destinationLongitude)}::float8, ${p(destinationLatitude)}::float8), 4326)::geography`;
 
-    const sourceDistanceExpr = `ST_Distance(source_geog, ${sourcePoint()}) AS source_distance_m`;
-    const destinationDistanceExpr = `ST_Distance(destination_geog, ${destinationPoint()}) AS destination_distance_m`;
+    const sourceDistanceExpr = `ST_Distance(r.source_geog, ${sourcePoint()}) AS source_distance_m`;
+    const destinationDistanceExpr = `ST_Distance(r.destination_geog, ${destinationPoint()}) AS destination_distance_m`;
     const dateParam = p(date);
     const seatsParam = p(seats);
-    const rideTypeClause = rideType ? `AND ride_type = ${p(rideType)}::"RideType"` : "";
-    const sourceDWithin = `ST_DWithin(source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
-    const destinationDWithin = `ST_DWithin(destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+    const rideTypeClause = rideType ? `AND r.ride_type = ${p(rideType)}::"RideType"` : "";
+    let timeClause = "";
+    if (time) {
+      const [hours, minutes] = String(time).split(":").map(Number);
+      const targetMinutes = hours * 60 + minutes;
+      const timeParam = p(targetMinutes);
+      const windowParam = p(timeWindowMinutes);
+      timeClause = `AND LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam}`;
+    }
+    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
+    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
 
     const { rows } = await pool.query(
       `SELECT id, source_distance_m, destination_distance_m
        FROM (
          SELECT
-           id,
+           r.id,
            ${sourceDistanceExpr},
            ${destinationDistanceExpr}
-         FROM rides
-         WHERE status = 'PUBLISHED'
-           AND departure_date = ${dateParam}::date
-           AND available_seats >= ${seatsParam}
+         FROM rides r
+         JOIN vehicles v ON v.id = r.vehicle_id
+         WHERE r.status = 'PUBLISHED'
+           AND v.verification_status = 'VERIFIED'
+           AND v.is_active = true
+           AND r.departure_date = ${dateParam}::date
+           AND r.available_seats >= ${seatsParam}
            ${rideTypeClause}
+           ${timeClause}
            AND ${sourceDWithin}
            AND ${destinationDWithin}
        ) candidates

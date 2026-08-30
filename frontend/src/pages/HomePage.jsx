@@ -566,7 +566,7 @@ function HomePage() {
           destinationLatitude: lat,
           destinationLongitude: lng,
           date: dayjs().format("YYYY-MM-DD"),
-          seats: 1,
+          seats: 1, radius: 50,
         })
         .then((data) => {
           if (!cancelled) setNearbyRides(Array.isArray(data) ? data : []);

@@ -21,12 +21,22 @@ const Meta = styled.div`
   gap: 4px;
   margin-bottom: 12px;
 `;
+const StyledCard = styled(Card)`
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+    transform: translateY(-2px);
+  }
+`;
 
 export default function RideCard({ ride, showMatch = false }) {
   const isFree = ride.rideType === "WITHOUT_TIP";
 
   return (
-    <Card>
+    <StyledCard>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ display: "flex", gap: 12 }}>
           <Avatar size={44} style={{ background: "#0f766e" }} icon={<UserOutlined />}>
@@ -79,6 +89,6 @@ export default function RideCard({ ride, showMatch = false }) {
           <Progress percent={ride.matchPercentage} showInfo={false} strokeColor="#0f766e" size="small" />
         </div>
       )}
-    </Card>
+    </StyledCard>
   );
 }

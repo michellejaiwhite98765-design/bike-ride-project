@@ -10,7 +10,8 @@ import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import VehiclesPage from "./pages/vehicles/VehiclesPage.jsx";
-import VehicleFormPage from "./pages/vehicles/VehicleFormPage.jsx";
+// import VehicleFormPage from "./pages/vehicles/VehicleFormPage.jsx";
+import VehicleFormPage from "../src/pages/vehicles/VehicleFormPage.jsx"
 import MyRidesPage from "./pages/rides/MyRidesPage.jsx";
 import CreateRidePage from "./pages/rides/CreateRidePage.jsx";
 import RideDetailsPage from "./pages/rides/RideDetailsPage.jsx";

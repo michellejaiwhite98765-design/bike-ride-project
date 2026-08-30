@@ -567,8 +567,8 @@ export default function VehicleFormPage() {
             {!verifyResult && (
               <>
                 <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 16 }}>
-                  We'll check <strong>{vehicle?.registrationNumber}</strong> against VAHAN government records to confirm
-                  this registration number is real and active.
+                  We'll check <strong>{vehicle?.registrationNumber}</strong> against VAHAN records. This confirms the vehicle is
+                  real and matches what you entered.
                 </div>
                 <NavRow>
                   <SecondaryBtn block onClick={() => setStepIndex(1)}>
@@ -623,6 +623,23 @@ export default function VehicleFormPage() {
 
                 <PrimaryBtn type="primary" block onClick={() => navigate("/vehicles")}>
                   Done
+                </PrimaryBtn>
+              </>
+            )}
+
+            {verifyResult?.retryable && !verifyResult?.rejected && (
+              <>
+                <ResultBanner className="rejected">
+                  <div className="badge">
+                    <ClockCircleOutlined style={{ fontSize: 26, color: colors.warning }} />
+                  </div>
+                  <div>
+                    <div className="title">Verification service unavailable</div>
+                    <div className="subtitle">{vehicle?.verificationFailureReason || "Please try again in a moment."}</div>
+                  </div>
+                </ResultBanner>
+                <PrimaryBtn type="primary" block loading={submitting} onClick={handleVerify}>
+                  Try again
                 </PrimaryBtn>
               </>
             )}

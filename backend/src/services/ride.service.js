@@ -19,6 +19,9 @@ export const rideService = {
     const vehicle = await vehicleRepository.findById(data.vehicleId);
     if (!vehicle || vehicle.ownerId !== riderId) throw ApiError.badRequest("Vehicle not found");
     if (!vehicle.isActive) throw ApiError.badRequest("This vehicle has been removed. Please select another vehicle.");
+    if (vehicle.verificationStatus !== "VERIFIED") {
+      throw ApiError.badRequest("Vehicle must be verified before creating a ride");
+    }
 
     const ride = await rideRepository.create(riderId, data);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
@@ -50,6 +53,11 @@ export const rideService = {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "PUBLISHED");
+
+    const vehicle = await vehicleRepository.findById(ride.vehicleId);
+    if (!vehicle || vehicle.ownerId !== userId || !vehicle.isActive || vehicle.verificationStatus !== "VERIFIED") {
+      throw ApiError.badRequest("A verified active vehicle is required before publishing this ride");
+    }
     const updated = await rideRepository.update(rideId, { status: "PUBLISHED" });
     await audit(null, { userId, action: "RIDE_PUBLISHED", entityType: "Ride", entityId: rideId });
     return updated;
@@ -98,6 +106,8 @@ export const rideService = {
     const candidates = await rideRepository.searchCandidates({
       ...search,
       date: search.date,
+      time: search.time,
+      timeWindowMinutes: env.matching.timeWindowMinutes,
       pickupRadiusM: pickupRadiusKm * 1000,
       destinationRadiusM: destinationRadiusKm * 1000,
     });

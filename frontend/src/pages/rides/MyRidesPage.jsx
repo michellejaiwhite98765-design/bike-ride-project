@@ -13,6 +13,7 @@ import {
   ArrowRightOutlined,
   CarOutlined,
   ClockCircleOutlined,
+  CompassOutlined,
   EnvironmentFilled,
   EnvironmentOutlined,
   EyeOutlined,
@@ -24,7 +25,9 @@ import {
 import dayjs from "dayjs";
 import { rideService } from "../../services/rideService.js";
 import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
+import RideDetailsModal from "../../components/ride/RideDetailsModal.jsx";
 import StatusTag from "../../components/StatusTag.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const HOME = {
   primary: "#2563eb",
@@ -237,7 +240,7 @@ function LiveMiniStats({ ride }) {
   );
 }
 
-function RideTrackingCard({ ride }) {
+function RideTrackingCard({ ride, onOpenDetails }) {
   const started = ride.status === "STARTED";
   const [livePosition, setLivePosition] = useState(null);
 
@@ -270,11 +273,16 @@ function RideTrackingCard({ ride }) {
           <span className={`live-dot ${started ? "pulse" : ""}`} />
           {started ? "LIVE TRACKING" : ride.status === "COMPLETED" ? "COMPLETED" : "UPCOMING"}
         </div>
-        <Tooltip title="Open ride details">
-          <Link to={`/rides/${ride.id}`}>
-            <Button type="text" shape="circle" icon={<EyeOutlined />} />
-          </Link>
-        </Tooltip>
+        <div style={{ display: "flex", gap: 4 }}>
+          <Tooltip title="Vehicle & route">
+            <Button type="text" shape="circle" icon={<CompassOutlined />} onClick={() => onOpenDetails(ride)} />
+          </Tooltip>
+          <Tooltip title="Open ride details">
+            <Link to={`/rides/${ride.id}`}>
+              <Button type="text" shape="circle" icon={<EyeOutlined />} />
+            </Link>
+          </Tooltip>
+        </div>
       </div>
 
       <RideSummary ride={ride} />
@@ -303,8 +311,10 @@ function RideTrackingCard({ ride }) {
 }
 
 export default function MyRidesPage() {
+  const { user } = useAuth();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [detailsRide, setDetailsRide] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -365,10 +375,17 @@ export default function MyRidesPage() {
           </div>
         ) : (
           <div className="my-rides-grid">
-            {rides.map((ride) => <RideTrackingCard key={ride.id} ride={ride} />)}
+            {rides.map((ride) => <RideTrackingCard key={ride.id} ride={ride} onOpenDetails={setDetailsRide} />)}
           </div>
         )}
       </div>
+
+      <RideDetailsModal
+        ride={detailsRide}
+        open={Boolean(detailsRide)}
+        onClose={() => setDetailsRide(null)}
+        isOwner={detailsRide ? detailsRide.riderId === user.id : false}
+      />
 
       <style>{`
         .my-rides-page{position:relative;min-height:100vh;padding:38px 0 64px;background:radial-gradient(circle at 8% 0%,rgba(219,234,254,.85),transparent 28%),radial-gradient(circle at 96% 12%,rgba(224,231,255,.75),transparent 30%),linear-gradient(180deg,#f8fbff 0%,#fff 72%);overflow:hidden;color:${HOME.text};}

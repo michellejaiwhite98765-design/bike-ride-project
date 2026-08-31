@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Form, Input, InputNumber, Select, Upload, App, Skeleton, Row, Col, Button as AntButton } from "antd";
+import { Form, Input, InputNumber, Select, Upload, App, Skeleton, Row, Col, Button as AntButton, Modal } from "antd";
 import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
@@ -300,6 +300,80 @@ const ResultBanner = styled.div`
   }
 `;
 
+const SuccessPopupBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 4px 4px;
+
+  .badge {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes pop-in {
+    0% {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid ${colors.success};
+    animation: ring-pulse 1.8s ease-out infinite;
+  }
+
+  @keyframes ring-pulse {
+    0% {
+      transform: scale(0.7);
+      opacity: 0;
+    }
+    45% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+
+  .check-path {
+    stroke-dasharray: 30;
+    stroke-dashoffset: 30;
+    animation: check-draw 0.5s ease-out 0.25s forwards;
+  }
+
+  @keyframes check-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .title {
+    font-size: 17px;
+    font-weight: 700;
+    color: ${colors.textPrimary};
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: ${colors.textSecondary};
+    margin-bottom: 22px;
+  }
+`;
+
 const RecordCard = styled.div`
   border: 1px solid ${colors.border};
   border-radius: 10px;
@@ -380,6 +454,7 @@ export default function VehicleFormPage() {
   const [vehicle, setVehicle] = useState(null);
   const [rcDocumentFile, setRcDocumentFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
+  const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
   const vehicleType = Form.useWatch("vehicleType", form);
 
   useEffect(() => {
@@ -426,7 +501,8 @@ export default function VehicleFormPage() {
     try {
       const updated = await vehicleService.uploadRcDocument(vehicleId, rcDocumentFile);
       setVehicle(updated);
-      setStepIndex(2);
+      setStepIndex(1);
+      setUploadSuccessOpen(true);
     } catch (err) {
       message.error(err.message);
     } finally {
@@ -686,6 +762,30 @@ export default function VehicleFormPage() {
           </div>
         )}
       </Panel>
+
+      <Modal open={uploadSuccessOpen} footer={null} closable={false} centered onCancel={() => setUploadSuccessOpen(false)} width={360}>
+        <SuccessPopupBody>
+          <div className="badge">
+            <div className="ring" />
+            <svg width="64" height="64" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="12" fill={colors.success} />
+              <path className="check-path" d="M7 13l4 4 8-8" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="title">RC uploaded successfully</div>
+          <div className="subtitle">Your registration certificate matched and is ready. Continue to verify this vehicle against VAHAN.</div>
+          <PrimaryBtn
+            type="primary"
+            block
+            onClick={() => {
+              setUploadSuccessOpen(false);
+              setStepIndex(2);
+            }}
+          >
+            Continue to verification
+          </PrimaryBtn>
+        </SuccessPopupBody>
+      </Modal>
     </PageWrap>
   );
 }

@@ -1,6 +1,6 @@
 import { vehicleRepository } from "../repositories/vehicle.repository.js";
 import { ApiError } from "../utils/ApiError.js";
-import { normalizeRegistrationNumber } from "../utils/vehicle.utils.js";
+import { normalizeRegistrationNumber, registrationNumbersLookAlike } from "../utils/vehicle.utils.js";
 import { audit } from "../utils/audit.js";
 import { cloudinaryService } from "./cloudinary.service.js";
 import { way2ApiService } from "./way2api.service.js";
@@ -11,20 +11,6 @@ async function assertOwner(vehicleId, userId) {
   if (!vehicle) throw ApiError.notFound("Vehicle not found");
   if (vehicle.ownerId !== userId) throw ApiError.forbidden("You do not own this vehicle");
   return vehicle;
-}
-
-function rcNumbersEquivalent(expected, extracted) {
-  const a = normalizeRegistrationNumber(expected);
-  const b = normalizeRegistrationNumber(extracted);
-  if (!a || !b || a.length !== b.length) return false;
-  const ambiguous = new Map([
-    ["O", new Set(["O", "0"])], ["0", new Set(["0", "O"])],
-    ["I", new Set(["I", "1"])], ["1", new Set(["1", "I"])],
-    ["Z", new Set(["Z", "2"])], ["2", new Set(["2", "Z"])],
-    ["S", new Set(["S", "5"])], ["5", new Set(["5", "S"])],
-    ["B", new Set(["B", "8"])], ["8", new Set(["8", "B"])]
-  ]);
-  return [...a].every((char, index) => char === b[index] || ambiguous.get(char)?.has(b[index]));
 }
 
 export const vehicleService = {
@@ -115,8 +101,8 @@ export const vehicleService = {
   async uploadRcDocument(userId, vehicleId, file) {
     const vehicle = await assertOwner(vehicleId, userId);
 
-    const ocr = await rcOcrService.extractRegistrationNumber(file);
     const expected = normalizeRegistrationNumber(vehicle.registrationNumber);
+    const ocr = await rcOcrService.extractRegistrationNumber(file, expected);
 
     if (!ocr.registrationNumber) {
       await vehicleRepository.update(vehicleId, {
@@ -128,7 +114,7 @@ export const vehicleService = {
       throw ApiError.badRequest("Could not read the registration number from the RC. Please upload a clear document.");
     }
 
-    if (!rcNumbersEquivalent(expected, ocr.registrationNumber)) {
+    if (!registrationNumbersLookAlike(expected, ocr.registrationNumber)) {
       await vehicleRepository.update(vehicleId, {
         rcOcrStatus: "MISMATCH",
         rcExtractedRegistrationNumber: ocr.registrationNumber,
@@ -160,7 +146,7 @@ export const vehicleService = {
       throw ApiError.badRequest("Please upload an RC that matches the vehicle registration number before verifying");
     }
 
-    if (!rcNumbersEquivalent(vehicle.registrationNumber, vehicle.rcExtractedRegistrationNumber)) {
+    if (!registrationNumbersLookAlike(vehicle.registrationNumber, vehicle.rcExtractedRegistrationNumber)) {
       throw ApiError.badRequest("The uploaded RC does not match this vehicle registration number");
     }
 

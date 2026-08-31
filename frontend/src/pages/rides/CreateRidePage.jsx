@@ -84,15 +84,22 @@ const RouteMapCard = styled(Card)`
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 32px 0 16px;
   font-size: 16px;
   font-weight: 700;
   color: ${colors.textPrimary};
 
   .icon {
-    font-size: 18px;
-    color: ${colors.primary};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    font-size: 15px;
+    color: #2563eb;
+    background: #eff6ff;
   }
 
   &:first-of-type {
@@ -102,9 +109,11 @@ const SectionHeader = styled.div`
 
 const FormCard = styled(Card)`
   margin-bottom: 24px;
-  border-radius: 12px;
-  border: 1px solid ${colors.border};
-  background: ${colors.bgPrimary};
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(10px);
 `;
 
 const ActionButtons = styled.div`

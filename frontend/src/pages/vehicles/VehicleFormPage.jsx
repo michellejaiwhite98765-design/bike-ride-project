@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Form, Input, InputNumber, Select, Upload, App, Skeleton, Row, Col, Button as AntButton, Modal } from "antd";
-import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Select, AutoComplete, Upload, App, Skeleton, Row, Col, Button as AntButton, Modal } from "antd";
+import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined, CarOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
+import { VEHICLE_TYPES, VEHICLE_COLORS, brandsForType, modelsForBrand } from "../../constants/vehicleCatalog.js";
 
 const { Dragger } = Upload;
 
 const ACCENT = "#2563EB";
 const ACCENT_DARK = "#1D4ED8";
-
-const VEHICLE_TYPES = [
-  { value: "MOTORCYCLE", label: "Motorcycle" },
-  { value: "SCOOTER", label: "Scooter" },
-  { value: "BICYCLE", label: "Bicycle" },
-  { value: "CAR", label: "Car" },
-];
 
 const STEPS = [
   { key: "details", label: "Details" },
@@ -46,7 +40,24 @@ const BackLink = styled(Link)`
 `;
 
 const HeaderBlock = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 24px;
+
+  .icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, ${ACCENT}, ${ACCENT_DARK});
+    color: #fff;
+    font-size: 20px;
+    flex-shrink: 0;
+    box-shadow: ${colors.shadowMd};
+  }
 
   h1 {
     margin: 0;
@@ -57,7 +68,7 @@ const HeaderBlock = styled.div`
   }
 
   p {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     font-size: 13.5px;
     color: ${colors.textSecondary};
   }
@@ -66,9 +77,9 @@ const HeaderBlock = styled.div`
 const Panel = styled.div`
   background: ${colors.bgPrimary};
   border: 1px solid ${colors.border};
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: ${colors.shadowSm};
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: ${colors.shadowMd};
 
   @media (max-width: 480px) {
     padding: 18px;
@@ -456,6 +467,10 @@ export default function VehicleFormPage() {
   const [verifyResult, setVerifyResult] = useState(null);
   const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
   const vehicleType = Form.useWatch("vehicleType", form);
+  const brand = Form.useWatch("brand", form);
+  const brandOptions = brandsForType(vehicleType).map((b) => ({ value: b }));
+  const modelOptions = modelsForBrand(vehicleType, brand).map((m) => ({ value: m }));
+  const colorOptions = VEHICLE_COLORS.map((c) => ({ value: c }));
 
   useEffect(() => {
     if (!isEdit) return;
@@ -534,8 +549,13 @@ export default function VehicleFormPage() {
       </BackLink>
 
       <HeaderBlock>
-        <h1>{isEdit ? "Edit vehicle" : "Add a vehicle"}</h1>
-        <p>Add your vehicle, upload its RC, then verify it against VAHAN.</p>
+        <div className="icon-badge">
+          <CarOutlined />
+        </div>
+        <div>
+          <h1>{isEdit ? "Edit vehicle" : "Add a vehicle"}</h1>
+          <p>Add your vehicle, upload its RC, then verify it against VAHAN.</p>
+        </div>
       </HeaderBlock>
 
       <Panel>
@@ -560,24 +580,36 @@ export default function VehicleFormPage() {
             <Row gutter={16}>
               <Col xs={24} sm={12}>
                 <Form.Item name="vehicleType" label="Vehicle type" rules={[{ required: true }]}>
-                  <Select size="large" placeholder="Select type" options={VEHICLE_TYPES} />
+                  <Select
+                    size="large"
+                    placeholder="Select type"
+                    options={VEHICLE_TYPES}
+                    suffixIcon={<CarOutlined />}
+                    onChange={() => form.setFieldsValue({ brand: undefined, model: undefined })}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
                 <Form.Item name="color" label="Color" rules={[{ required: true }]}>
-                  <Input size="large" placeholder="Black" />
+                  <AutoComplete size="large" placeholder="e.g. White" options={colorOptions} filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())} />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
                 <Form.Item name="brand" label="Brand" rules={[{ required: true }]}>
-                  <Input size="large" placeholder="Honda" />
+                  <AutoComplete
+                    size="large"
+                    placeholder={vehicleType ? "e.g. Honda" : "Select a vehicle type first"}
+                    options={brandOptions}
+                    filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())}
+                    onChange={() => form.setFieldsValue({ model: undefined })}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
                 <Form.Item name="model" label="Model" rules={[{ required: true }]}>
-                  <Input size="large" placeholder="Unicorn" />
+                  <AutoComplete size="large" placeholder="e.g. Unicorn" options={modelOptions} filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())} />
                 </Form.Item>
               </Col>
             </Row>

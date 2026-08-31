@@ -142,6 +142,9 @@ export const rcOcrService = {
       else throw ApiError.badRequest("Unsupported RC document type");
     } catch (error) {
       if (error instanceof ApiError) throw error;
+      // errorHandler doesn't log ApiError instances, so log the real cause
+      // here or it's lost entirely once we wrap it below.
+      logger.error(`RC OCR failed: ${error.stack || error.message || String(error)}`);
       throw ApiError.badRequest("RC could not be read. Make sure the document is clear and try again.");
     }
     const registrationNumber = findExpectedRegistrationNumber(text, expected) || extractRegistrationNumber(text);

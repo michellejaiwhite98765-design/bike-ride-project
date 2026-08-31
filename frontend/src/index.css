@@ -167,8 +167,8 @@ a {
 
 .ride-creation-map {
   position: relative;
-  height: min(680px, calc(100vh - 150px));
-  min-height: 500px;
+  height: min(860px, calc(100vh - 110px));
+  min-height: 640px;
   overflow: hidden;
   border-radius: 0 0 22px 22px;
   isolation: isolate;
@@ -356,8 +356,8 @@ body::-webkit-scrollbar,
 
 @media (max-width: 1050px) {
   .ride-creation-map {
-    height: 480px;
-    min-height: 480px;
+    height: 620px;
+    min-height: 620px;
   }
 }
 
@@ -379,8 +379,8 @@ body::-webkit-scrollbar,
   }
 
   .ride-creation-map {
-    height: 430px;
-    min-height: 430px;
+    height: 520px;
+    min-height: 520px;
   }
 
   .ride-creation-map-legend {

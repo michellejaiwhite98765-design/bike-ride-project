@@ -10,10 +10,11 @@ const RIDE_JOIN_SELECT = `
   v."id" AS "vehicle__id", v."owner_id" AS "vehicle__owner_id", v."vehicle_type" AS "vehicle__vehicle_type",
   v."brand" AS "vehicle__brand", v."model" AS "vehicle__model", v."registration_number" AS "vehicle__registration_number",
   v."color" AS "vehicle__color", v."manufacturing_year" AS "vehicle__manufacturing_year",
+  v."seat_capacity" AS "vehicle__seat_capacity",
   v."verification_status" AS "vehicle__verification_status", v."is_active" AS "vehicle__is_active",
   v."created_at" AS "vehicle__created_at", v."updated_at" AS "vehicle__updated_at",
   u."id" AS "rider__id", u."first_name" AS "rider__first_name", u."last_name" AS "rider__last_name",
-  u."profile_image" AS "rider__profile_image"
+  u."profile_image" AS "rider__profile_image", u."phone" AS "rider__phone", u."is_verified" AS "rider__is_verified"
 `;
 const RIDE_JOIN_FROM = `FROM "rides" r JOIN "vehicles" v ON v."id" = r."vehicle_id" JOIN "users" u ON u."id" = r."rider_id"`;
 
@@ -176,5 +177,13 @@ export const rideRepository = {
       [seats, rideId]
     );
     return toCamelRow(rows[0]);
+  },
+
+  async countCompletedByRider(riderId) {
+    const { rows } = await pool.query(
+      'SELECT COUNT(*) AS "count" FROM "rides" WHERE "rider_id" = $1 AND "status" = \'COMPLETED\'',
+      [riderId]
+    );
+    return Number(rows[0].count);
   },
 };

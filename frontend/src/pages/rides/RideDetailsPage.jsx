@@ -14,6 +14,7 @@ import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
 import { VerifiedBadge, Badge } from "../../components/ui/index.js";
 import RouteOverviewMap from "../../components/ride/RouteOverviewMap.jsx";
 // import RouteOverviewMap from "../../components/ride/RouteOverviewMap.jsx";
+import { haversineKm } from "../../utils/geo.js";
 
 
 // Dark "vibe" palette — scoped to this page only, doesn't touch the global light theme.
@@ -366,14 +367,6 @@ const ActionButtons = styled.div`
   }
 `;
 
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export default function RideDetailsPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -542,12 +535,60 @@ export default function RideDetailsPage() {
               <StatusTag status={ride.status} />
             </DriverHeader>
 
+            {ride.rider?.phone && (
+              <div className="driver-phone">
+                <PhoneOutlined style={{ color: dark.teal }} />
+                <a href={`tel:${ride.rider.phone}`}>{ride.rider.phone}</a>
+              </div>
+            )}
+
             {ride.notes && (
               <div className="dark-alert">
                 <Alert style={{ marginTop: 12 }} type="info" message="Notes from rider" description={ride.notes} showIcon />
               </div>
             )}
           </DriverProfileCard>
+
+          {/* Vehicle Details */}
+          <SectionCard>
+            <div className="section-header">
+              <span className="section-title">
+                <CarOutlined style={{ color: dark.teal }} /> Vehicle Details
+              </span>
+              {ride.vehicle?.verificationStatus === "VERIFIED" && <VerifiedBadge />}
+            </div>
+            <div className="section-body">
+              <InfoCardsGrid>
+                <InfoCard>
+                  <div className="info-icon">
+                    <CarOutlined />
+                  </div>
+                  <div className="info-label">Vehicle</div>
+                  <div className="info-value">
+                    {ride.vehicle?.brand} {ride.vehicle?.model}
+                  </div>
+                  <div className="info-sub">{ride.vehicle?.registrationNumber}</div>
+                </InfoCard>
+                <InfoCard>
+                  <div className="info-icon">
+                    <EnvironmentOutlined />
+                  </div>
+                  <div className="info-label">Type &amp; Color</div>
+                  <div className="info-value" style={{ textTransform: "capitalize" }}>
+                    {ride.vehicle?.vehicleType?.toLowerCase()}
+                  </div>
+                  <div className="info-sub">{ride.vehicle?.color}</div>
+                </InfoCard>
+                <InfoCard>
+                  <div className="info-icon">
+                    <TeamOutlined />
+                  </div>
+                  <div className="info-label">Seat Capacity</div>
+                  <div className="info-value">{ride.vehicle?.seatCapacity ?? 1} passenger(s)</div>
+                </InfoCard>
+              </InfoCardsGrid>
+            </div>
+          </SectionCard>
 
           {/* Route Details */}
           <SectionCard>
@@ -624,16 +665,6 @@ export default function RideDetailsPage() {
                   <div className="info-label">Duration &amp; Distance</div>
                   <div className="info-value">~{estimatedMinutes} min</div>
                   <div className="info-sub">{distanceKm.toFixed(1)} km</div>
-                </InfoCard>
-                <InfoCard>
-                  <div className="info-icon">
-                    <CarOutlined />
-                  </div>
-                  <div className="info-label">Vehicle</div>
-                  <div className="info-value">
-                    {ride.vehicle?.brand} {ride.vehicle?.model}
-                  </div>
-                  <div className="info-sub">{ride.vehicle?.registrationNumber}</div>
                 </InfoCard>
                 <InfoCard>
                   <div className="info-icon">
@@ -855,6 +886,20 @@ export default function RideDetailsPage() {
       />
 
       <style>{`
+        .driver-phone {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        .driver-phone a {
+          color: ${dark.textPrimary};
+        }
+        .driver-phone a:hover {
+          color: ${dark.teal};
+        }
         .dark-alert .ant-alert {
           background: rgba(45, 212, 191, 0.08) !important;
           border: 1px solid rgba(45, 212, 191, 0.25) !important;

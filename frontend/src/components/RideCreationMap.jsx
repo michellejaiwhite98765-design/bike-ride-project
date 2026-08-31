@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { Button, Segmented, Spin, Tag } from "antd";
+import { Button, Segmented, Spin, Tag, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
+import { reverseGeocode, countryMismatch } from "../utils/geo.js";
 
 const DEFAULT_CENTER = [8.183, 77.411];
 const HOME_BLUE = "#2563eb";
@@ -56,17 +57,6 @@ function MapClickHandler({ mode, onMapLocation }) {
     },
   });
   return null;
-}
-
-async function reverseGeocode(latitude, longitude) {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-  const response = await fetch(url, {
-    headers: { "Accept-Language": "en" },
-  });
-
-  if (!response.ok) throw new Error("Unable to find this place");
-  const data = await response.json();
-  return data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 }
 
 async function getRoute(source, destination) {
@@ -126,22 +116,29 @@ export default function RideCreationMap({ source, destination, form }) {
 
   async function handleMapLocation({ lat, lng }, selectedMode) {
     if (!form) return;
+    const prefix = selectedMode === "source" ? "source" : "destination";
 
     try {
       setMapLoading(true);
-      const placeName = await reverseGeocode(lat, lng);
-      const prefix = selectedMode === "source" ? "source" : "destination";
+      const { name, country } = await reverseGeocode(lat, lng);
+
+      const mismatchError = countryMismatch(form, prefix, country);
+      if (mismatchError) {
+        message.error(mismatchError);
+        return;
+      }
 
       form.setFieldsValue({
-        [`${prefix}Name`]: placeName.slice(0, 150),
+        [`${prefix}Name`]: name.slice(0, 150),
         [`${prefix}Latitude`]: lat,
         [`${prefix}Longitude`]: lng,
+        [`${prefix}Country`]: country,
       });
 
       setMode(selectedMode === "source" ? "destination" : "source");
     } catch {
-      // Keep the map usable even if reverse geocoding fails.
-      const prefix = selectedMode === "source" ? "source" : "destination";
+      // Keep the map usable even if reverse geocoding fails - country can't
+      // be checked here, so this point is accepted as-is.
       form.setFieldsValue({
         [`${prefix}Name`]: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
         [`${prefix}Latitude`]: lat,

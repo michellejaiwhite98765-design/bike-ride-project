@@ -315,7 +315,7 @@ export default function AppLayout() {
                 </Link>
               </NavItems>
               <CtaLink to="/rides/create">
-                <PlusCircleOutlined /> Offer ride
+                <PlusCircleOutlined /> Create ride
               </CtaLink>
             </DesktopNav>
           )}
@@ -384,7 +384,7 @@ export default function AppLayout() {
               {[
                 { to: "/", icon: <HomeOutlined />, label: "Home" },
                 { to: "/search", icon: <SearchOutlined />, label: "Find Ride" },
-                { to: "/rides/create", icon: <PlusCircleOutlined />, label: "Offer Ride" },
+                { to: "/rides/create", icon: <PlusCircleOutlined />, label: "Create Ride" },
                 { to: "/rides", icon: <CarOutlined />, label: "My Rides" },
                 { to: "/notifications", icon: <BellOutlined />, label: "Notifications" },
                 { to: "/profile", icon: <UserOutlined />, label: "Profile" },

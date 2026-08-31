@@ -1,6 +1,7 @@
-import { Form, Input, AutoComplete, Spin } from "antd";
+import { Form, Input, AutoComplete, Spin, message } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { useEffect, useState, useRef } from "react";
+import { countryMismatch } from "../utils/geo.js";
 
 // Replace manual place name input with an autocomplete backed by
 // OpenStreetMap's Nominatim search. When a suggestion is selected,
@@ -48,12 +49,22 @@ export default function LocationFields({ prefix, label, placeholder }) {
     // Nominatim returns lat/lon as strings
     const lat = Number(d.lat);
     const lon = Number(d.lon);
+    const country = d.address?.country || null;
+
+    const mismatchError = countryMismatch(form, prefix, country);
+    if (mismatchError) {
+      message.error(mismatchError);
+      setOptions([]);
+      return;
+    }
+
     // Truncate display name to the server-side limit to avoid validation errors
     const displayName = d.display_name.length > 150 ? d.display_name.slice(0, 150) : d.display_name;
     form.setFieldsValue({
       [`${prefix}Name`]: displayName,
       [`${prefix}Latitude`]: lat,
       [`${prefix}Longitude`]: lon,
+      [`${prefix}Country`]: country,
     });
     setOptions([]);
   };
@@ -81,6 +92,9 @@ export default function LocationFields({ prefix, label, placeholder }) {
         <Input />
       </Form.Item>
       <Form.Item name={`${prefix}Longitude`} noStyle hidden>
+        <Input />
+      </Form.Item>
+      <Form.Item name={`${prefix}Country`} noStyle hidden>
         <Input />
       </Form.Item>
     </div>

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import request from "supertest";
 import { app } from "../src/app.js";
+import { vehicleRepository } from "../src/repositories/vehicle.repository.js";
 
 let counter = 0;
 function unique() {
@@ -15,6 +16,18 @@ function unique() {
 // suffix instead so uniqueness doesn't depend on any shared/reset state.
 function uniquePhone() {
   return `9${crypto.randomInt(100000000, 999999999)}`;
+}
+
+// Must match the validator's Indian plate regex (e.g. TN01AB1234), not just
+// be unique - a plain numeric suffix like the old `TN${unique()}` doesn't
+// satisfy /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}$/, so every test that
+// creates a vehicle was failing registration validation before this fix.
+function uniqueRegistrationNumber() {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const letter1 = letters[crypto.randomInt(0, 26)];
+  const letter2 = letters[crypto.randomInt(0, 26)];
+  const digits = crypto.randomInt(1000, 9999);
+  return `TN01${letter1}${letter2}${digits}`;
 }
 
 export async function registerUser(overrides = {}) {
@@ -35,12 +48,11 @@ export async function registerUser(overrides = {}) {
 }
 
 export async function createVehicle(token, overrides = {}) {
-  const id = unique();
   const payload = {
     vehicleType: "MOTORCYCLE",
     brand: "Honda",
     model: "Activa",
-    registrationNumber: `TN${id}`.slice(0, 15),
+    registrationNumber: uniqueRegistrationNumber(),
     color: "Black",
     manufacturingYear: 2022,
     ...overrides,
@@ -58,7 +70,17 @@ export function futureDate(daysAhead = 5) {
   return d.toISOString().slice(0, 10);
 }
 
+// ride.service.js#create requires a VERIFIED vehicle, but the RC-upload +
+// way2api verification flow needs a real document/external call that can't
+// run in tests - go straight to the DB instead, same as a completed manual
+// verification would leave the row.
+export async function verifyVehicle(vehicleId) {
+  return vehicleRepository.update(vehicleId, { verificationStatus: "VERIFIED" });
+}
+
 export async function createPublishedRide(token, vehicleId, overrides = {}) {
+  await verifyVehicle(vehicleId);
+
   const payload = {
     vehicleId,
     sourceName: "Avadi",

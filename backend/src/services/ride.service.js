@@ -22,6 +22,11 @@ export const rideService = {
     if (vehicle.verificationStatus !== "VERIFIED") {
       throw ApiError.badRequest("Vehicle must be verified before creating a ride");
     }
+    if (data.availableSeats > vehicle.seatCapacity) {
+      throw ApiError.badRequest(
+        `This vehicle only has ${vehicle.seatCapacity} passenger seat${vehicle.seatCapacity === 1 ? "" : "s"} available`
+      );
+    }
 
     const ride = await rideRepository.create(riderId, data);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
@@ -31,6 +36,14 @@ export const rideService = {
   async getById(rideId) {
     const ride = await rideRepository.findById(rideId);
     if (!ride) throw ApiError.notFound("Ride not found");
+
+    const [ratingAgg, numberOfRides] = await Promise.all([
+      ratingRepository.aggregateForReviewee(ride.riderId),
+      rideRepository.countCompletedByRider(ride.riderId),
+    ]);
+    ride.rider.rating = ratingAgg.avgScore ? Number(ratingAgg.avgScore.toFixed(2)) : null;
+    ride.rider.numberOfRides = numberOfRides;
+
     return ride;
   },
 

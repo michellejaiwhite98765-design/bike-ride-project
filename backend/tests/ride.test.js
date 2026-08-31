@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { request, app, registerUser, createVehicle, createPublishedRide, futureDate } from "./helpers.js";
+import { request, app, registerUser, createVehicle, createPublishedRide, futureDate, verifyVehicle } from "./helpers.js";
 
 describe("Ride creation", () => {
   it("rejects WITHOUT_TIP rides with a nonzero tip amount", async () => {
@@ -55,6 +55,7 @@ describe("Ride creation", () => {
   it("creates a ride as DRAFT and only becomes searchable after publish", async () => {
     const { token } = await registerUser();
     const vehicle = await createVehicle(token);
+    await verifyVehicle(vehicle.id);
     const draftDate = futureDate(6);
 
     const createRes = await request(app)

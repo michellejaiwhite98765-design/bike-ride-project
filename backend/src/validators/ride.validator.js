@@ -38,7 +38,7 @@ export const createRideSchema = z
     pickupPreference: z.enum(["ON_ROUTE", "PASSENGER_LOCATION"]).default("ON_ROUTE"),
     departureDate: z.coerce.date(),
     departureTime: timeOfDay,
-    availableSeats: z.coerce.number().int().min(1).max(6),
+    availableSeats: z.coerce.number().int().min(1).max(8),
     rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]),
     tipAmount: z.coerce.number().min(0).max(10000).default(0),
     notes: z.string().trim().max(500).optional(),
@@ -90,7 +90,7 @@ export const searchRideSchema = z.object({
   destinationLongitude: longitude,
   date: z.coerce.date(),
   time: timeOfDay.optional(),
-  seats: z.coerce.number().int().min(1).max(6).default(1),
+  seats: z.coerce.number().int().min(1).max(8).default(1),
   rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]).optional(),
   radius: z.coerce.number().positive().max(50).optional(),
 });

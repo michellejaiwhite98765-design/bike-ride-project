@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Form, Input, InputNumber, Select, Upload, App, Skeleton, Row, Col, Button as AntButton } from "antd";
-import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
@@ -15,6 +15,7 @@ const VEHICLE_TYPES = [
   { value: "MOTORCYCLE", label: "Motorcycle" },
   { value: "SCOOTER", label: "Scooter" },
   { value: "BICYCLE", label: "Bicycle" },
+  { value: "CAR", label: "Car" },
 ];
 
 const STEPS = [
@@ -379,6 +380,7 @@ export default function VehicleFormPage() {
   const [vehicle, setVehicle] = useState(null);
   const [rcDocumentFile, setRcDocumentFile] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
+  const vehicleType = Form.useWatch("vehicleType", form);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -515,6 +517,19 @@ export default function VehicleFormPage() {
                 </Form.Item>
               </Col>
             </Row>
+            {vehicleType === "CAR" && (
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="seatCapacity"
+                    label="Passenger seat capacity"
+                    rules={[{ required: true, message: "Seat capacity is required for cars" }]}
+                  >
+                    <InputNumber size="large" style={{ width: "100%" }} min={1} max={8} placeholder="e.g. 4" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
             <NavRow>
               <PrimaryBtn type="primary" htmlType="submit" block loading={submitting}>
                 Continue

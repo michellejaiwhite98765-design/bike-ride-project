@@ -51,7 +51,7 @@ describe("Ride requests and bookings", () => {
     const rider = await registerUser();
     const passenger = await registerUser();
     const vehicle = await createVehicle(rider.token);
-    const ride = await createPublishedRide(rider.token, vehicle.id, { availableSeats: 2 });
+    const ride = await createPublishedRide(rider.token, vehicle.id, { availableSeats: 1 });
 
     const first = await request(app)
       .post(`/api/rides/${ride.id}/requests`)

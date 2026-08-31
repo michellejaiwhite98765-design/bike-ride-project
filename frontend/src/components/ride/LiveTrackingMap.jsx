@@ -5,6 +5,7 @@ import { Card, Button, Tag, Space } from "antd";
 import { ClockCircleOutlined, EnvironmentOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { connectSocket, getSocket } from "../../services/socket.js";
 import { rideService } from "../../services/rideService.js";
+import { DARK_TILE_BASE_URL, DARK_TILE_REFERENCE_URL, DARK_TILE_ATTRIBUTION } from "../../constants/mapTiles.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -178,10 +179,8 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
           zoomSnap={0.5}
           zoomDelta={0.5}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
+          <TileLayer attribution={DARK_TILE_ATTRIBUTION} url={DARK_TILE_BASE_URL} />
+          <TileLayer url={DARK_TILE_REFERENCE_URL} />
           <FitRoute source={source} destination={destination} />
           {riderPosition && <RecenterOnMove position={riderPosition} />}
           <Marker position={[source.latitude, source.longitude]} icon={markerIcon("start")} />

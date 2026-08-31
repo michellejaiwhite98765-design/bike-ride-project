@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet
 import L from "leaflet";
 import { Spin, Tag } from "antd";
 import { ClockCircleOutlined, EnvironmentOutlined, LoadingOutlined, RiseOutlined } from "@ant-design/icons";
+import { DARK_TILE_BASE_URL, DARK_TILE_REFERENCE_URL, DARK_TILE_ATTRIBUTION } from "../../constants/mapTiles.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -111,10 +112,8 @@ export default function RouteOverviewMap({ ride, compact = false }) {
           zoomSnap={0.5}
           style={{ height: "100%", width: "100%" }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
+          <TileLayer attribution={DARK_TILE_ATTRIBUTION} url={DARK_TILE_BASE_URL} />
+          <TileLayer url={DARK_TILE_REFERENCE_URL} />
           <FitRoute source={source} destination={destination} />
 
           <Marker position={[source.latitude, source.longitude]} icon={pinIcon("start")} />

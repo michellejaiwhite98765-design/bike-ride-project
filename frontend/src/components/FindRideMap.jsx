@@ -43,7 +43,6 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
   const activePinRef = useRef("source");
   const [routeInfo, setRouteInfo] = useState(null);
   const [reverseLoading, setReverseLoading] = useState(false);
-const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -59,19 +58,13 @@ const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
       boxZoom: false,
       keyboard: true,
     });
-L.tileLayer(
-  `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${cartoKey}`,
-  {
-    attribution:
-      '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: "abcd",
-    maxZoom: 20,
-  }
-).addTo(map);
-    // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    //   maxZoom: 19,
-    //   attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    // }).addTo(map);
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: '&copy; <a href="https://www.esri.com">Esri</a>',
+        maxZoom: 19,
+      }
+    ).addTo(map);
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
     mapRef.current = map;

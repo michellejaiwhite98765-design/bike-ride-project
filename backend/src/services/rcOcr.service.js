@@ -40,6 +40,11 @@ function run(command, args, { input, timeoutMs = env.rcOcr.timeoutMs } = {}) {
       if (code !== 0) return reject(new Error(`${command} failed: ${stderr.slice(0, 500)}`));
       resolve(stdout);
     });
+    // If the child exits/closes stdin before we finish writing (e.g. it
+    // errors out early on bad input), the write throws EPIPE on this
+    // stream. Left unhandled, that's an uncaught error that crashes the
+    // whole Node process instead of just failing this OCR call.
+    child.stdin.on("error", () => {});
     if (input) child.stdin.end(input); else child.stdin.end();
   });
 }

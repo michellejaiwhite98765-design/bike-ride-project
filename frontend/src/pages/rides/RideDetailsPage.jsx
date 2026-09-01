@@ -7,6 +7,7 @@ import styled from "styled-components";
 import { rideService } from "../../services/rideService.js";
 import { safetyService } from "../../services/safetyService.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import LocationPickerModal from "../../components/LocationPickerModal.jsx";
 import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
@@ -380,6 +381,7 @@ export default function RideDetailsPage() {
   const [dropModalOpen, setDropModalOpen] = useState(false);
   const [requestForm] = Form.useForm();
   const [reportForm] = Form.useForm();
+  useAutoCurrentLocation(requestForm, "pickup", { enabled: requestModalOpen });
   const [actionLoading, setActionLoading] = useState(false);
 
   async function load() {

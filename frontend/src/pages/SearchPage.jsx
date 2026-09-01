@@ -100,11 +100,13 @@ import { rideService } from "../services/rideService.js";
 import LocationFields from "../components/LocationFields.jsx";
 import RideCard from "../components/ride/RideCard.jsx";
 import FindRideMap from "../components/FindRideMap.jsx";
+import useAutoCurrentLocation from "../hooks/useAutoCurrentLocation.js";
 import "../styles/find-ride.css";
 
 export default function SearchPage() {
   const { message } = App.useApp();
   const [form] = Form.useForm();
+  useAutoCurrentLocation(form, "source");
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const sourceName = Form.useWatch("sourceName", form);

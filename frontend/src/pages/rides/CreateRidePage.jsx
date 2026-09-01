@@ -21,6 +21,7 @@ import RideCreationMap from "../../components/RideCreationMap.jsx";
 import colors from "../../theme/colors.js";
 import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
+import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
 import { parseSharedLocationLink, isShortLink } from "../../utils/parseSharedLocation.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
@@ -153,6 +154,7 @@ export default function CreateRidePage() {
   const [sharedLinkInput, setSharedLinkInput] = useState("");
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const isOnline = useOnlineStatus();
+  useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
   const sourceLatitude = Form.useWatch("sourceLatitude", form);

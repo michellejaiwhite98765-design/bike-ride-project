@@ -9,8 +9,8 @@ import { VEHICLE_TYPES, VEHICLE_COLORS, brandsForType, modelsForBrand } from "..
 
 const { Dragger } = Upload;
 
-const ACCENT = "#2563EB";
-const ACCENT_DARK = "#1D4ED8";
+const ACCENT = "#2DD4BF";
+const ACCENT_DARK = "#14B8A6";
 
 const STEPS = [
   { key: "details", label: "Details" },
@@ -174,7 +174,7 @@ const DropzoneWrap = styled.div`
   .ant-upload-drag:hover,
   .ant-upload-drag-hover {
     border-color: ${ACCENT};
-    background: #eff6ff;
+    background: rgba(45, 212, 191, 0.08);
   }
 
   .drop-icon {

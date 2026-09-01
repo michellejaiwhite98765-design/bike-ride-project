@@ -20,9 +20,9 @@ import colors from "../../theme/colors.js";
 
 const { Header, Content, Footer } = Layout;
 
-const ACCENT = "#2563EB";
-const ACCENT_DARK = "#1D4ED8";
-const ACCENT_SOFT = "#EFF6FF";
+const ACCENT = "#2DD4BF";
+const ACCENT_DARK = "#14B8A6";
+const ACCENT_SOFT = "rgba(45, 212, 191, 0.14)";
 
 
 const HeaderOuter = styled(Header)`
@@ -174,7 +174,7 @@ const AvatarButton = styled(Button)`
     border: none;
   }
   &.ant-btn:hover {
-    background: #dbeafe !important;
+    background: rgba(45, 212, 191, 0.24) !important;
     color: ${ACCENT_DARK} !important;
   }
 `;

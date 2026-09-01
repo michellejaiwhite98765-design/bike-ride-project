@@ -11,8 +11,8 @@ body,
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #ffffff;
-  color: #0f172a;
+  background: #05070d;
+  color: #f1f5f9;
 }
 
 a {
@@ -60,7 +60,7 @@ a {
 .ride-creation-map-shell {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(11, 15, 23, 0.75);
 }
 
 .ride-creation-map-toolbar {
@@ -70,12 +70,12 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, rgba(248, 251, 255, 0.98), rgba(239, 246, 255, 0.9));
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(135deg, rgba(11, 15, 23, 0.95), rgba(5, 7, 13, 0.9));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ride-map-title {
-  color: #0f172a;
+  color: #F1F5F9;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.25px;
@@ -83,7 +83,7 @@ a {
 
 .ride-map-subtitle {
   margin-top: 4px;
-  color: #64748b;
+  color: #94A3B8;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -97,15 +97,15 @@ a {
   align-items: center;
   gap: 6px;
   padding: 6px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  background: rgba(11, 15, 23, 0.9);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(12px);
 }
 
 .ride-map-control .ant-segmented {
-  background: #eff6ff;
+  background: rgba(45, 212, 191, 0.12);
 }
 
 .ride-creation-map {
@@ -121,14 +121,14 @@ a {
   height: 100%;
   width: 100%;
   z-index: 0;
-  background: #eef4f9;
+  background: #0F172A;
   cursor: crosshair;
   overscroll-behavior: contain;
 }
 
 .ride-creation-map .leaflet-control-zoom {
   border: 0 !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden;
   border-radius: 12px !important;
 }
@@ -137,14 +137,14 @@ a {
   width: 36px !important;
   height: 36px !important;
   line-height: 36px !important;
-  color: #334155 !important;
-  background: rgba(255, 255, 255, 0.94) !important;
+  color: #F1F5F9 !important;
+  background: rgba(11, 15, 23, 0.9) !important;
   border: 0 !important;
 }
 
 .ride-creation-map .leaflet-control-attribution {
   font-size: 9px;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(11, 15, 23, 0.75) !important;
 }
 
 .ride-creation-map-empty {
@@ -159,12 +159,12 @@ a {
   align-items: center;
   gap: 7px;
   padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+  background: rgba(11, 15, 23, 0.9);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   text-align: center;
-  color: #64748b;
+  color: #94A3B8;
   backdrop-filter: blur(16px);
   pointer-events: none;
 }
@@ -176,13 +176,13 @@ a {
   place-items: center;
   margin-bottom: 2px;
   border-radius: 14px;
-  color: #2563eb;
-  background: #eff6ff;
+  color: #2DD4BF;
+  background: rgba(45, 212, 191, 0.12);
   font-size: 21px;
 }
 
 .ride-creation-map-empty strong {
-  color: #0f172a;
+  color: #F1F5F9;
   font-size: 14px;
 }
 
@@ -202,9 +202,9 @@ a {
   gap: 9px;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
-  color: #334155;
+  background: rgba(11, 15, 23, 0.9);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: #F1F5F9;
   font-size: 12px;
   font-weight: 600;
   pointer-events: none;
@@ -220,10 +220,10 @@ a {
   align-items: center;
   flex-wrap: wrap;
   padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
+  background: rgba(11, 15, 23, 0.9);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   font-size: 11px;
   backdrop-filter: blur(12px);
 }
@@ -245,7 +245,7 @@ a {
 .legend-dot.end { background: #6366f1; }
 
 .route-status {
-  color: #64748b;
+  color: #94A3B8;
 }
 
 .ride-creation-modern-pin-wrapper {
@@ -266,7 +266,7 @@ a {
 }
 
 .ride-creation-modern-pin.is-start {
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  background: linear-gradient(135deg, #2DD4BF, #60a5fa);
 }
 
 .ride-creation-modern-pin.is-end {
@@ -336,10 +336,10 @@ body::-webkit-scrollbar,
 
 .ant-card {
   border-radius: 19px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .ant-card:hover {
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }

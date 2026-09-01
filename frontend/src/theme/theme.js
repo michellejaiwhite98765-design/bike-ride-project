@@ -1,9 +1,11 @@
+import { theme as antdThemeApi } from 'antd';
 import colors from './colors.js';
 
 // Ant Design theme configuration for BikeRide
 // This customizes Ant Design to match the modern BikeRide visual identity
 
 export const antDesignTheme = {
+  algorithm: antdThemeApi.darkAlgorithm,
   token: {
     // Colors
     colorPrimary: colors.primary,
@@ -93,7 +95,9 @@ export const antDesignTheme = {
   components: {
     // Button customization
     Button: {
-      primaryColor: colors.primary,
+      // NOT the button's accent color — this is antd's token for TEXT color on
+      // solid/primary buttons. It was set equal to the background color before,
+      // which made primary-button text invisible; leave unset for antd's default.
       borderRadius: 8,
       controlHeight: 40,
       fontWeight: 600,

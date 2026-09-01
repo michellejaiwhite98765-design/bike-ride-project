@@ -31,9 +31,9 @@ const PageContainer = styled.div`
   padding: 18px 24px 100px;
   min-height: 100%;
   background:
-    radial-gradient(circle at 90% 8%, rgba(224, 231, 255, 0.65), transparent 28%),
-    radial-gradient(circle at 8% 25%, rgba(219, 234, 254, 0.55), transparent 26%),
-    linear-gradient(180deg, #f8fbff 0%, #ffffff 58%, #f8fafc 100%);
+    radial-gradient(circle at 90% 8%, rgba(167, 139, 250, 0.14), transparent 28%),
+    radial-gradient(circle at 8% 25%, rgba(45, 212, 191, 0.14), transparent 26%),
+    linear-gradient(180deg, #05070d 0%, #05070d 58%, #0B0F17 100%);
 
   @media (max-width: 600px) {
     padding: 14px 14px 100px;
@@ -71,9 +71,9 @@ const RouteMapCard = styled(Card)`
   padding: 0;
   overflow: hidden;
   border-radius: 24px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 24px 60px rgba(37, 99, 235, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 15, 23, 0.85);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(18px);
 
   .ant-card-body {
@@ -98,8 +98,8 @@ const SectionHeader = styled.div`
     height: 30px;
     border-radius: 9px;
     font-size: 15px;
-    color: #2563eb;
-    background: #eff6ff;
+    color: #2DD4BF;
+    background: rgba(45, 212, 191, 0.12);
   }
 
   &:first-of-type {
@@ -110,9 +110,9 @@ const SectionHeader = styled.div`
 const FormCard = styled(Card)`
   margin-bottom: 24px;
   border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 15, 23, 0.85);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
 `;
 

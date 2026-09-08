@@ -125,17 +125,22 @@ export const vehicleService = {
     }
 
     const uploaded = await cloudinaryService.uploadRcDocument(file, vehicleId);
+    // WAY2API registry verification is skipped for now (no provider configured) —
+    // auto-verify as soon as the RC's OCR'd registration number matches the vehicle.
     const updated = await vehicleRepository.update(vehicleId, {
       rcDocumentUrl: uploaded.secureUrl,
       rcDocumentPublicId: uploaded.publicId,
-      verificationStatus: "PENDING",
+      verificationStatus: "VERIFIED",
+      verificationProvider: "AUTO_SKIP",
       verificationFailureReason: null,
+      verifiedAt: new Date(),
       rcExtractedRegistrationNumber: ocr.registrationNumber,
       rcOcrStatus: "MATCHED",
       updatedAt: new Date(),
     });
 
     await audit(null, { userId, action: "VEHICLE_RC_DOCUMENT_UPLOADED", entityType: "Vehicle", entityId: vehicleId, metadata: { rcOcrStatus: "MATCHED" } });
+    await audit(null, { userId, action: "VEHICLE_VERIFIED", entityType: "Vehicle", entityId: vehicleId, metadata: { provider: "AUTO_SKIP" } });
     return updated;
   },
 
@@ -150,7 +155,7 @@ export const vehicleService = {
       throw ApiError.badRequest("The uploaded RC does not match this vehicle registration number");
     }
 
-    if (vehicle.verificationStatus === "VERIFIED" && vehicle.verificationData) {
+    if (vehicle.verificationStatus === "VERIFIED") {
       return { vehicle, cached: true, providerResult: vehicle.verificationData };
     }
 

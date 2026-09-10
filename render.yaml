@@ -1,0 +1,54 @@
+# Render Blueprint for the BikeRide backend.
+# Deploy: on render.com, choose "New" -> "Blueprint", point it at this repo.
+# Render reads this file automatically and provisions the service below.
+#
+# DATABASE_URL and CLIENT_URL are marked sync:false, meaning Render will NOT
+# set a value for them automatically - you must paste them in yourself in the
+# Render dashboard after the Neon database and Vercel frontend exist:
+#   DATABASE_URL -> the connection string from your Neon project
+#   CLIENT_URL   -> your Vercel frontend URL, e.g. https://bikeride-frontend.vercel.app
+#
+# JWT_SECRET uses generateValue:true, so Render creates a random secret for
+# you automatically - no action needed for that one.
+
+services:
+  - type: web
+    name: bikeride-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: PAYMENT_KEY_ID
+        value: mock
+      - key: PAYMENT_KEY_SECRET
+        value: mock
+      - key: PAYMENT_WEBHOOK_SECRET
+        value: mock
+      - key: DEFAULT_PICKUP_RADIUS_KM
+        value: "2"
+      - key: DEFAULT_DESTINATION_RADIUS_KM
+        value: "2"
+      - key: DEFAULT_TIME_WINDOW_MINUTES
+        value: "30"
+      - key: PLATFORM_FEE_FLAT
+        value: "5"
+      - key: TRACKING_SNAPSHOT_INTERVAL_MS
+        value: "20000"
+      - key: TRACKING_STALE_AFTER_MS
+        value: "30000"

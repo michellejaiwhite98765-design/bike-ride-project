@@ -135,7 +135,7 @@ export default function BookingsPage() {
                     </div>
                     <div className="detail">
                       <DollarCircleOutlined className="icon" />
-                      <span>{b.seatsBooked} seat{b.seatsBooked !== 1 ? "s" : ""}</span>
+                      <span>{b.seats} seat{b.seats !== 1 ? "s" : ""}</span>
                     </div>
                   </BookingDetails>
                 </BookingCard>

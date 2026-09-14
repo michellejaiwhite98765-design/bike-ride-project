@@ -92,7 +92,7 @@
 //   );
 // }
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Card, Form, DatePicker, TimePicker, InputNumber, Select, Button, List, Empty, App } from "antd";
 import { SearchOutlined, EnvironmentOutlined, SwapOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -141,13 +141,16 @@ export default function SearchPage() {
     }
   }
 
-  const setMapLocation = (prefix, location) => {
-    form.setFieldsValue({
-      [`${prefix}Name`]: location.name,
-      [`${prefix}Latitude`]: location.lat,
-      [`${prefix}Longitude`]: location.lng,
-    });
-  };
+  const setMapLocation = useCallback(
+    (prefix, location) => {
+      form.setFieldsValue({
+        [`${prefix}Name`]: location.name,
+        [`${prefix}Latitude`]: location.lat,
+        [`${prefix}Longitude`]: location.lng,
+      });
+    },
+    [form]
+  );
 
   const swapLocations = () => {
     const values = form.getFieldsValue([

@@ -29,4 +29,9 @@ export const rideRequestService = {
     if (ride.riderId !== userId) throw ApiError.forbidden("You do not own this ride");
     return rideRequestRepository.findByRide(rideId);
   },
+
+  /** The current user's own active (REQUESTED/ACCEPTED) request for this ride, or null. Lets the passenger's own UI show/withdraw a pending request without exposing the owner-only full request list. */
+  async getMine(passengerId, rideId) {
+    return rideRequestRepository.findActiveByRideAndPassenger(rideId, passengerId);
+  },
 };

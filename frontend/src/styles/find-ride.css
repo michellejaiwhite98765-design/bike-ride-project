@@ -281,7 +281,7 @@
   margin: 0 10px;
   border-radius: 20px;
   overflow: hidden;
-  min-height: clamp(400px, calc(100vh - 330px), 560px);
+  min-height: clamp(320px, calc(100vh - 420px), 420px);
   background: #0B0F17;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -457,15 +457,16 @@
 }
 
 .br-findride-ride-marker {
-  width: 14px;
-  height: 14px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #2DD4BF;
-  border: 3px solid #fff;
+  border: 2.5px solid #fff;
   box-shadow: 0 0 0 5px rgba(37,99,235,.16), 0 5px 13px rgba(20,36,60,.22);
   display: grid;
   place-items: center;
   cursor: pointer;
+  color: #fff;
   transition: transform .15s ease;
 }
 
@@ -473,11 +474,74 @@
   transform: scale(1.15);
 }
 
-.br-findride-ride-marker span {
-  width: 4px;
-  height: 4px;
-  background: #0B0F17;
+.br-findride-ride-marker svg {
+  display: block;
+}
+
+.br-findride-me {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+
+.br-findride-me-dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.br-findride-me-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(37,99,235,.35);
+  animation: brMePulse 1.8s infinite;
+}
+
+@keyframes brMePulse {
+  0% { transform: scale(.5); opacity: .9; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+.br-findride-place-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--place-color, #94a3b8);
+  box-shadow: 0 3px 8px rgba(20,36,60,.3);
+  display: grid;
+  place-items: center;
+  color: var(--place-color, #94a3b8);
+  cursor: pointer;
+}
+
+.br-findride-place-marker svg {
+  display: block;
+}
+
+.br-findride-distance-label {
+  background: rgba(15,23,42,.85) !important;
+  border: 0 !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  box-shadow: none !important;
+}
+
+.br-findride-distance-label::before {
+  display: none !important;
 }
 
 .leaflet-popup-content-wrapper {

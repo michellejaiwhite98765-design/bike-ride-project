@@ -13,6 +13,11 @@ export const rideRequestController = {
     ok(res, requests);
   },
 
+  async getMine(req, res) {
+    const rideRequest = await rideRequestService.getMine(req.user.id, req.params.rideId);
+    ok(res, rideRequest);
+  },
+
   async accept(req, res) {
     const booking = await bookingService.acceptRequest(req.user.id, req.params.id);
     ok(res, booking, "Request accepted");

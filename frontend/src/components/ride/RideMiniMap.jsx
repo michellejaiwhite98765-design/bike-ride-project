@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import { ClockCircleOutlined, RiseOutlined } from "@ant-design/icons";
 import { haversineKm } from "../../utils/geo.js";
@@ -32,13 +32,55 @@ async function getRoute(source, destination) {
 }
 
 /**
+ * Fits the map to the start/end pins (plus the route line, once loaded)
+ * instead of relying on a fixed zoom - a fixed zoom around the midpoint
+ * routinely pushes one or both pins outside this map's short, wide
+ * viewport for anything but the closest routes.
+ */
+function FitBounds({ points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (points.length === 0) return undefined;
+    // invalidateSize() first: when this map mounts straight into a
+    // freshly-swapped-in card (e.g. the homepage's compact/expanded
+    // toggle), the container can still be settling into the layout Leaflet
+    // last measured, and fitBounds() against a stale/zero size throws
+    // "Cannot read properties of undefined (reading '_leaflet_pos')".
+    try {
+      map.invalidateSize();
+      map.fitBounds(L.latLngBounds(points), { padding: [18, 18] });
+    } catch {
+      // Same class of issue mid-teardown (see below) - the map is on its
+      // way out either way, nothing to recover here.
+    }
+    return () => {
+      // Cancel any in-flight pan/zoom animation so it can't fire again
+      // once unmounted. Wrapped in try/catch because if the card was
+      // swapped away fast enough (e.g. rapid taps), Leaflet's own parent
+      // MapContainer teardown can already be mid-flight by the time this
+      // runs, and calling any method on a half-removed map throws the same
+      // "_leaflet_pos" error - Leaflet owns this DOM outside React, so a
+      // stale-instance error here is expected, not a bug to chase further.
+      try {
+        map.stop();
+      } catch {
+        // Map already torn down - nothing to stop.
+      }
+    };
+  }, [map, points]);
+
+  return null;
+}
+
+/**
  * Small, non-interactive route preview used inside ride cards — just the
  * start/end pins and a distance + real (OSRM) drive-time chip. Falls back to
  * a straight line + haversine distance if the route API is unreachable, and
  * only shows a minutes figure when a value was actually available (never a
  * fabricated estimate).
  */
-export default function RideMiniMap({ ride }) {
+export default function RideMiniMap({ ride, showChips = true }) {
   const [route, setRoute] = useState({ points: [], distanceKm: null, durationMin: null });
 
   const source = useMemo(
@@ -77,6 +119,10 @@ export default function RideMiniMap({ ride }) {
   if (!hasCoords) return null;
 
   const center = [(source.latitude + destination.latitude) / 2, (source.longitude + destination.longitude) / 2];
+  const boundsPoints =
+    route.points.length > 1
+      ? route.points
+      : [[source.latitude, source.longitude], [destination.latitude, destination.longitude]];
 
   return (
     <div className="rmm-shell">
@@ -97,6 +143,8 @@ export default function RideMiniMap({ ride }) {
         <TileLayer url={LIGHT_TILE_BASE_URL} />
         <TileLayer url={LIGHT_TILE_REFERENCE_URL} />
 
+        <FitBounds points={boundsPoints} />
+
         <Marker position={[source.latitude, source.longitude]} icon={pinIcon("start")} />
         <Marker position={[destination.latitude, destination.longitude]} icon={pinIcon("end")} />
 
@@ -108,18 +156,20 @@ export default function RideMiniMap({ ride }) {
         )}
       </MapContainer>
 
-      <div className="rmm-chips">
-        {route.distanceKm != null && (
-          <span className="rmm-chip">
-            <RiseOutlined /> {route.distanceKm.toFixed(1)} km
-          </span>
-        )}
-        {route.durationMin != null && (
-          <span className="rmm-chip">
-            <ClockCircleOutlined /> {Math.max(1, Math.round(route.durationMin))} min
-          </span>
-        )}
-      </div>
+      {showChips && (
+        <div className="rmm-chips">
+          {route.distanceKm != null && (
+            <span className="rmm-chip">
+              <RiseOutlined /> {route.distanceKm.toFixed(1)} km
+            </span>
+          )}
+          {route.durationMin != null && (
+            <span className="rmm-chip">
+              <ClockCircleOutlined /> {Math.max(1, Math.round(route.durationMin))} min
+            </span>
+          )}
+        </div>
+      )}
 
       <style>{`
         .rmm-shell{position:relative;height:110px;border-radius:12px;overflow:hidden;pointer-events:none;border:1px solid #e2e8f0}

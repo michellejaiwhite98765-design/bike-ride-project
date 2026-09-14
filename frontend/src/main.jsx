@@ -21,3 +21,15 @@ createRoot(document.getElementById("root")).render(
     </ConfigProvider>
   </StrictMode>
 );
+
+// Registers the app-shell service worker so BikeRide is installable
+// (Add to Home Screen / desktop install) and still boots offline.
+// Skipped in dev - Vite's own dev server + HMR shouldn't be cached.
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Installability is a progressive enhancement - failing silently
+      // here just means the app behaves as a normal (non-installable) SPA.
+    });
+  });
+}

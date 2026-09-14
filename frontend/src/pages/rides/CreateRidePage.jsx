@@ -11,6 +11,7 @@ import {
   LinkOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -117,6 +118,21 @@ const FormCard = styled(Card)`
   backdrop-filter: blur(10px);
 `;
 
+const WEEKDAY_OPTIONS = [
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+  { label: "Sun", value: 0 },
+];
+
+// Safety cap on how many extra ride rows a single "repeat" submission can
+// generate - the weekday x date-range picker below can't produce more than
+// this in practice, but the cap guards against pathological inputs.
+const MAX_REPEAT_OCCURRENCES = 30;
+
 const ActionButtons = styled.div`
   display: flex;
   gap: 12px;
@@ -157,6 +173,8 @@ export default function CreateRidePage() {
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
+  const departureDate = Form.useWatch("departureDate", form);
+  const repeatEnabled = Form.useWatch("repeatEnabled", form);
   const sourceLatitude = Form.useWatch("sourceLatitude", form);
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
@@ -272,7 +290,7 @@ export default function CreateRidePage() {
           tipAmount: Number(ride.tipAmount),
         });
       } else {
-        form.setFieldsValue({ rideType: "WITHOUT_TIP", tipAmount: 0, availableSeats: 1, pickupPreference: "ON_ROUTE" });
+        form.setFieldsValue({ rideType: "WITHOUT_TIP", tipAmount: 0, availableSeats: 1, pickupPreference: "ON_ROUTE", repeatEnabled: false, repeatDays: [] });
       }
       setLoading(false);
     }
@@ -299,7 +317,16 @@ export default function CreateRidePage() {
         return;
       }
       setSubmitting(true);
-      const { agreeTerms: _agreeTerms, agreeSecurity: _agreeSecurity, sourceCountry: _sourceCountry, destinationCountry: _destinationCountry, ...rest } = values;
+      const {
+        agreeTerms: _agreeTerms,
+        agreeSecurity: _agreeSecurity,
+        sourceCountry: _sourceCountry,
+        destinationCountry: _destinationCountry,
+        repeatEnabled: _repeatEnabled,
+        repeatDays: _repeatDays,
+        repeatUntil: _repeatUntil,
+        ...rest
+      } = values;
       const payload = { ...rest, departureDate: values.departureDate.format("YYYY-MM-DD") };
       if (values.rideType === "WITHOUT_TIP") payload.tipAmount = 0;
 
@@ -315,6 +342,37 @@ export default function CreateRidePage() {
       }
 
       message.success(publish ? "Ride published" : "Ride saved as draft");
+
+      // Recurring rides: fire off the same create(+publish) call once per
+      // matching weekday between the original departure date and the chosen
+      // end date. Each occurrence is an independent ride row - same model,
+      // matching, and booking logic as a normal ride, just created in a loop.
+      if (!isEdit && values.repeatEnabled && values.repeatDays?.length && values.repeatUntil) {
+        const daysSet = new Set(values.repeatDays);
+        const occurrences = [];
+        let cursor = values.departureDate.add(1, "day");
+        while (!cursor.isAfter(values.repeatUntil, "day") && occurrences.length < MAX_REPEAT_OCCURRENCES) {
+          if (daysSet.has(cursor.day())) occurrences.push(cursor);
+          cursor = cursor.add(1, "day");
+        }
+
+        let created = 0;
+        for (const occurrenceDate of occurrences) {
+          try {
+            const occurrencePayload = { ...payload, departureDate: occurrenceDate.format("YYYY-MM-DD") };
+            let occurrenceRide = await rideService.create(occurrencePayload);
+            if (publish) occurrenceRide = await rideService.publish(occurrenceRide.id);
+            created += 1;
+          } catch {
+            // Skip individual occurrence failures (e.g. a transient clash) -
+            // the primary ride above already succeeded either way.
+          }
+        }
+        if (created > 0) {
+          message.success(`${created} additional repeat ride${created === 1 ? "" : "s"} created`);
+        }
+      }
+
       navigate(`/rides/${ride.id}`);
     } catch (err) {
       if (err?.errorFields) return;
@@ -447,6 +505,45 @@ export default function CreateRidePage() {
             <Input size="large" placeholder="08:00" />
           </Form.Item>
         </FormCard>
+
+        {!isEdit && (
+          <>
+            <SectionHeader>
+              <SyncOutlined className="icon" />
+              Repeat
+            </SectionHeader>
+            <FormCard>
+              <Form.Item name="repeatEnabled" valuePropName="checked" style={{ marginBottom: repeatEnabled ? 16 : 0 }}>
+                <Checkbox>Repeat this ride on future dates</Checkbox>
+              </Form.Item>
+              {repeatEnabled && (
+                <>
+                  <Form.Item
+                    name="repeatDays"
+                    label="Repeat on"
+                    rules={[{ required: true, type: "array", min: 1, message: "Pick at least one day" }]}
+                  >
+                    <Checkbox.Group options={WEEKDAY_OPTIONS} />
+                  </Form.Item>
+                  <Form.Item
+                    name="repeatUntil"
+                    label="Repeat until"
+                    rules={[{ required: true, message: "Pick an end date" }]}
+                    extra="A separate ride is published for each matching day between your departure date and this date."
+                  >
+                    <DatePicker
+                      size="large"
+                      style={{ width: "100%" }}
+                      disabledDate={(d) =>
+                        d && (d <= (departureDate || dayjs()).startOf("day") || d > dayjs().add(12, "week").endOf("day"))
+                      }
+                    />
+                  </Form.Item>
+                </>
+              )}
+            </FormCard>
+          </>
+        )}
 
         {/* Vehicle & Capacity Section */}
         <SectionHeader>

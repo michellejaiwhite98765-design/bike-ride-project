@@ -34,6 +34,9 @@ export const rideService = {
   listRequests(rideId) {
     return api.get(`/rides/${rideId}/requests`).then((res) => res.data);
   },
+  getMyRequest(rideId) {
+    return api.get(`/rides/${rideId}/requests/mine`).then((res) => res.data);
+  },
   acceptRequest(requestId) {
     return api.put(`/ride-requests/${requestId}/accept`).then((res) => res.data);
   },

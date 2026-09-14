@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { PERSON_ICON_SVG, vehicleIconSvg } from "../utils/mapIcons.js";
+import { fetchNearbyPlaces } from "../utils/nearbyPlaces.js";
 
 const DEFAULT_CENTER = [10.25, 77.45];
 const DEFAULT_ZOOM = 7.2;
+const MY_LOCATION_ZOOM = 14;
+const PLACE_LINE_COLOR = "#22C55E";
 
 const pinIcon = (type) =>
   L.divIcon({
@@ -13,10 +17,26 @@ const pinIcon = (type) =>
     iconAnchor: [11, 30],
   });
 
-const rideIcon = () =>
+const rideIcon = (vehicleType) =>
   L.divIcon({
     className: "br-findride-marker-wrap",
-    html: `<div class="br-findride-ride-marker"><span></span></div>`,
+    html: `<div class="br-findride-ride-marker">${vehicleIconSvg(vehicleType)}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+
+const meIcon = () =>
+  L.divIcon({
+    className: "br-findride-marker-wrap",
+    html: `<div class="br-findride-me"><div class="br-findride-me-ring"></div><div class="br-findride-me-dot">${PERSON_ICON_SVG}</div></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+
+const placeIcon = (place) =>
+  L.divIcon({
+    className: "br-findride-marker-wrap",
+    html: `<div class="br-findride-place-marker" style="--place-color:${place.color}">${place.icon}</div>`,
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   });
@@ -43,6 +63,32 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
   const activePinRef = useRef("source");
   const [routeInfo, setRouteInfo] = useState(null);
   const [reverseLoading, setReverseLoading] = useState(false);
+  const [myLocation, setMyLocation] = useState(null);
+  const meMarkerRef = useRef(null);
+  const placeMarkersRef = useRef([]);
+  const hasCenteredOnMeRef = useRef(false);
+  const hasFetchedMyLocationRef = useRef(false);
+
+  // Independent of the pickup/destination pins - a fixed "you are here"
+  // reference point at the visitor's real GPS position, so it stays put even
+  // if they later set pickup somewhere else (e.g. picking up a friend).
+  // Guarded by a ref (not just the empty dep array) so React StrictMode's
+  // dev-only double-invoke of this effect can't fire setMyLocation twice in
+  // a row - that second update raced the map's own StrictMode remount and
+  // could leave the "me" marker added-then-orphaned with no re-render left
+  // to recreate it.
+  useEffect(() => {
+    if (!navigator.geolocation || hasFetchedMyLocationRef.current) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (hasFetchedMyLocationRef.current) return;
+        hasFetchedMyLocationRef.current = true;
+        setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {},
+      { timeout: 6000 }
+    );
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -94,6 +140,11 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
     setTimeout(() => map.invalidateSize(), 100);
 
     return () => {
+      try {
+        map.stop();
+      } catch {
+        // Map already torn down.
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -252,7 +303,7 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
       const lng = Number(ride.sourceLongitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-      const marker = L.marker([lat, lng], { icon: rideIcon(), keyboard: false })
+      const marker = L.marker([lat, lng], { icon: rideIcon(ride.vehicle?.vehicleType), keyboard: false })
         .addTo(map)
         .bindPopup(
           `<div class="br-findride-ride-popup">` +
@@ -269,6 +320,96 @@ export default function FindRideMap({ source, destination, results = [], onMapLo
       rideMarkersRef.current = [];
     };
   }, [results]);
+
+  // "You are here" marker - centers/zooms the map on first fix only, so it
+  // doesn't yank the view back to the visitor's GPS position every time this
+  // effect re-runs after that (e.g. once the ride list refreshes).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !myLocation) return undefined;
+
+    try {
+      meMarkerRef.current?.remove();
+      meMarkerRef.current = L.marker([myLocation.lat, myLocation.lng], {
+        icon: meIcon(),
+        keyboard: false,
+        zIndexOffset: 1000,
+      })
+        .addTo(map)
+        .bindPopup("You are here");
+
+      if (!hasCenteredOnMeRef.current) {
+        hasCenteredOnMeRef.current = true;
+        map.invalidateSize();
+        map.setView([myLocation.lat, myLocation.lng], MY_LOCATION_ZOOM);
+      }
+    } catch {
+      // Map may be mid-teardown (e.g. React StrictMode's dev-only double
+      // mount) - safe to skip, the next effect run will retry cleanly.
+    }
+
+    return () => {
+      try {
+        meMarkerRef.current?.remove();
+      } catch {
+        // Map already torn down.
+      }
+      meMarkerRef.current = null;
+    };
+  }, [myLocation]);
+
+  // Nearby "busy places" (bus stand / airport / mall) - fetched once the
+  // visitor's location is known, each connected back to it with a dashed
+  // line and a permanent label showing the distance.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !myLocation) return undefined;
+
+    let cancelled = false;
+    fetchNearbyPlaces(myLocation.lat, myLocation.lng)
+      .then((places) => {
+        if (cancelled) return;
+        try {
+          placeMarkersRef.current.forEach((layer) => layer.remove());
+          placeMarkersRef.current = [];
+
+          places.forEach((place) => {
+            const marker = L.marker([place.lat, place.lng], { icon: placeIcon(place), keyboard: false })
+              .addTo(map)
+              .bindPopup(`<strong>${escapeHtml(place.name)}</strong><br/>${place.category} · ${place.distanceKm.toFixed(1)} km away`);
+
+            const line = L.polyline(
+              [
+                [myLocation.lat, myLocation.lng],
+                [place.lat, place.lng],
+              ],
+              { color: PLACE_LINE_COLOR, weight: 2, opacity: 0.7, dashArray: "3 8" }
+            )
+              .addTo(map)
+              .bindTooltip(`${place.distanceKm.toFixed(1)} km`, {
+                permanent: true,
+                direction: "center",
+                className: "br-findride-distance-label",
+              });
+
+            placeMarkersRef.current.push(marker, line);
+          });
+        } catch {
+          // Map may be mid-teardown (e.g. visitor navigated away while the
+          // Overpass request was in flight) - safe to skip.
+        }
+      })
+      .catch(() => {
+        // Overpass can be slow/unreachable - the map still works fine
+        // without the nearby-places overlay, so just skip it silently.
+      });
+
+    return () => {
+      cancelled = true;
+      placeMarkersRef.current.forEach((layer) => layer.remove());
+      placeMarkersRef.current = [];
+    };
+  }, [myLocation]);
 
   const choosePin = (pin) => {
     activePinRef.current = pin;

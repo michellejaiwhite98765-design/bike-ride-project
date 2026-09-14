@@ -383,13 +383,36 @@ export default function RideDetailsPage() {
   const [reportForm] = Form.useForm();
   useAutoCurrentLocation(requestForm, "pickup", { enabled: requestModalOpen });
   const [actionLoading, setActionLoading] = useState(false);
+  const [myRequest, setMyRequest] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   async function load() {
     setLoading(true);
     try {
-      setRide(await rideService.getById(id));
+      const loadedRide = await rideService.getById(id);
+      setRide(loadedRide);
+      // Only passengers have an "own request" to track - skip the extra call for the ride's owner.
+      if (loadedRide.riderId !== user.id) {
+        rideService.getMyRequest(id).then(setMyRequest).catch(() => setMyRequest(null));
+      } else {
+        setMyRequest(null);
+      }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function withdrawRequest() {
+    if (!myRequest) return;
+    setWithdrawing(true);
+    try {
+      await rideService.cancelRequest(myRequest.id);
+      message.success("Request withdrawn");
+      setMyRequest(null);
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setWithdrawing(false);
     }
   }
 
@@ -698,7 +721,7 @@ export default function RideDetailsPage() {
 
           {/* Action Buttons */}
           <ActionButtons>
-            {!isOwner && ride.status === "PUBLISHED" && (
+            {!isOwner && ride.status === "PUBLISHED" && !myRequest && (
               <Button
                 type="primary"
                 size="large"
@@ -713,6 +736,22 @@ export default function RideDetailsPage() {
               >
                 Request to Join
               </Button>
+            )}
+
+            {!isOwner && myRequest?.status === "REQUESTED" && (
+              <Popconfirm title="Withdraw your request to join this ride?" onConfirm={withdrawRequest}>
+                <Button size="large" danger loading={withdrawing} style={{ flex: 1 }}>
+                  Withdraw Request (Pending)
+                </Button>
+              </Popconfirm>
+            )}
+
+            {!isOwner && myRequest?.status === "ACCEPTED" && (
+              <Link to="/bookings" style={{ flex: 1 }}>
+                <Button size="large" block>
+                  Request Accepted — View Booking
+                </Button>
+              </Link>
             )}
 
             {isOwner && (

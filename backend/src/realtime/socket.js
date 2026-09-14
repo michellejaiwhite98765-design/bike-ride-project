@@ -7,11 +7,16 @@ import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { rideTrackingRepository } from "../repositories/rideTracking.repository.js";
 import { locationStore } from "./locationStore.js";
+import { setIo } from "./io.js";
 
 const lastSnapshotAtByRide = new Map();
 
 function roomFor(rideId) {
   return `ride:${rideId}`;
+}
+
+function userRoomFor(userId) {
+  return `user:${userId}`;
 }
 
 async function authenticateSocket(socket, next) {
@@ -43,8 +48,14 @@ export function initSocket(httpServer) {
   });
 
   io.use(authenticateSocket);
+  setIo(io);
 
   io.on("connection", (socket) => {
+    // Every authenticated socket joins its own user room so services outside
+    // the realtime layer (see notification.service.js) can push events to a
+    // specific user without knowing which ride room, if any, they're in.
+    socket.join(userRoomFor(socket.data.userId));
+
     socket.on("ride:join", async (rideId, callback) => {
       const access = await assertRideAccess(rideId, socket.data.userId);
       if (!access.ok) {

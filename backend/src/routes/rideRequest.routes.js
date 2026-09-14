@@ -33,3 +33,19 @@ export const rideRequestRoutes = Router({ mergeParams: true });
  */
 rideRequestRoutes.post("/", validateBody(createRideRequestSchema), rideRequestController.create);
 rideRequestRoutes.get("/", rideRequestController.listForRide);
+
+/**
+ * @openapi
+ * /rides/{rideId}/requests/mine:
+ *   get:
+ *     tags: [Ride Requests]
+ *     summary: Get the current user's own active request for this ride (REQUESTED/ACCEPTED), or null
+ *     parameters:
+ *       - in: path
+ *         name: rideId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: The caller's active request for this ride, or null }
+ */
+rideRequestRoutes.get("/mine", rideRequestController.getMine);

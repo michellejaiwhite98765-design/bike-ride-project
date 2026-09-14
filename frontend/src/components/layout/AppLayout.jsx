@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Layout, Dropdown, Drawer, Button, Badge as AntBadge } from "antd";
+import { Layout, Dropdown, Drawer, Button, Badge as AntBadge, App as AntdApp } from "antd";
 import {
   HomeOutlined,
   SearchOutlined,
@@ -16,6 +16,8 @@ import {
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { locationService } from "../../services/locationService.js";
+import { notificationService } from "../../services/notificationService.js";
+import { connectSocket, disconnectSocket } from "../../services/socket.js";
 import colors from "../../theme/colors.js";
 
 const { Header, Content, Footer } = Layout;
@@ -247,8 +249,10 @@ export default function AppLayout() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { message } = AntdApp.useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -262,6 +266,43 @@ export default function AppLayout() {
     }
   }, [isAuthenticated]);
 
+  // Keep the bell badge in sync with real unread notifications: an initial
+  // fetch (also re-run whenever the route changes, which cheaply covers the
+  // "just read some on /notifications" case without needing shared state
+  // between that page and this layout), plus a live bump when a notification
+  // arrives over the socket while the app is open.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+    notificationService
+      .list()
+      .then((data) => {
+        if (!cancelled) setUnreadCount(Array.isArray(data) ? data.filter((n) => !n.isRead).length : 0);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, location.pathname]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const socket = connectSocket();
+
+    const onNotification = (notification) => {
+      setUnreadCount((count) => count + 1);
+      message.info(notification?.title || "You have a new notification");
+    };
+    socket.on("notification:new", onNotification);
+
+    return () => {
+      socket.off("notification:new", onNotification);
+    };
+  }, [isAuthenticated, message]);
+
   async function requestLocationPermission() {
     try {
       await locationService.requestPermission();
@@ -273,6 +314,7 @@ export default function AppLayout() {
 
   async function handleLogout() {
     await logout();
+    disconnectSocket();
     navigate("/");
   }
 
@@ -325,7 +367,7 @@ export default function AppLayout() {
               <>
                 <Link to="/notifications">
                   <NotificationIcon>
-                    <AntBadge count={0} color={ACCENT}>
+                    <AntBadge count={unreadCount} color={ACCENT}>
                       <BellOutlined />
                     </AntBadge>
                   </NotificationIcon>
@@ -464,7 +506,9 @@ export default function AppLayout() {
             Rides
           </BottomNavItem>
           <BottomNavItem to="/notifications" $active={location.pathname === "/notifications"}>
-            <BellOutlined />
+            <AntBadge dot={unreadCount > 0} color={ACCENT} offset={[-2, 2]}>
+              <BellOutlined />
+            </AntBadge>
             Alerts
           </BottomNavItem>
           <BottomNavItem to="/profile" $active={location.pathname === "/profile"}>

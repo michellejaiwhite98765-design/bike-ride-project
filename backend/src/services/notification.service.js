@@ -2,12 +2,17 @@ import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { notificationRepository } from "../repositories/notification.repository.js";
 import { logger } from "../config/logger.js";
+import { emitToUser } from "../realtime/io.js";
 
 // Single fan-in point for every notification. In-app only for this MVP; email/push
 // channels can be added here later without touching the call sites below.
+// Also pushes the same row over the user's Socket.IO room (if connected) so
+// the bell badge and a toast update live instead of only on next page load;
+// the DB write is still the source of truth - the socket emit is best-effort.
 async function dispatch({ userId, type, title, message, data }) {
   try {
-    await notificationRepository.create({ userId, type, title, message, data });
+    const notification = await notificationRepository.create({ userId, type, title, message, data });
+    emitToUser(userId, "notification:new", notification);
   } catch (err) {
     logger.warn(`Notification dispatch failed (${type} -> ${userId}): ${err.message}`);
   }

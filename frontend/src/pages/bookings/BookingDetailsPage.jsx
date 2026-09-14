@@ -68,6 +68,65 @@ export default function BookingDetailsPage() {
     }
   }
 
+  // Printable receipt built client-side from data already on this page - no
+  // backend endpoint needed. Printed via a hidden iframe (rather than
+  // window.open) so it can't be blocked by the browser's popup blocker;
+  // the user can save it as a PDF or print it directly from the dialog.
+  function downloadReceipt() {
+    const rows = [
+      ["Booking ID", booking.id],
+      ["Rider", `${booking.ride.rider?.firstName ?? ""} ${booking.ride.rider?.lastName ?? ""}`.trim()],
+      ["Route", `${booking.ride.sourceName} → ${booking.ride.destinationName}`],
+      ["Date", dayjs(booking.ride.departureDate).format("DD MMM YYYY")],
+      ["Time", booking.ride.departureTime],
+      [
+        "Vehicle",
+        `${booking.ride.vehicle?.brand ?? ""} ${booking.ride.vehicle?.model ?? ""} (${booking.ride.vehicle?.registrationNumber ?? ""})`,
+      ],
+      ["Seats", booking.seats],
+      ["Tip", isFree ? "₹0" : `₹${booking.tipAmount}`],
+      ...(isFree ? [] : [["Platform Fee", `₹${booking.platformFee}`]]),
+      ["Total Paid", `₹${booking.totalAmount}`],
+      ["Payment Status", booking.paymentStatus],
+    ];
+    const rowsHtml = rows
+      .map(([label, value]) => `<tr><td class="label">${label}</td><td>${value}</td></tr>`)
+      .join("");
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+      <html><head><title>Receipt - ${booking.id}</title>
+      <style>
+        body { font-family: -apple-system, Segoe UI, Arial, sans-serif; padding: 24px; color: #111; }
+        h1 { font-size: 18px; margin: 0 0 4px; }
+        .sub { color: #666; margin-bottom: 20px; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .label { color: #666; width: 40%; }
+        .total td { font-weight: 700; font-size: 16px; border-bottom: none; padding-top: 12px; }
+      </style></head>
+      <body>
+        <h1>BikeRide — Trip Receipt</h1>
+        <div class="sub">Issued ${dayjs().format("DD MMM YYYY, HH:mm")}</div>
+        <table>${rowsHtml}</table>
+      </body></html>`);
+    doc.close();
+
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 1000);
+  }
+
   async function submitRating() {
     try {
       const values = await rateForm.validateFields();
@@ -133,6 +192,11 @@ export default function BookingDetailsPage() {
           {booking.ride.status === "COMPLETED" && booking.bookingStatus === "CONFIRMED" && (
             <Button size="large" onClick={() => setRateOpen(true)}>
               Rate this ride
+            </Button>
+          )}
+          {booking.bookingStatus === "CONFIRMED" && (
+            <Button size="large" onClick={downloadReceipt}>
+              Download Receipt
             </Button>
           )}
         </div>

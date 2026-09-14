@@ -239,7 +239,7 @@ function HomePage() {
           </div>
         )}
 
-        <section className="br-hero br-hero-embedded" style={upcomingRides.length > 0 ? { paddingTop: 8 } : undefined}>
+        <section className="br-hero br-hero-embedded" style={upcomingRides.length > 0 ? { paddingTop: 24 } : undefined}>
           <div className="br-hero-glow br-glow-one" />
           <div className="br-hero-glow br-glow-two" />
 

@@ -292,7 +292,7 @@ export default function UpcomingRideBanner({ ride, compact = false, onActivate }
 function CardStyles() {
   return (
     <style>{`
-      .urb-card{position:relative;padding:12px;border-radius:18px;background:linear-gradient(160deg,#141a24,#0a0d13);border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 26px rgba(0,0,0,.4);cursor:pointer;display:flex;flex-direction:column;gap:10px;transform-origin:center;transition:border-color .35s cubic-bezier(.4,0,.2,1),box-shadow .35s cubic-bezier(.4,0,.2,1);height:100%}
+      .urb-card{position:relative;padding:16px 16px 20px;border-radius:18px;background:linear-gradient(160deg,#141a24,#0a0d13);border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 26px rgba(0,0,0,.4);cursor:pointer;display:flex;flex-direction:column;gap:10px;transform-origin:center;transition:border-color .35s cubic-bezier(.4,0,.2,1),box-shadow .35s cubic-bezier(.4,0,.2,1);height:100%}
       .urb-card:not(.urb-compact):hover{border-color:rgba(255,255,255,.16);box-shadow:0 24px 50px rgba(0,0,0,.55)}
 
       .urb-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}

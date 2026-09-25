@@ -98,7 +98,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30 }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30, includeFull = false }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -111,7 +111,7 @@ export const rideRepository = {
     const sourceDistanceExpr = `ST_Distance(r.source_geog, ${sourcePoint()}) AS source_distance_m`;
     const destinationDistanceExpr = `ST_Distance(r.destination_geog, ${destinationPoint()}) AS destination_distance_m`;
     const dateParam = p(date);
-    const seatsParam = p(seats);
+    const seatsClause = includeFull ? "" : `AND r.available_seats >= ${p(seats)}`;
     const rideTypeClause = rideType ? `AND r.ride_type = ${p(rideType)}::"RideType"` : "";
     let timeClause = "";
     if (time) {
@@ -137,7 +137,7 @@ export const rideRepository = {
            AND v.verification_status = 'VERIFIED'
            AND v.is_active = true
            AND r.departure_date = ${dateParam}::date
-           AND r.available_seats >= ${seatsParam}
+           ${seatsClause}
            ${rideTypeClause}
            ${timeClause}
            AND ${sourceDWithin}

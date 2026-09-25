@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, Form, Input, InputNumber, Select, DatePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
+import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
 import {
   EnvironmentOutlined,
   CarOutlined,
@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   AimOutlined,
   LinkOutlined,
+  MenuOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   SyncOutlined,
@@ -26,62 +27,6 @@ import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
 import { parseSharedLocationLink, isShortLink } from "../../utils/parseSharedLocation.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
-
-const PageContainer = styled.div`
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px 24px 100px;
-  min-height: 100%;
-  background:
-    radial-gradient(circle at 90% 8%, rgba(167, 139, 250, 0.14), transparent 28%),
-    radial-gradient(circle at 8% 25%, rgba(45, 212, 191, 0.14), transparent 26%),
-    linear-gradient(180deg, #05070d 0%, #05070d 58%, #0B0F17 100%);
-
-  @media (max-width: 600px) {
-    padding: 14px 14px 100px;
-  }
-`;
-
-const CreateRideGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(400px, 0.8fr) minmax(520px, 1.2fr);
-  gap: 24px;
-  align-items: start;
-
-  @media (max-width: 1050px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const FormColumn = styled.div`
-  min-width: 0;
-`;
-
-const MapColumn = styled.div`
-  position: sticky;
-  top: 24px;
-  min-width: 0;
-
-  @media (max-width: 1050px) {
-    position: relative;
-    top: auto;
-    order: -1;
-  }
-`;
-
-const RouteMapCard = styled(Card)`
-  padding: 0;
-  overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 15, 23, 0.85);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(18px);
-
-  .ant-card-body {
-    padding: 0;
-  }
-`;
 
 const SectionHeader = styled.div`
   display: flex;
@@ -169,6 +114,8 @@ export default function CreateRidePage() {
   const [locatingMe, setLocatingMe] = useState(false);
   const [sharedLinkInput, setSharedLinkInput] = useState("");
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [selectedRoute, setSelectedRoute] = useState(null);
   const isOnline = useOnlineStatus();
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
@@ -186,7 +133,12 @@ export default function CreateRidePage() {
   const destinationPoint = destinationLatitude != null && destinationLongitude != null
     ? { latitude: Number(destinationLatitude), longitude: Number(destinationLongitude) }
     : null;
-  const distanceKm = sourcePoint && destinationPoint
+  // Prefers the actually-selected driving route's real distance over the
+  // straight-line haversine fallback, so the tip suggestion (and anything
+  // else derived from distanceKm) matches the road the rider picked.
+  const distanceKm = selectedRoute?.distanceKm != null
+    ? selectedRoute.distanceKm
+    : sourcePoint && destinationPoint
     ? haversineKm(sourcePoint.latitude, sourcePoint.longitude, destinationPoint.latitude, destinationPoint.longitude)
     : null;
 
@@ -384,53 +336,64 @@ export default function CreateRidePage() {
 
   if (!isOnline) {
     return (
-      <ErrorState
-        title="No Internet Connection"
-        description="Check your connection and try again."
-        onRetry={() => window.location.reload()}
-      />
+      <div style={{ padding: "100px 24px 24px", height: "100%", overflow: "auto", boxSizing: "border-box" }}>
+        <ErrorState
+          title="No Internet Connection"
+          description="Check your connection and try again."
+          onRetry={() => window.location.reload()}
+        />
+      </div>
     );
   }
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <div style={{ padding: "100px 24px 24px", height: "100%", overflow: "auto", boxSizing: "border-box" }}><Skeleton active /></div>;
 
   if (verifiedVehicles.length === 0) {
     const hasPendingVehicles = vehicles.length > 0;
     return (
-      <Alert
-        type="warning"
-        showIcon
-        message={hasPendingVehicles ? "Vehicle verification pending" : "Add a vehicle first"}
-        description={
-          hasPendingVehicles
-            ? "Your vehicle is still being verified. You'll be able to create a ride once it's verified."
-            : "You need at least one verified vehicle before you can create a ride."
-        }
-        action={
-          !hasPendingVehicles && (
-            <Button size="small" onClick={() => navigate("/vehicles/add")}>
-              Add Vehicle
-            </Button>
-          )
-        }
-      />
+      <div style={{ padding: "100px 24px 24px", height: "100%", overflow: "auto", boxSizing: "border-box" }}>
+        <Alert
+          type="warning"
+          showIcon
+          message={hasPendingVehicles ? "Vehicle verification pending" : "Add a vehicle first"}
+          description={
+            hasPendingVehicles
+              ? "Your vehicle is still being verified. You'll be able to create a ride once it's verified."
+              : "You need at least one verified vehicle before you can create a ride."
+          }
+          action={
+            !hasPendingVehicles && (
+              <Button size="small" onClick={() => navigate("/vehicles/add")}>
+                Add Vehicle
+              </Button>
+            )
+          }
+        />
+      </div>
     );
   }
 
   return (
-    <PageContainer>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: colors.textPrimary }}>
-          {isEdit ? "Edit Your Ride" : "Create a New Ride"}
-        </h1>
-        <p style={{ margin: "8px 0 0", color: colors.textSecondary }}>
-          {isEdit ? "Update your ride details below" : "Fill in your ride details to get started"}
-        </p>
+    <div className="cr-shell">
+      <div className="cr-map-stage">
+        <RideCreationMap source={sourcePoint} destination={destinationPoint} form={form} onRouteSelect={setSelectedRoute} />
       </div>
 
-      <CreateRideGrid>
-        <FormColumn>
+      {!drawerOpen && (
+        <button type="button" className="cr-open-drawer-btn" onClick={() => setDrawerOpen(true)}>
+          <MenuOutlined /> Ride details
+        </button>
+      )}
+
+      <Drawer
+        placement="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        mask={false}
+        width={420}
+        title={isEdit ? "Edit ride details" : "Ride details"}
+        rootClassName="cr-drawer"
+      >
           <Form form={form} layout="vertical" requiredMark={false}>
         <SectionHeader>
           <EnvironmentOutlined className="icon" />
@@ -660,14 +623,7 @@ export default function CreateRidePage() {
           </Button>
         </ActionButtons>
           </Form>
-        </FormColumn>
-
-        <MapColumn>
-          <RouteMapCard>
-            <RideCreationMap source={sourcePoint} destination={destinationPoint} form={form} />
-          </RouteMapCard>
-        </MapColumn>
-      </CreateRideGrid>
+      </Drawer>
 
       <Modal title="Terms & Conditions" open={termsModal === "terms"} onCancel={() => setTermsModal(null)} footer={null}>
         <p>By publishing a ride, you agree that:</p>
@@ -690,6 +646,19 @@ export default function CreateRidePage() {
           <li>Ride data (route, timing) may be shared with the other party in a confirmed booking for coordination purposes.</li>
         </ul>
       </Modal>
-    </PageContainer>
+
+      <style>{`
+        .cr-shell{position:relative;height:100%}
+        .cr-map-stage{position:absolute;inset:0;z-index:1}
+
+        .cr-open-drawer-btn{position:absolute;top:186px;left:14px;z-index:600;display:flex;align-items:center;gap:8px;background:var(--surface-glass);border:1px solid var(--chrome-border);color:var(--text-primary);border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
+        .cr-open-drawer-btn:hover{background:var(--bg-tertiary)}
+
+        .cr-drawer .ant-drawer-content{background:${colors.bgSecondary}}
+        .cr-drawer .ant-drawer-header{background:${colors.bgPrimary};border-color:${colors.border}}
+        .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
+        .cr-drawer .ant-drawer-body{padding-bottom:24px}
+      `}</style>
+    </div>
   );
 }

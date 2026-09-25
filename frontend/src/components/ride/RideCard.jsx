@@ -87,33 +87,33 @@ export default function RideCard({ ride, showMatch = false }) {
       <RideDetailsModal ride={ride} open={detailsOpen} onClose={() => setDetailsOpen(false)} isOwner={isOwner} />
 
       <style>{`
-        .rc-card{background:#0F172A;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 26px rgba(0,0,0,.35);transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease;cursor:pointer;display:flex;flex-direction:column;gap:12px;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
-        .rc-card:hover{box-shadow:0 18px 40px rgba(0,0,0,.5);transform:translateY(-3px);border-color:rgba(255,255,255,.16)}
+        .rc-card{background:var(--bg-primary);border:1px solid var(--border-light);border-radius:16px;padding:16px;box-shadow:var(--shadow-md);transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease;cursor:pointer;display:flex;flex-direction:column;gap:12px;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+        .rc-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-3px);border-color:var(--border)}
         .rc-card:active{transform:translateY(-1px) scale(.995)}
         .rc-card:focus-visible{outline:2px solid #2DD4BF;outline-offset:2px}
 
         .rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
         .rc-person{display:flex;gap:10px;min-width:0}
         .rc-avatar{background:#0f766e;flex-shrink:0}
-        .rc-name{font-weight:700;font-size:14px;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
-        .rc-rating{color:#94A3B8;font-size:12px;display:flex;align-items:center;gap:4px}
+        .rc-name{font-weight:700;font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+        .rc-rating{color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:4px}
         .rc-rating svg{color:#faad14}
 
-        .rc-route{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;color:#F1F5F9}
+        .rc-route{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;color:var(--text-primary)}
         .rc-route svg{color:#2DD4BF;flex-shrink:0}
         .rc-route-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
-        .rc-route-arrow{font-size:11px;color:#64748b;flex-shrink:0}
+        .rc-route-arrow{font-size:11px;color:var(--text-tertiary);flex-shrink:0}
 
-        .rc-meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:#94A3B8;font-size:12.5px}
+        .rc-meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--text-secondary);font-size:12.5px}
         .rc-meta span{display:inline-flex;align-items:center;gap:6px}
-        .rc-meta svg{color:#64748b}
+        .rc-meta svg{color:var(--text-tertiary)}
 
         .rc-map{cursor:default}
 
         .rc-match{margin-top:-2px}
-        .rc-match-label{font-size:12px;color:#94A3B8;margin-bottom:4px}
+        .rc-match-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
 
-        .rc-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px;border-top:1px solid rgba(255,255,255,.06)}
+        .rc-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px;border-top:1px solid var(--border-light)}
         .rc-price span{font-weight:700;color:#2DD4BF;font-size:13.5px}
         .rc-view-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:#2DD4BF;white-space:nowrap}
         .rc-view-link:hover{color:#5EEAD4;text-decoration:underline}

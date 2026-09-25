@@ -24,13 +24,13 @@ const dark = {
     "radial-gradient(ellipse 900px 520px at 12% -8%, rgba(45,212,191,0.16), transparent 60%)," +
     "radial-gradient(ellipse 820px 520px at 105% 4%, rgba(167,139,250,0.15), transparent 58%)," +
     "radial-gradient(ellipse 700px 420px at 50% 110%, rgba(96,165,250,0.10), transparent 60%)," +
-    "#05070d",
-  panel: "rgba(255,255,255,0.045)",
-  panelBorder: "rgba(255,255,255,0.09)",
-  divider: "rgba(255,255,255,0.08)",
-  textPrimary: "#F1F5F9",
-  textSecondary: "#94A3B8",
-  textTertiary: "#64748B",
+    "var(--bg-secondary)",
+  panel: "var(--chrome-tint)",
+  panelBorder: "var(--chrome-tint)",
+  divider: "var(--divider)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textTertiary: "var(--text-tertiary)",
   teal: "#2DD4BF",
   blue: "#60A5FA",
   purple: "#A78BFA",
@@ -63,7 +63,7 @@ const MapSection = styled(Card)`
   background: ${dark.panel} !important;
   backdrop-filter: blur(22px);
   overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--chrome-tint);
 
   .ant-card-body {
     padding: 0;
@@ -143,7 +143,7 @@ const SectionCard = styled(Card)`
   background: ${dark.panel} !important;
   backdrop-filter: blur(22px);
   overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--chrome-tint);
 
   .ant-card-body {
     padding: 0;
@@ -249,7 +249,7 @@ const RouteTimeline = styled.div`
     gap: 6px;
     padding: 6px 12px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--chrome-tint);
     border: 1px solid ${dark.panelBorder};
     color: ${dark.textPrimary};
     font-size: 12px;
@@ -274,13 +274,13 @@ const InfoCardsGrid = styled.div`
 const InfoCard = styled.div`
   padding: 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--chrome-tint);
   border: 1px solid ${dark.panelBorder};
   transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
 
   &:hover {
     border-color: rgba(45, 212, 191, 0.4);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--chrome-tint);
     transform: translateY(-1px);
   }
 
@@ -328,13 +328,13 @@ const ActionButtons = styled.div`
   border-top: 1px solid ${dark.divider};
 
   .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
-    background: rgba(255, 255, 255, 0.07) !important;
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    background: var(--chrome-tint) !important;
+    border-color: var(--chrome-tint-strong) !important;
     color: ${dark.textPrimary} !important;
   }
 
   .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):hover {
-    background: rgba(255, 255, 255, 0.12) !important;
+    background: var(--chrome-tint-strong) !important;
     border-color: rgba(45, 212, 191, 0.45) !important;
     color: #fff !important;
   }
@@ -358,7 +358,7 @@ const ActionButtons = styled.div`
     right: 0;
     gap: 8px;
     padding: 16px;
-    background: rgba(5, 7, 13, 0.92);
+    background: var(--surface-glass);
     backdrop-filter: blur(20px);
     border-top: 1px solid ${dark.divider};
     margin: 0;
@@ -432,7 +432,7 @@ export default function RideDetailsPage() {
             .skeleton-dark .ant-skeleton-title,
             .skeleton-dark .ant-skeleton-paragraph > li,
             .skeleton-dark .ant-skeleton-avatar {
-              background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.06) 63%) !important;
+              background: linear-gradient(90deg, var(--chrome-tint) 25%, var(--chrome-tint-strong) 37%, var(--chrome-tint) 63%) !important;
               background-size: 400% 100% !important;
             }
           `}</style>

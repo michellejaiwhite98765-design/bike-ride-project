@@ -93,4 +93,9 @@ export const searchRideSchema = z.object({
   seats: z.coerce.number().int().min(1).max(8).default(1),
   rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]).optional(),
   radius: z.coerce.number().positive().max(50).optional(),
+  // When true, also returns rides with fewer available seats than requested
+  // (including fully-booked ones) instead of filtering them out - used by
+  // map views that want to show every ride on the route, not just bookable
+  // ones.
+  includeFull: z.coerce.boolean().optional().default(false),
 });

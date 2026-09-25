@@ -41,10 +41,10 @@ export default function RatingsPage() {
                       <strong>
                         {r.reviewer?.firstName} {r.reviewer?.lastName}
                       </strong>
-                      <span style={{ color: "#94a3b8", fontSize: 12 }}>{dayjs(r.createdAt).format("DD MMM YYYY")}</span>
+                      <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>{dayjs(r.createdAt).format("DD MMM YYYY")}</span>
                     </div>
                     <Rate disabled value={r.score} style={{ fontSize: 14 }} />
-                    {r.comment && <p style={{ margin: "4px 0 0", color: "#64748b" }}>{r.comment}</p>}
+                    {r.comment && <p style={{ margin: "4px 0 0", color: "var(--text-tertiary)" }}>{r.comment}</p>}
                   </div>
                 </div>
               </Card>

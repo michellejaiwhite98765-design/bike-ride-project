@@ -1,3 +1,80 @@
+:root {
+  --color-primary: #2DD4BF;
+  --color-primary-light: #5EEAD4;
+  --color-primary-dark: #14B8A6;
+
+  --bg-primary: #0B0F17;
+  --bg-secondary: #05070D;
+  --bg-tertiary: #141A24;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
+  --text-inverse: #05070D;
+
+  --color-success: #22C55E;
+  --color-success-light: rgba(34, 197, 94, 0.16);
+  --color-warning: #FBBF24;
+  --color-warning-light: rgba(251, 191, 36, 0.16);
+  --color-error: #F87171;
+  --color-error-light: rgba(248, 113, 113, 0.16);
+  --color-info: #60A5FA;
+  --color-info-light: rgba(96, 165, 250, 0.16);
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.06);
+  --divider: rgba(255, 255, 255, 0.08);
+
+  --status-published: #22C55E;
+  --status-started: #FBBF24;
+  --status-completed: #A78BFA;
+  --status-cancelled: #F87171;
+
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 20px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 36px -6px rgba(0, 0, 0, 0.55), 0 6px 14px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 24px 48px -8px rgba(0, 0, 0, 0.6), 0 12px 20px -6px rgba(0, 0, 0, 0.45);
+
+  /* Chrome tints - subtle highlight/border washes for floating pills over the
+     app's own background (header capsule, tab pills, filter chips). Not used
+     for the deliberately-always-white map cards (search pins, popups). */
+  --chrome-tint: rgba(255, 255, 255, 0.06);
+  --chrome-tint-strong: rgba(255, 255, 255, 0.12);
+  --chrome-border: rgba(255, 255, 255, 0.1);
+  --surface-glass: rgba(11, 15, 23, 0.85);
+  --map-fallback-bg: #161a1e;
+  --map-top-shade: rgba(5, 7, 13, 0.55);
+}
+
+[data-theme="light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F7FA;
+  --bg-tertiary: #EEF1F4;
+  --bg-overlay: rgba(15, 23, 42, 0.45);
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #64748B;
+  --text-inverse: #FFFFFF;
+
+  --border: rgba(15, 23, 42, 0.12);
+  --border-light: rgba(15, 23, 42, 0.08);
+  --divider: rgba(15, 23, 42, 0.1);
+
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 8px 20px -4px rgba(15, 23, 42, 0.14), 0 2px 6px -2px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 16px 36px -6px rgba(15, 23, 42, 0.16), 0 6px 14px -4px rgba(15, 23, 42, 0.1);
+  --shadow-xl: 0 24px 48px -8px rgba(15, 23, 42, 0.18), 0 12px 20px -6px rgba(15, 23, 42, 0.12);
+
+  --chrome-tint: rgba(15, 23, 42, 0.05);
+  --chrome-tint-strong: rgba(15, 23, 42, 0.1);
+  --chrome-border: rgba(15, 23, 42, 0.12);
+  --surface-glass: rgba(255, 255, 255, 0.85);
+  --map-fallback-bg: #dbe4ec;
+  --map-top-shade: rgba(255, 255, 255, 0.65);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -11,8 +88,9 @@ body,
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #05070d;
-  color: #f1f5f9;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 a {
@@ -58,24 +136,29 @@ a {
 
 /* Create Ride - modern map UI */
 .ride-creation-map-shell {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: rgba(11, 15, 23, 0.75);
+  background: var(--surface-glass);
 }
 
 .ride-creation-map-toolbar {
   min-height: 82px;
+  flex-shrink: 0;
+  margin-top: 90px;
   padding: 18px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, rgba(11, 15, 23, 0.95), rgba(5, 7, 13, 0.9));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-glass);
+  border-bottom: 1px solid var(--chrome-border);
 }
 
 .ride-map-title {
-  color: #F1F5F9;
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.25px;
@@ -83,7 +166,7 @@ a {
 
 .ride-map-subtitle {
   margin-top: 4px;
-  color: #94A3B8;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -91,16 +174,16 @@ a {
 .ride-map-control {
   position: absolute;
   right: 16px;
-  top: 96px;
+  top: 186px;
   z-index: 900;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--chrome-border);
   border-radius: 14px;
-  background: rgba(11, 15, 23, 0.9);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(12px);
 }
 
@@ -110,10 +193,9 @@ a {
 
 .ride-creation-map {
   position: relative;
-  height: min(520px, calc(100vh - 260px));
-  min-height: 340px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
-  border-radius: 0 0 22px 22px;
   isolation: isolate;
 }
 
@@ -121,9 +203,13 @@ a {
   height: 100%;
   width: 100%;
   z-index: 0;
-  background: #0F172A;
+  background: var(--map-fallback-bg);
   cursor: crosshair;
   overscroll-behavior: contain;
+}
+
+.rcm-dark-tiles .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.75);
 }
 
 .ride-creation-map .leaflet-control-zoom {
@@ -144,7 +230,7 @@ a {
 
 .ride-creation-map .leaflet-control-attribution {
   font-size: 9px;
-  background: rgba(11, 15, 23, 0.75) !important;
+  background: var(--surface-glass) !important;
 }
 
 .ride-creation-map-empty {
@@ -159,12 +245,12 @@ a {
   align-items: center;
   gap: 7px;
   padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--chrome-border);
   border-radius: 20px;
-  background: rgba(11, 15, 23, 0.9);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-lg);
   text-align: center;
-  color: #94A3B8;
+  color: var(--text-secondary);
   backdrop-filter: blur(16px);
   pointer-events: none;
 }
@@ -182,7 +268,7 @@ a {
 }
 
 .ride-creation-map-empty strong {
-  color: #F1F5F9;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
@@ -202,12 +288,54 @@ a {
   gap: 9px;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(11, 15, 23, 0.9);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-  color: #F1F5F9;
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
   pointer-events: none;
+}
+
+.ride-map-route-options {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 60px;
+  z-index: 600;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.ride-map-route-options button {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  padding: 9px 14px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 14px;
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.ride-map-route-options button.active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.18);
+  color: var(--text-primary);
+}
+
+.ride-map-route-options .route-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ride-map-route-options .route-meta {
+  font-size: 11px;
 }
 
 .ride-creation-map-legend {
@@ -220,11 +348,12 @@ a {
   align-items: center;
   flex-wrap: wrap;
   padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--chrome-border);
   border-radius: 12px;
-  background: rgba(11, 15, 23, 0.9);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-md);
   font-size: 11px;
+  color: var(--text-secondary);
   backdrop-filter: blur(12px);
 }
 
@@ -245,7 +374,7 @@ a {
 .legend-dot.end { background: #6366f1; }
 
 .route-status {
-  color: #94A3B8;
+  color: var(--text-secondary);
 }
 
 .ride-creation-modern-pin-wrapper {
@@ -297,16 +426,10 @@ body::-webkit-scrollbar,
   display: none;
 }
 
-@media (max-width: 1050px) {
-  .ride-creation-map {
-    height: 380px;
-    min-height: 380px;
-  }
-}
-
 @media (max-width: 650px) {
   .ride-creation-map-toolbar {
     min-height: 74px;
+    margin-top: 78px;
     padding: 15px;
   }
 
@@ -317,13 +440,8 @@ body::-webkit-scrollbar,
   .ride-map-control {
     left: 12px;
     right: 12px;
-    top: 86px;
+    top: 166px;
     justify-content: space-between;
-  }
-
-  .ride-creation-map {
-    height: 300px;
-    min-height: 300px;
   }
 
   .ride-creation-map-legend {

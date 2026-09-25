@@ -9,10 +9,10 @@ import { VerifiedBadge } from "../ui/index.js";
 import { haversineKm } from "../../utils/geo.js";
 
 const dark = {
-  panel: "rgba(255,255,255,0.045)",
-  panelBorder: "rgba(255,255,255,0.09)",
-  textPrimary: "#F1F5F9",
-  textTertiary: "#64748B",
+  panel: "var(--chrome-tint)",
+  panelBorder: "var(--chrome-border)",
+  textPrimary: "var(--text-primary)",
+  textTertiary: "var(--text-tertiary)",
   teal: "#2DD4BF",
 };
 
@@ -130,7 +130,7 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         .ride-details-modal .ant-modal-mask{background:rgba(2,4,10,.72)!important;backdrop-filter:blur(6px)}
         .ride-details-modal .ant-modal-content{transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
         .ride-details-modal .ant-modal-container,
-        .ride-details-modal .ant-modal-content{background:#05070d!important;border:1px solid ${dark.panelBorder};border-radius:20px;padding:20px!important}
+        .ride-details-modal .ant-modal-content{background:var(--bg-secondary)!important;border:1px solid ${dark.panelBorder};border-radius:20px;padding:20px!important}
         .ride-details-modal .ant-modal-close{color:${dark.textTertiary}}
         .ride-details-modal .ant-modal-close:hover{color:${dark.textPrimary}}
         .rdm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}

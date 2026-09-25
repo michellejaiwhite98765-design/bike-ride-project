@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet
 import L from "leaflet";
 import { Spin, Tag } from "antd";
 import { ClockCircleOutlined, EnvironmentOutlined, LoadingOutlined, RiseOutlined } from "@ant-design/icons";
-import { DARK_TILE_BASE_URL, DARK_TILE_REFERENCE_URL, DARK_TILE_ATTRIBUTION } from "../../constants/mapTiles.js";
+import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
+import { useTheme } from "../../context/ThemeContext.jsx";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -57,6 +58,8 @@ async function getRoute(source, destination) {
  * regardless of ride status, so ride details never show a blank map.
  */
 export default function RouteOverviewMap({ ride, compact = false }) {
+  const { mode } = useTheme();
+  const isDark = mode === "dark";
   const [route, setRoute] = useState({ points: [], distanceKm: null, durationMin: null });
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -111,9 +114,9 @@ export default function RouteOverviewMap({ ride, compact = false }) {
           touchZoom
           zoomSnap={0.5}
           style={{ height: "100%", width: "100%" }}
+          className={isDark ? "ro-dark-tiles" : ""}
         >
-          <TileLayer attribution={DARK_TILE_ATTRIBUTION} url={DARK_TILE_BASE_URL} />
-          <TileLayer url={DARK_TILE_REFERENCE_URL} />
+          <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
           <FitRoute source={source} destination={destination} />
 
           <Marker position={[source.latitude, source.longitude]} icon={pinIcon("start")} />
@@ -184,11 +187,12 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         .ro-shell{display:flex;flex-direction:column;background:transparent}
         .ro-map{position:relative;height:400px;overflow:hidden}
         .ro-compact .ro-map{height:220px}
-        .ro-map .leaflet-container{height:100%;width:100%;background:#05070d;z-index:0}
-        .ro-map .leaflet-control-zoom{border:0!important;box-shadow:0 8px 22px rgba(0,0,0,.4)!important;border-radius:10px!important;overflow:hidden}
-        .ro-map .leaflet-control-zoom a{width:32px!important;height:32px!important;line-height:32px!important;color:#E2E8F0!important;background:rgba(255,255,255,.08)!important;border:0!important}
-        .ro-map .leaflet-control-attribution{font-size:8px;background:rgba(5,7,13,.6)!important;color:#94a3b8!important}
-        .ro-map .leaflet-control-attribution a{color:#94a3b8!important}
+        .ro-map .leaflet-container{height:100%;width:100%;background:var(--map-fallback-bg);z-index:0}
+        .ro-dark-tiles .leaflet-tile-pane{filter:${DARK_TILE_FILTER}}
+        .ro-map .leaflet-control-zoom{border:0!important;box-shadow:var(--shadow-md)!important;border-radius:10px!important;overflow:hidden}
+        .ro-map .leaflet-control-zoom a{width:32px!important;height:32px!important;line-height:32px!important;color:var(--text-primary)!important;background:var(--chrome-tint-strong)!important;border:0!important}
+        .ro-map .leaflet-control-attribution{font-size:8px;background:var(--surface-glass)!important;color:var(--text-secondary)!important}
+        .ro-map .leaflet-control-attribution a{color:var(--text-secondary)!important}
         .ro-compact .leaflet-control-zoom{display:none!important}
 
         .ro-pin-wrapper{background:transparent!important;border:0!important}
@@ -197,23 +201,23 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         .ro-pin-end{background:linear-gradient(135deg,#2dd4bf,#14b8a6)}
         .ro-pin-core{width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.2)}
 
-        .ro-loading{position:absolute;left:50%;top:50%;z-index:600;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(15,18,32,.9);border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 26px rgba(0,0,0,.5);color:#E2E8F0;font-size:12px;font-weight:600;pointer-events:none;backdrop-filter:blur(10px)}
+        .ro-loading{position:absolute;left:50%;top:50%;z-index:600;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:var(--surface-glass);border:1px solid var(--chrome-border);box-shadow:var(--shadow-lg);color:var(--text-primary);font-size:12px;font-weight:600;pointer-events:none;backdrop-filter:blur(10px)}
 
-        .ro-legend{position:absolute;left:12px;bottom:12px;z-index:500;display:flex;gap:10px;padding:7px 11px;border-radius:10px;background:rgba(15,18,32,.85);border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 20px rgba(0,0,0,.4);font-size:11px;backdrop-filter:blur(10px)}
-        .ro-legend span{display:inline-flex;align-items:center;gap:5px;color:#E2E8F0;font-weight:600}
+        .ro-legend{position:absolute;left:12px;bottom:12px;z-index:500;display:flex;gap:10px;padding:7px 11px;border-radius:10px;background:var(--surface-glass);border:1px solid var(--chrome-border);box-shadow:var(--shadow-md);font-size:11px;backdrop-filter:blur(10px)}
+        .ro-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--text-primary);font-weight:600}
         .ro-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
         .ro-dot-start{background:#60a5fa}
         .ro-dot-end{background:#2dd4bf}
 
         .ro-chips{position:absolute;right:12px;top:12px;z-index:500;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
-        .ro-chip.ant-tag{margin:0;border:1px solid rgba(255,255,255,.1)!important;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;color:#F1F5F9!important;background:rgba(15,18,32,.85)!important;box-shadow:0 8px 20px rgba(0,0,0,.4);backdrop-filter:blur(10px)}
+        .ro-chip.ant-tag{margin:0;border:1px solid var(--chrome-border)!important;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--text-primary)!important;background:var(--surface-glass)!important;box-shadow:var(--shadow-md);backdrop-filter:blur(10px)}
 
-        .ro-endpoints{display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.08)}
+        .ro-endpoints{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--chrome-tint);border-top:1px solid var(--chrome-border)}
         .ro-endpoint{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
         .ro-endpoint-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-        .ro-endpoint-label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b}
-        .ro-endpoint-value{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .ro-endpoint-divider{width:28px;height:2px;flex-shrink:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 5px,transparent 5px 9px);border-radius:2px}
+        .ro-endpoint-label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary)}
+        .ro-endpoint-value{font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ro-endpoint-divider{width:28px;height:2px;flex-shrink:0;background:repeating-linear-gradient(90deg,var(--chrome-border) 0 5px,transparent 5px 9px);border-radius:2px}
 
         @media (max-width:600px){
           .ro-map{height:280px}

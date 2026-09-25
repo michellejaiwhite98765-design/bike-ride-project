@@ -45,11 +45,11 @@ export default function SafetyPage() {
         <p>
           <PhoneOutlined /> National Emergency Number (India): <strong>112</strong>
         </p>
-        <p style={{ color: "#64748b" }}>Save this number in your phone before starting any ride.</p>
+        <p style={{ color: "var(--text-tertiary)" }}>Save this number in your phone before starting any ride.</p>
       </Card>
 
       <Card title="SOS">
-        <p style={{ color: "#64748b" }}>
+        <p style={{ color: "var(--text-tertiary)" }}>
           This button is a reminder only. It does not call emergency services or notify anyone at BikeRide.
         </p>
         <Button danger size="large" onClick={handleSOS}>

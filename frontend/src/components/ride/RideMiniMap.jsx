@@ -3,9 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet
 import L from "leaflet";
 import { ClockCircleOutlined, RiseOutlined } from "@ant-design/icons";
 import { haversineKm } from "../../utils/geo.js";
-
-const LIGHT_TILE_BASE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const LIGHT_TILE_REFERENCE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+import { COLOR_TILE_URL } from "../../constants/mapTiles.js";
 
 function pinIcon(type) {
   const isStart = type === "start";
@@ -140,8 +138,7 @@ export default function RideMiniMap({ ride, showChips = true }) {
         keyboard={false}
         tap={false}
       >
-        <TileLayer url={LIGHT_TILE_BASE_URL} />
-        <TileLayer url={LIGHT_TILE_REFERENCE_URL} />
+        <TileLayer url={COLOR_TILE_URL} />
 
         <FitBounds points={boundsPoints} />
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Layout, Dropdown, Drawer, Button, Badge as AntBadge, App as AntdApp } from "antd";
+import { css } from "styled-components";
 import {
   HomeOutlined,
   SearchOutlined,
@@ -12,12 +13,19 @@ import {
   LogoutOutlined,
   SettingOutlined,
   FileTextOutlined,
+  ArrowLeftOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from "@ant-design/icons";
 import styled from "styled-components";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { locationService } from "../../services/locationService.js";
 import { notificationService } from "../../services/notificationService.js";
 import { connectSocket, disconnectSocket } from "../../services/socket.js";
+import { SearchHeaderProvider, useSearchHeaderForm } from "../../context/SearchHeaderContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import SearchHeaderFields from "./SearchHeaderFields.jsx";
 import colors from "../../theme/colors.js";
 
 const { Header, Content, Footer } = Layout;
@@ -36,6 +44,17 @@ const HeaderOuter = styled(Header)`
   height: auto;
   line-height: normal;
   transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  ${(p) =>
+    p.$floating &&
+    css`
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: transparent;
+      padding: 10px 16px;
+    `}
 `;
 
 const Capsule = styled.div`
@@ -181,6 +200,58 @@ const AvatarButton = styled(Button)`
   }
 `;
 
+const BackButton = styled.button`
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: ${colors.textPrimary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+`;
+
+const ThemeToggleButton = styled.button`
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid ${colors.border};
+  background: transparent;
+  color: ${colors.textSecondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    color: ${ACCENT};
+    border-color: ${ACCENT};
+  }
+`;
+
+const CenterTitle = styled.div`
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: ${colors.textPrimary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 const MobileBar = styled.div`
   display: none;
   align-items: center;
@@ -234,6 +305,21 @@ const ContentWrap = styled(Content)`
   @media (max-width: 768px) {
     padding: 8px 16px 96px;
   }
+
+  ${(p) =>
+    p.$fullBleed &&
+    css`
+      padding: 0;
+      max-width: none;
+      min-height: 0;
+      height: 100vh;
+      overflow: hidden;
+
+      @media (max-width: 768px) {
+        padding: 0;
+        height: calc(100vh - 70px);
+      }
+    `}
 `;
 
 const FooterBar = styled(Footer)`
@@ -246,6 +332,14 @@ const FooterBar = styled(Footer)`
 `;
 
 export default function AppLayout() {
+  return (
+    <SearchHeaderProvider>
+      <AppLayoutInner />
+    </SearchHeaderProvider>
+  );
+}
+
+function AppLayoutInner() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -319,6 +413,13 @@ export default function AppLayout() {
   }
 
   const isActive = (path) => (location.pathname === path ? "active" : "");
+  const isHome = location.pathname === "/";
+  const isSearchPage = location.pathname === "/search";
+  const isEditRide = /^\/rides\/[^/]+\/edit$/.test(location.pathname);
+  const isCreateRidePage = location.pathname === "/rides/create" || isEditRide;
+  const isFullBleedPage = isHome || isSearchPage || isCreateRidePage;
+  const searchForm = useSearchHeaderForm();
+  const { mode, toggleTheme } = useTheme();
 
   const userMenu = {
     items: [
@@ -334,75 +435,120 @@ export default function AppLayout() {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <HeaderOuter $scrolled={scrolled}>
+      <HeaderOuter $scrolled={scrolled} $floating={isFullBleedPage}>
         <Capsule $scrolled={scrolled}>
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <BrandContainer>
-              {/* <BrandMark>B</BrandMark> */}
-              <span className="wordmark">Liftshare</span>
-            </BrandContainer>
-          </Link>
-
-          {isAuthenticated && (
-            <DesktopNav>
-              <NavItems>
-                <Link to="/" className={isActive("/")}>
-                  Home
-                </Link>
-                <Link to="/search" className={isActive("/search")}>
-                  Find ride
-                </Link>
-                <Link to="/rides" className={isActive("/rides")}>
-                  My rides
-                </Link>
-              </NavItems>
-              <CtaLink to="/rides/create">
-                <PlusCircleOutlined /> Create ride
-              </CtaLink>
-            </DesktopNav>
-          )}
-
-          <UserSection>
-            {isAuthenticated && (
-              <>
-                <Link to="/notifications">
-                  <NotificationIcon>
-                    <AntBadge count={unreadCount} color={ACCENT}>
-                      <BellOutlined />
-                    </AntBadge>
-                  </NotificationIcon>
-                </Link>
+          <AnimatePresence mode="wait" initial={false}>
+            {isSearchPage && searchForm ? (
+              <motion.div
+                key="search"
+                style={{ display: "flex", alignItems: "center", width: "100%" }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <SearchHeaderFields form={searchForm} />
+              </motion.div>
+            ) : isCreateRidePage ? (
+              <motion.div
+                key="createRide"
+                style={{ display: "flex", alignItems: "center", width: "100%", gap: 12 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <BackButton type="button" onClick={() => navigate(-1)} aria-label="Back">
+                  <ArrowLeftOutlined />
+                </BackButton>
+                <CenterTitle>{isEditRide ? "Edit ride" : "Create ride"}</CenterTitle>
+                <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
+                  {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
+                </ThemeToggleButton>
                 <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
                   <AvatarButton shape="circle" size="large" icon={<UserOutlined />} />
                 </Dropdown>
-              </>
-            )}
-
-            {!isAuthenticated && (
-              <>
-                <Link to="/login">
-                  <Button type="default" size="middle" style={{ borderRadius: 999 }}>
-                    Login
-                  </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="default"
+                style={{ display: "flex", alignItems: "center", width: "100%", gap: 28 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <Link to="/" style={{ textDecoration: "none" }}>
+                  <BrandContainer>
+                    {/* <BrandMark>B</BrandMark> */}
+                    <span className="wordmark">Liftshare</span>
+                  </BrandContainer>
                 </Link>
-                <Link to="/register">
-                  <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
-                    Sign up
-                  </Button>
-                </Link>
-              </>
-            )}
 
-            <MobileBar>
-              <Button
-                type="text"
-                icon={<MenuOutlined />}
-                size="large"
-                onClick={() => setDrawerOpen(true)}
-                style={{ color: colors.textSecondary }}
-              />
-            </MobileBar>
-          </UserSection>
+                {isAuthenticated && (
+                  <DesktopNav>
+                    <NavItems>
+                      <Link to="/search" className={isActive("/search")}>
+                        Find ride
+                      </Link>
+                      <Link to="/rides" className={isActive("/rides")}>
+                        My rides
+                      </Link>
+                    </NavItems>
+                    <CtaLink to="/rides/create">
+                      <PlusCircleOutlined /> Create ride
+                    </CtaLink>
+                  </DesktopNav>
+                )}
+
+                <UserSection>
+                  <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
+                    {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
+                  </ThemeToggleButton>
+
+                  {isAuthenticated && (
+                    <>
+                      <Link to="/notifications">
+                        <NotificationIcon>
+                          <AntBadge count={unreadCount} color={ACCENT}>
+                            <BellOutlined />
+                          </AntBadge>
+                        </NotificationIcon>
+                      </Link>
+                      <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+                        <AvatarButton shape="circle" size="large" icon={<UserOutlined />} />
+                      </Dropdown>
+                    </>
+                  )}
+
+                  {!isAuthenticated && (
+                    <>
+                      <Link to="/login">
+                        <Button type="default" size="middle" style={{ borderRadius: 999 }}>
+                          Login
+                        </Button>
+                      </Link>
+                      <Link to="/register">
+                        <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
+                          Sign up
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+
+                  <MobileBar>
+                    <Button
+                      type="text"
+                      icon={<MenuOutlined />}
+                      size="large"
+                      onClick={() => setDrawerOpen(true)}
+                      style={{ color: colors.textSecondary }}
+                    />
+                  </MobileBar>
+                </UserSection>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Capsule>
       </HeaderOuter>
 
@@ -487,7 +633,7 @@ export default function AppLayout() {
         )}
       </Drawer>
 
-      <ContentWrap>
+      <ContentWrap $fullBleed={isFullBleedPage}>
         <Outlet />
       </ContentWrap>
 
@@ -518,7 +664,7 @@ export default function AppLayout() {
         </BottomNav>
       )}
 
-      <FooterBar>BikeRide — Share your journey. Ride together.</FooterBar>
+      {!isFullBleedPage && <FooterBar>BikeRide — Share your journey. Ride together.</FooterBar>}
     </Layout>
   );
 }

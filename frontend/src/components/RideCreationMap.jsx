@@ -4,10 +4,12 @@ import L from "leaflet";
 import { Button, Segmented, Spin, Tag, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
 import { reverseGeocode, countryMismatch } from "../utils/geo.js";
+import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
+import { useTheme } from "../context/ThemeContext.jsx";
 
 const DEFAULT_CENTER = [8.183, 77.411];
 const HOME_BLUE = "#2563eb";
-const HOME_INDIGO = "#6366f1";
+const ROUTE_COLORS = ["#2563eb", "#94a3b8", "#94a3b8"];
 
 function pinIcon(type) {
   const isStart = type === "start";
@@ -59,21 +61,40 @@ function MapClickHandler({ mode, onMapLocation }) {
   return null;
 }
 
-async function getRoute(source, destination) {
+// Requests alternative routes (not just the single fastest one) so the rider
+// can pick which road their ride actually follows - OSRM returns them
+// ordered fastest-first, which we treat as the default when nothing is
+// explicitly chosen.
+async function getRoutes(source, destination) {
   if (!source || !destination) return [];
 
-  const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson&alternatives=true`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Unable to load route");
 
   const data = await response.json();
-  const coordinates = data?.routes?.[0]?.geometry?.coordinates || [];
-  return coordinates.map(([longitude, latitude]) => [latitude, longitude]);
+  const routes = data?.routes || [];
+  return routes.map((r) => ({
+    coordinates: (r.geometry?.coordinates || []).map(([lng, lat]) => [lat, lng]),
+    distanceKm: r.distance / 1000,
+    durationMin: r.duration / 60,
+  }));
 }
 
-export default function RideCreationMap({ source, destination, form }) {
+function formatDuration(minutes) {
+  if (!Number.isFinite(minutes)) return "—";
+  const total = Math.round(minutes);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h ? `${h}h ${m}m` : `${m} min`;
+}
+
+export default function RideCreationMap({ source, destination, form, onRouteSelect }) {
+  const { mode: themeMode } = useTheme();
+  const isDark = themeMode === "dark";
   const [mode, setMode] = useState(source ? "destination" : "source");
-  const [route, setRoute] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [routeLoading, setRouteLoading] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
 
@@ -86,33 +107,51 @@ export default function RideCreationMap({ source, destination, form }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRoute() {
+    async function loadRoutes() {
       if (!source || !destination) {
-        setRoute([]);
+        setRoutes([]);
+        setSelectedIndex(0);
         return;
       }
 
       try {
         setRouteLoading(true);
-        const points = await getRoute(source, destination);
-        if (!cancelled) setRoute(points);
+        const loaded = await getRoutes(source, destination);
+        if (!cancelled) {
+          setRoutes(loaded);
+          setSelectedIndex(0);
+        }
       } catch {
         if (!cancelled) {
-          setRoute([
-            [source.latitude, source.longitude],
-            [destination.latitude, destination.longitude],
+          setRoutes([
+            {
+              coordinates: [
+                [source.latitude, source.longitude],
+                [destination.latitude, destination.longitude],
+              ],
+              distanceKm: null,
+              durationMin: null,
+            },
           ]);
+          setSelectedIndex(0);
         }
       } finally {
         if (!cancelled) setRouteLoading(false);
       }
     }
 
-    loadRoute();
+    loadRoutes();
     return () => {
       cancelled = true;
     };
   }, [source, destination]);
+
+  // Bubble the currently-selected route (defaulting to the first/fastest
+  // one) up to the create-ride form so it can use its real driving distance.
+  useEffect(() => {
+    onRouteSelect?.(routes[selectedIndex] || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routes, selectedIndex]);
 
   async function handleMapLocation({ lat, lng }, selectedMode) {
     if (!form) return;
@@ -148,6 +187,9 @@ export default function RideCreationMap({ source, destination, form }) {
       setMapLoading(false);
     }
   }
+
+  // Draw unselected routes first so the selected one always renders on top.
+  const orderedIndexes = [...routes.keys()].sort((a, b) => (a === selectedIndex ? 1 : b === selectedIndex ? -1 : 0));
 
   return (
     <div className="ride-creation-map-shell">
@@ -193,11 +235,9 @@ export default function RideCreationMap({ source, destination, form }) {
           doubleClickZoom
           dragging
           style={{ height: "100%", width: "100%" }}
+          className={isDark ? "rcm-dark-tiles" : ""}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
 
           <MapViewport source={source} destination={destination} />
           <MapClickHandler mode={mode} onMapLocation={handleMapLocation} />
@@ -218,30 +258,38 @@ export default function RideCreationMap({ source, destination, form }) {
             />
           )}
 
-          {route.length > 1 && (
-            <>
-              <Polyline
-                positions={route}
-                pathOptions={{
-                  color: "#ffffff",
-                  weight: 8,
-                  opacity: 0.9,
-                  lineCap: "round",
-                  lineJoin: "round",
-                }}
-              />
-              <Polyline
-                positions={route}
-                pathOptions={{
-                  color: HOME_BLUE,
-                  weight: 5,
-                  opacity: 0.95,
-                  lineCap: "round",
-                  lineJoin: "round",
-                }}
-              />
-            </>
-          )}
+          {orderedIndexes.map((i) => {
+            const route = routes[i];
+            const isSelected = i === selectedIndex;
+            if (route.coordinates.length < 2) return null;
+            return (
+              <div key={i}>
+                <Polyline
+                  positions={route.coordinates}
+                  pathOptions={{
+                    color: "#ffffff",
+                    weight: isSelected ? 8 : 5,
+                    opacity: isSelected ? 0.9 : 0.5,
+                    lineCap: "round",
+                    lineJoin: "round",
+                  }}
+                  eventHandlers={{ click: () => setSelectedIndex(i) }}
+                />
+                <Polyline
+                  positions={route.coordinates}
+                  pathOptions={{
+                    color: isSelected ? HOME_BLUE : ROUTE_COLORS[Math.min(i, ROUTE_COLORS.length - 1)],
+                    weight: isSelected ? 5 : 3,
+                    opacity: isSelected ? 0.95 : 0.7,
+                    dashArray: isSelected ? undefined : "2 8",
+                    lineCap: "round",
+                    lineJoin: "round",
+                  }}
+                  eventHandlers={{ click: () => setSelectedIndex(i) }}
+                />
+              </div>
+            );
+          })}
         </MapContainer>
 
         {mapLoading && (
@@ -256,6 +304,24 @@ export default function RideCreationMap({ source, destination, form }) {
             <div className="map-empty-icon"><AimOutlined /></div>
             <strong>Start by choosing a location</strong>
             <span>Click anywhere on the map to set your start point.</span>
+          </div>
+        )}
+
+        {routes.length > 1 && (
+          <div className="ride-map-route-options">
+            {routes.map((route, i) => (
+              <button
+                key={i}
+                type="button"
+                className={i === selectedIndex ? "active" : ""}
+                onClick={() => setSelectedIndex(i)}
+              >
+                <span className="route-name">{i === 0 ? "Fastest route" : `Alternative ${i}`}</span>
+                <span className="route-meta">
+                  {route.distanceKm != null ? `${route.distanceKm.toFixed(1)} km` : "—"} · {formatDuration(route.durationMin)}
+                </span>
+              </button>
+            ))}
           </div>
         )}
 

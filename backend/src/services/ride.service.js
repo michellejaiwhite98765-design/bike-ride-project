@@ -120,6 +120,7 @@ export const rideService = {
       ...search,
       date: search.date,
       time: search.time,
+      includeFull: search.includeFull,
       timeWindowMinutes: env.matching.timeWindowMinutes,
       pickupRadiusM: pickupRadiusKm * 1000,
       destinationRadiusM: destinationRadiusKm * 1000,

@@ -23,6 +23,82 @@ const MIN_OCR_WIDTH = 2000;
 // a plausible registration number instead of giving up after the first.
 const PSM_MODES = ["6", "4", "11"];
 
+// Document boundary detection: phone photos often show the RC card small
+// within a much larger, busier frame (a table, someone's hand, etc.), and
+// that surrounding clutter confuses tesseract's text segmentation even
+// after the resize/contrast pass below. RC cards are printed on white/light
+// card stock, so a brightness-density heuristic - find the rows/columns
+// that are mostly "bright" and take their bounding box - locates the card
+// well enough to crop to it first, without needing a full CV/ML library.
+const DETECT_MAX_DIM = 800; // downscale for fast row/column scanning
+const BRIGHT_THRESHOLD = 150; // 0-255 grayscale
+const LINE_BRIGHT_DENSITY = 0.35; // fraction of bright pixels for a row/col to count as "card"
+const MIN_DETECTED_AREA_RATIO = 0.15; // ignore detections implausibly small to be the whole card
+const CROP_PADDING_RATIO = 0.04; // small margin so the crop doesn't clip the card edge/text
+
+async function detectDocumentBounds(orientedBuffer) {
+  const meta = await sharp(orientedBuffer).metadata();
+  const { width = 0, height = 0 } = meta;
+  if (!width || !height) return null;
+
+  const scale = Math.min(1, DETECT_MAX_DIM / Math.max(width, height));
+  const workWidth = Math.max(1, Math.round(width * scale));
+  const workHeight = Math.max(1, Math.round(height * scale));
+
+  const { data, info } = await sharp(orientedBuffer)
+    .resize({ width: workWidth, height: workHeight, fit: "fill" })
+    .grayscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // Two passes, not one: a column's brightness has to be measured only
+  // *within* the row band the card actually occupies, not across the full
+  // image height - otherwise a narrow card band gets diluted by all the
+  // dark background above/below it and never crosses the density
+  // threshold, even though it's clearly the brightest thing in its rows.
+  const rowBright = new Array(info.height).fill(0);
+  for (let y = 0; y < info.height; y++) {
+    const rowOffset = y * info.width;
+    for (let x = 0; x < info.width; x++) {
+      if (data[rowOffset + x] > BRIGHT_THRESHOLD) rowBright[y] += 1;
+    }
+  }
+  const isCardRow = rowBright.map((count) => count / info.width > LINE_BRIGHT_DENSITY);
+  const top = isCardRow.indexOf(true);
+  const bottom = isCardRow.lastIndexOf(true);
+  if (top === -1 || bottom <= top) return null;
+  const rowSpan = bottom - top + 1;
+
+  const colBright = new Array(info.width).fill(0);
+  for (let y = top; y <= bottom; y++) {
+    const rowOffset = y * info.width;
+    for (let x = 0; x < info.width; x++) {
+      if (data[rowOffset + x] > BRIGHT_THRESHOLD) colBright[x] += 1;
+    }
+  }
+  const isCardCol = colBright.map((count) => count / rowSpan > LINE_BRIGHT_DENSITY);
+  const left = isCardCol.indexOf(true);
+  const right = isCardCol.lastIndexOf(true);
+  if (left === -1 || right <= left) return null;
+
+  const boxWidth = right - left;
+  const boxHeight = bottom - top;
+  if ((boxWidth * boxHeight) / (info.width * info.height) < MIN_DETECTED_AREA_RATIO) return null;
+
+  // Scale the detected box back up to the (already EXIF-oriented) full-size
+  // image, with a small padding margin on every side.
+  const invScale = 1 / scale;
+  const padX = Math.round(boxWidth * invScale * CROP_PADDING_RATIO);
+  const padY = Math.round(boxHeight * invScale * CROP_PADDING_RATIO);
+  const cropLeft = Math.max(0, Math.round(left * invScale) - padX);
+  const cropTop = Math.max(0, Math.round(top * invScale) - padY);
+  const cropWidth = Math.min(width - cropLeft, Math.round(boxWidth * invScale) + padX * 2);
+  const cropHeight = Math.min(height - cropTop, Math.round(boxHeight * invScale) + padY * 2);
+  if (cropWidth <= 0 || cropHeight <= 0) return null;
+
+  return { left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight };
+}
+
 function run(command, args, { input, timeoutMs = env.rcOcr.timeoutMs } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -75,8 +151,22 @@ function findExpectedRegistrationNumber(text, expected) {
 }
 
 async function preprocessImage(buffer) {
-  const image = sharp(buffer, { failOn: "none" }).rotate(); // auto-orient using EXIF
-  const { width = 0 } = await image.metadata();
+  // Bake in EXIF orientation once so both the boundary detection below and
+  // the final crop operate on the same right-way-up pixel grid.
+  const orientedBuffer = await sharp(buffer, { failOn: "none" }).rotate().toBuffer();
+  const bounds = await detectDocumentBounds(orientedBuffer).catch(() => null);
+
+  let image = sharp(orientedBuffer);
+  let width;
+  if (bounds) {
+    image = image.extract(bounds);
+    width = bounds.width;
+  } else {
+    // No confident crop found (e.g. the card already fills the frame) -
+    // fall back to the untouched full photo, same as before this existed.
+    width = (await sharp(orientedBuffer).metadata()).width || 0;
+  }
+
   return image
     .resize({ width: Math.max(width, MIN_OCR_WIDTH), withoutEnlargement: false })
     .grayscale()

@@ -29,6 +29,16 @@ function MapViewport({ source, destination, occludedLeft = 0 }) {
   const map = useMap();
 
   useEffect(() => {
+    // Setting Start then End in quick succession (e.g. two shared-link
+    // pastes a couple seconds apart) fires this effect twice before the
+    // first flyToBounds animation finishes. Leaflet's fly animation
+    // retargets itself if left alone, but doing that mid-flight has left
+    // the vector-layer pane's zoom transform stuck at a non-1 scale in
+    // testing (routes render squashed/offset afterwards). Explicitly
+    // stopping any animation in progress before starting the next one
+    // avoids that interruption entirely.
+    map.stop();
+
     // flyTo/flyToBounds animate by interpolating over the container's pixel
     // size, which is still 0x0 on the very first render (e.g. while the
     // Drawer it lives in is still animating open) - Leaflet's easing math

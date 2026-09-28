@@ -394,7 +394,13 @@ export default function CreateRidePage() {
   return (
     <div className="cr-shell">
       <div className="cr-map-stage">
-        <RideCreationMap source={sourcePoint} destination={destinationPoint} form={form} onRouteSelect={setSelectedRoute} />
+        <RideCreationMap
+          source={sourcePoint}
+          destination={destinationPoint}
+          form={form}
+          onRouteSelect={setSelectedRoute}
+          occludedLeft={drawerOpen ? 420 : 0}
+        />
       </div>
 
       {!drawerOpen && (

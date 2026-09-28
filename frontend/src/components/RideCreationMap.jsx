@@ -25,7 +25,7 @@ function pinIcon(type) {
   });
 }
 
-function MapViewport({ source, destination }) {
+function MapViewport({ source, destination, occludedLeft = 0 }) {
   const map = useMap();
 
   useEffect(() => {
@@ -38,6 +38,16 @@ function MapViewport({ source, destination }) {
     const size = map.getSize();
     const canAnimate = size.x > 0 && size.y > 0;
 
+    // The Ride details Drawer floats *over* the map (mask={false}, not a
+    // side-by-side layout), so Leaflet's own container is the full map
+    // width and has no idea part of it is visually covered. Centering
+    // bounds across that full width pushes real content half-behind the
+    // drawer. Padding the fit's left side by the drawer's width (clamped
+    // so a narrow viewport can't push padding past the container itself)
+    // keeps everything within the part that's actually visible.
+    const leftPad = Math.min(occludedLeft + 30, Math.max(size.x - 100, 0));
+    const padding = { paddingTopLeft: [leftPad, 60], paddingBottomRight: [60, 60] };
+
     const points = [source, destination].filter(Boolean);
 
     if (!points.length) {
@@ -46,20 +56,20 @@ function MapViewport({ source, destination }) {
       return;
     }
 
-    if (points.length === 1) {
-      const target = [points[0].latitude, points[0].longitude];
-      if (canAnimate) map.flyTo(target, 13, { duration: 0.8 });
-      else map.setView(target, 13);
-      return;
-    }
+    // A single point can't take fitBounds' padding option directly, but a
+    // zero-size "bounds" of just that point can - so it's centered in the
+    // same visible (non-drawer) region as the two-point case below.
+    const bounds =
+      points.length === 1
+        ? L.latLngBounds([points[0].latitude, points[0].longitude], [points[0].latitude, points[0].longitude])
+        : L.latLngBounds(points.map((p) => [p.latitude, p.longitude]));
 
-    const bounds = L.latLngBounds(points.map((p) => [p.latitude, p.longitude]));
     if (canAnimate) {
-      map.flyToBounds(bounds, { padding: [70, 70], maxZoom: 13, duration: 0.9 });
+      map.flyToBounds(bounds, { ...padding, maxZoom: 13, duration: 0.9 });
     } else {
-      map.fitBounds(bounds, { padding: [70, 70], maxZoom: 13 });
+      map.fitBounds(bounds, { ...padding, maxZoom: 13 });
     }
-  }, [map, source, destination]);
+  }, [map, source, destination, occludedLeft]);
 
   return null;
 }
@@ -101,7 +111,7 @@ function formatDuration(minutes) {
   return h ? `${h}h ${m}m` : `${m} min`;
 }
 
-export default function RideCreationMap({ source, destination, form, onRouteSelect }) {
+export default function RideCreationMap({ source, destination, form, onRouteSelect, occludedLeft = 0 }) {
   const { mode: themeMode } = useTheme();
   const isDark = themeMode === "dark";
   const [mode, setMode] = useState(source ? "destination" : "source");
@@ -251,7 +261,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
         >
           <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
 
-          <MapViewport source={source} destination={destination} />
+          <MapViewport source={source} destination={destination} occludedLeft={occludedLeft} />
           <MapClickHandler mode={mode} onMapLocation={handleMapLocation} />
 
           {source && (

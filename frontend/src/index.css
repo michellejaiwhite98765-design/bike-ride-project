@@ -189,6 +189,14 @@ a {
 
 .ride-map-control .ant-segmented {
   background: rgba(45, 212, 191, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.ride-map-control .ant-segmented-thumb,
+.ride-map-control .ant-segmented-item-selected {
+  background: rgba(45, 212, 191, 0.22) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.4);
 }
 
 .ride-creation-map {

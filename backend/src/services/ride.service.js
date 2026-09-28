@@ -22,9 +22,14 @@ export const rideService = {
     if (vehicle.verificationStatus !== "VERIFIED") {
       throw ApiError.badRequest("Vehicle must be verified before creating a ride");
     }
-    if (data.availableSeats > vehicle.seatCapacity) {
+    // Vehicles created before seatCapacity existed (or reactivated ones) can
+    // still have a null value in the DB - treat that the same way the
+    // frontend already does elsewhere: default to 1 rather than letting
+    // `N > null` (which JS coerces to `N > 0`) block every ride.
+    const seatCapacity = vehicle.seatCapacity ?? 1;
+    if (data.availableSeats > seatCapacity) {
       throw ApiError.badRequest(
-        `This vehicle only has ${vehicle.seatCapacity} passenger seat${vehicle.seatCapacity === 1 ? "" : "s"} available`
+        `This vehicle only has ${seatCapacity} passenger seat${seatCapacity === 1 ? "" : "s"} available`
       );
     }
 

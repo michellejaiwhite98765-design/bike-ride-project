@@ -147,16 +147,20 @@ export const vehicleService = {
   async verify(userId, vehicleId) {
     const vehicle = await assertOwner(vehicleId, userId);
 
+    // Check this before the RC-document preconditions below: a vehicle can
+    // already be VERIFIED without those fields set (e.g. an admin override
+    // via PUT /admin/vehicles/:id/verify), and re-verifying it should just
+    // return the cached result instead of complaining about a missing RC.
+    if (vehicle.verificationStatus === "VERIFIED") {
+      return { vehicle, cached: true, providerResult: vehicle.verificationData };
+    }
+
     if (!vehicle.rcDocumentUrl || vehicle.rcOcrStatus !== "MATCHED") {
       throw ApiError.badRequest("Please upload an RC that matches the vehicle registration number before verifying");
     }
 
     if (!registrationNumbersLookAlike(vehicle.registrationNumber, vehicle.rcExtractedRegistrationNumber)) {
       throw ApiError.badRequest("The uploaded RC does not match this vehicle registration number");
-    }
-
-    if (vehicle.verificationStatus === "VERIFIED") {
-      return { vehicle, cached: true, providerResult: vehicle.verificationData };
     }
 
     const existingRegistration = await vehicleRepository.findByRegistrationNumber(vehicle.registrationNumber);

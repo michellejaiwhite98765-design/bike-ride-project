@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
+import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
 import {
   EnvironmentOutlined,
   CarOutlined,
@@ -239,6 +239,7 @@ export default function CreateRidePage() {
         form.setFieldsValue({
           ...ride,
           departureDate: dayjs(ride.departureDate),
+          departureTime: dayjs(ride.departureTime, "HH:mm"),
           tipAmount: Number(ride.tipAmount),
         });
       } else {
@@ -279,7 +280,11 @@ export default function CreateRidePage() {
         repeatUntil: _repeatUntil,
         ...rest
       } = values;
-      const payload = { ...rest, departureDate: values.departureDate.format("YYYY-MM-DD") };
+      const payload = {
+        ...rest,
+        departureDate: values.departureDate.format("YYYY-MM-DD"),
+        departureTime: values.departureTime.format("HH:mm"),
+      };
       if (values.rideType === "WITHOUT_TIP") payload.tipAmount = 0;
 
       let ride;
@@ -464,8 +469,22 @@ export default function CreateRidePage() {
           <Form.Item name="departureDate" label="Departure Date" rules={[{ required: true }]}>
             <DatePicker size="large" style={{ width: "100%" }} disabledDate={(d) => d && d < dayjs().startOf("day")} />
           </Form.Item>
-          <Form.Item name="departureTime" label="Departure Time" rules={[{ required: true, pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: "Use HH:mm format" }]}>
-            <Input size="large" placeholder="08:00" />
+          <Form.Item name="departureTime" label="Departure Time" rules={[{ required: true, message: "Pick a departure time" }]}>
+            <TimePicker
+              size="large"
+              style={{ width: "100%" }}
+              format="h:mm A"
+              minuteStep={5}
+              disabledTime={() => {
+                if (!departureDate || !departureDate.isSame(dayjs(), "day")) return {};
+                const now = dayjs();
+                return {
+                  disabledHours: () => Array.from({ length: now.hour() }, (_, i) => i),
+                  disabledMinutes: (hour) =>
+                    hour === now.hour() ? Array.from({ length: now.minute() + 1 }, (_, i) => i) : [],
+                };
+              }}
+            />
           </Form.Item>
         </FormCard>
 

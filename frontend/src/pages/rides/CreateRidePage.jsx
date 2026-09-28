@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
 import {
@@ -131,12 +131,25 @@ export default function CreateRidePage() {
   const sourceName = Form.useWatch("sourceName", form);
   const destinationName = Form.useWatch("destinationName", form);
 
-  const sourcePoint = sourceLatitude != null && sourceLongitude != null
-    ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude), name: sourceName }
-    : null;
-  const destinationPoint = destinationLatitude != null && destinationLongitude != null
-    ? { latitude: Number(destinationLatitude), longitude: Number(destinationLongitude), name: destinationName }
-    : null;
+  // Memoized so the map only re-fits/re-flies when the actual coordinates
+  // change, not on every unrelated re-render (typing in Notes, ticking a
+  // checkbox, etc). A fresh object literal here on every render would give
+  // RideCreationMap's fitBounds effect a "new" source/destination each
+  // time, restarting its fly animation - visible as the map blinking.
+  const sourcePoint = useMemo(
+    () =>
+      sourceLatitude != null && sourceLongitude != null
+        ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude), name: sourceName }
+        : null,
+    [sourceLatitude, sourceLongitude, sourceName]
+  );
+  const destinationPoint = useMemo(
+    () =>
+      destinationLatitude != null && destinationLongitude != null
+        ? { latitude: Number(destinationLatitude), longitude: Number(destinationLongitude), name: destinationName }
+        : null,
+    [destinationLatitude, destinationLongitude, destinationName]
+  );
   // Prefers the actually-selected driving route's real distance over the
   // straight-line haversine fallback, so the tip suggestion (and anything
   // else derived from distanceKm) matches the road the rider picked.

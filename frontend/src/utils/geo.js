@@ -30,6 +30,22 @@ export async function reverseGeocode(latitude, longitude) {
 }
 
 /**
+ * Forward-geocodes a place name via Nominatim. Used to resolve
+ * share.google links, which (unlike older goo.gl/maps.app.goo.gl links)
+ * redirect to a Google Search results page with a place *name* in the
+ * query string rather than coordinates in the URL - so the name has to be
+ * geocoded the same way a typed search-box entry would be.
+ */
+export async function geocodePlaceName(query) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=1`;
+  const response = await fetch(url, { headers: { "Accept-Language": "en" } });
+  if (!response.ok) throw new Error("Unable to find this place");
+  const [result] = await response.json();
+  if (!result) return null;
+  return { latitude: Number(result.lat), longitude: Number(result.lon) };
+}
+
+/**
  * Returns an error message if setting `prefix` ("source"/"destination") to
  * `newCountry` would conflict with the already-set opposite point's country,
  * or null if it's fine (either point not yet resolved, or countries match).

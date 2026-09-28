@@ -8,16 +8,29 @@
 //   https://maps.google.com/?q=13.08,80.27
 //   https://www.google.com/maps?query=13.08,80.27
 //
-// Deliberately does NOT try to resolve maps.app.goo.gl short links - that
-// redirect can't be followed from the browser (CORS), so isShortLink() lets
-// callers show a clearer error instead of a generic parse failure.
+// Short links (goo.gl, maps.app.goo.gl, share.google, g.co) redirect to one
+// of the above - the browser can't read the final URL of a cross-origin
+// redirect itself (CORS), so resolveSharedLocationLink() below asks the
+// backend to follow the redirect server-side first.
 
 const COORD_PAIR = /^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/;
+const SHORT_LINK_HOSTS = ["goo.gl", "maps.app.goo.gl", "share.google", "g.co"];
+
+export function isGoogleLocationLink(input) {
+  try {
+    const url = new URL(String(input || "").trim());
+    const host = url.hostname.toLowerCase();
+    return host.includes("google.") || SHORT_LINK_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
 
 export function isShortLink(input) {
   try {
     const url = new URL(String(input || "").trim());
-    return url.hostname.toLowerCase().includes("goo.gl");
+    const host = url.hostname.toLowerCase();
+    return SHORT_LINK_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
   } catch {
     return false;
   }
@@ -25,17 +38,9 @@ export function isShortLink(input) {
 
 export function parseSharedLocationLink(input) {
   const text = String(input || "").trim();
-  if (!text) return null;
+  if (!text || !isGoogleLocationLink(text)) return null;
 
-  let url;
-  try {
-    url = new URL(text);
-  } catch {
-    return null;
-  }
-
-  const host = url.hostname.toLowerCase();
-  if (!host.includes("google.") && !host.includes("goo.gl")) return null;
+  const url = new URL(text);
 
   const atMatch = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (atMatch) {
@@ -50,5 +55,36 @@ export function parseSharedLocationLink(input) {
     }
   }
 
+  // share.google links resolve to a Google Search results page
+  // (google.com/search?q=map+of+<place name>) rather than a /maps/ URL, so
+  // there's no coordinate to read from the URL at all - only a place name,
+  // which the caller has to geocode itself (see resolveSharedLocationLink).
+  if (url.pathname === "/search") {
+    const q = url.searchParams.get("q");
+    if (q) {
+      const placeName = q.replace(/^map of /i, "").trim();
+      if (placeName) return { searchQuery: placeName };
+    }
+  }
+
   return null;
+}
+
+// Full pipeline: resolves short links via the backend (following the
+// redirect server-side) before parsing, and parses full links directly
+// without a network round-trip. Geocodes a place name if that's all the
+// resolved link yielded (see the share.google case above). Returns null if
+// the input isn't a recognizable Google Maps / shared-location link, or a
+// point couldn't be found even after resolving/geocoding it.
+export async function resolveSharedLocationLink(input, resolveLinkFn, geocodeFn) {
+  const text = String(input || "").trim();
+  if (!isGoogleLocationLink(text)) return null;
+
+  const parsed = isShortLink(text)
+    ? parseSharedLocationLink((await resolveLinkFn(text)).resolvedUrl)
+    : parseSharedLocationLink(text);
+
+  if (!parsed) return null;
+  if ("searchQuery" in parsed) return geocodeFn(parsed.searchQuery);
+  return parsed;
 }

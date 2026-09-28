@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Tooltip, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { Button, Segmented, Spin, Tag, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
@@ -29,24 +29,36 @@ function MapViewport({ source, destination }) {
   const map = useMap();
 
   useEffect(() => {
+    // flyTo/flyToBounds animate by interpolating over the container's pixel
+    // size, which is still 0x0 on the very first render (e.g. while the
+    // Drawer it lives in is still animating open) - Leaflet's easing math
+    // divides by that size and throws "Invalid LatLng (NaN, NaN)" instead
+    // of just... not animating. Fall back to the instant, non-animated
+    // equivalent whenever the container isn't sized yet.
+    const size = map.getSize();
+    const canAnimate = size.x > 0 && size.y > 0;
+
     const points = [source, destination].filter(Boolean);
 
     if (!points.length) {
-      map.flyTo(DEFAULT_CENTER, 9, { duration: 0.7 });
+      if (canAnimate) map.flyTo(DEFAULT_CENTER, 9, { duration: 0.7 });
+      else map.setView(DEFAULT_CENTER, 9);
       return;
     }
 
     if (points.length === 1) {
-      map.flyTo([points[0].latitude, points[0].longitude], 13, { duration: 0.8 });
+      const target = [points[0].latitude, points[0].longitude];
+      if (canAnimate) map.flyTo(target, 13, { duration: 0.8 });
+      else map.setView(target, 13);
       return;
     }
 
     const bounds = L.latLngBounds(points.map((p) => [p.latitude, p.longitude]));
-    map.flyToBounds(bounds, {
-      padding: [70, 70],
-      maxZoom: 13,
-      duration: 0.9,
-    });
+    if (canAnimate) {
+      map.flyToBounds(bounds, { padding: [70, 70], maxZoom: 13, duration: 0.9 });
+    } else {
+      map.fitBounds(bounds, { padding: [70, 70], maxZoom: 13 });
+    }
   }, [map, source, destination]);
 
   return null;
@@ -247,7 +259,11 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
               position={[source.latitude, source.longitude]}
               icon={pinIcon("start")}
               eventHandlers={{ click: () => setMode("source") }}
-            />
+            >
+              <Tooltip direction="top" offset={[0, -44]} opacity={1}>
+                <strong>Start:</strong> {source.name || `${source.latitude.toFixed(5)}, ${source.longitude.toFixed(5)}`}
+              </Tooltip>
+            </Marker>
           )}
 
           {destination && (
@@ -255,7 +271,11 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
               position={[destination.latitude, destination.longitude]}
               icon={pinIcon("end")}
               eventHandlers={{ click: () => setMode("destination") }}
-            />
+            >
+              <Tooltip direction="top" offset={[0, -44]} opacity={1}>
+                <strong>End:</strong> {destination.name || `${destination.latitude.toFixed(5)}, ${destination.longitude.toFixed(5)}`}
+              </Tooltip>
+            </Marker>
           )}
 
           {orderedIndexes.map((i) => {
@@ -274,7 +294,13 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
                     lineJoin: "round",
                   }}
                   eventHandlers={{ click: () => setSelectedIndex(i) }}
-                />
+                >
+                  <Tooltip sticky opacity={1}>
+                    <strong>{i === 0 ? "Fastest route" : `Alternative ${i}`}</strong>
+                    <br />
+                    {route.distanceKm != null ? `${route.distanceKm.toFixed(1)} km` : "—"} · {formatDuration(route.durationMin)}
+                  </Tooltip>
+                </Polyline>
                 <Polyline
                   positions={route.coordinates}
                   pathOptions={{

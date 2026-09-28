@@ -317,6 +317,7 @@ a {
   border: 1px solid var(--chrome-border);
   border-radius: 14px;
   background: var(--surface-glass);
+  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
   color: var(--text-secondary);
   cursor: pointer;
@@ -325,7 +326,8 @@ a {
 
 .ride-map-route-options button.active {
   border-color: #2563eb;
-  background: rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.22);
+  backdrop-filter: blur(10px);
   color: var(--text-primary);
 }
 

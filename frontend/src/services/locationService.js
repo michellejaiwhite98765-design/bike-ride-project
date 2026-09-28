@@ -1,3 +1,5 @@
+import { api } from "./api.js";
+
 export const locationService = {
   async requestPermission() {
     if (!navigator.geolocation) {
@@ -80,5 +82,12 @@ export const locationService = {
     const y = Math.sin(dLon) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
     return (Math.atan2(y, x) * 180) / Math.PI;
+  },
+
+  // Resolves a Google Maps / WhatsApp shared-location short link to its
+  // final URL (the backend follows the redirect server-side, since the
+  // browser can't read the final URL of a cross-origin redirect itself).
+  resolveLink(url) {
+    return api.post("/locations/resolve-link", { url }).then((res) => res.data);
   },
 };

@@ -18,14 +18,15 @@ import dayjs from "dayjs";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import { rideService } from "../../services/rideService.js";
+import { locationService } from "../../services/locationService.js";
 import LocationFields from "../../components/LocationFields.jsx";
 import RideCreationMap from "../../components/RideCreationMap.jsx";
 import colors from "../../theme/colors.js";
 import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
-import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
-import { parseSharedLocationLink, isShortLink } from "../../utils/parseSharedLocation.js";
+import { haversineKm, reverseGeocode, countryMismatch, geocodePlaceName } from "../../utils/geo.js";
+import { isGoogleLocationLink, resolveSharedLocationLink } from "../../utils/parseSharedLocation.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
 
 const SectionHeader = styled.div`
@@ -113,6 +114,7 @@ export default function CreateRidePage() {
   const [submitting, setSubmitting] = useState(false);
   const [locatingMe, setLocatingMe] = useState(false);
   const [sharedLinkInput, setSharedLinkInput] = useState("");
+  const [resolvingLink, setResolvingLink] = useState(false);
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -126,12 +128,14 @@ export default function CreateRidePage() {
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
   const destinationLongitude = Form.useWatch("destinationLongitude", form);
+  const sourceName = Form.useWatch("sourceName", form);
+  const destinationName = Form.useWatch("destinationName", form);
 
   const sourcePoint = sourceLatitude != null && sourceLongitude != null
-    ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) }
+    ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude), name: sourceName }
     : null;
   const destinationPoint = destinationLatitude != null && destinationLongitude != null
-    ? { latitude: Number(destinationLatitude), longitude: Number(destinationLongitude) }
+    ? { latitude: Number(destinationLatitude), longitude: Number(destinationLongitude), name: destinationName }
     : null;
   // Prefers the actually-selected driving route's real distance over the
   // straight-line haversine fallback, so the tip suggestion (and anything
@@ -203,13 +207,22 @@ export default function CreateRidePage() {
   }
 
   async function applySharedLink(prefix) {
-    const point = parseSharedLocationLink(sharedLinkInput);
+    if (!isGoogleLocationLink(sharedLinkInput)) {
+      message.error("Paste a Google Maps (or WhatsApp shared location) link.");
+      return;
+    }
+    setResolvingLink(true);
+    let point;
+    try {
+      point = await resolveSharedLocationLink(sharedLinkInput, locationService.resolveLink, geocodePlaceName);
+    } catch {
+      message.error("Couldn't resolve that link. Please try again.");
+      setResolvingLink(false);
+      return;
+    }
+    setResolvingLink(false);
     if (!point) {
-      message.error(
-        isShortLink(sharedLinkInput)
-          ? "Short links can't be read directly — open it and paste the full Google Maps link instead."
-          : "Couldn't read a location from that link. Paste the full Google Maps (or WhatsApp shared location) link."
-      );
+      message.error("Couldn't read a location from that link.");
       return;
     }
     const ok = await applyPoint(prefix, point.latitude, point.longitude);
@@ -432,8 +445,8 @@ export default function CreateRidePage() {
                 onChange={(e) => setSharedLinkInput(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <Button onClick={() => applySharedLink("source")}>Set as start</Button>
-              <Button onClick={() => applySharedLink("destination")}>Set as end</Button>
+              <Button loading={resolvingLink} onClick={() => applySharedLink("source")}>Set as start</Button>
+              <Button loading={resolvingLink} onClick={() => applySharedLink("destination")}>Set as end</Button>
             </Space.Compact>
           </Form.Item>
 
@@ -474,7 +487,10 @@ export default function CreateRidePage() {
               size="large"
               style={{ width: "100%" }}
               format="h:mm A"
-              minuteStep={5}
+              // 1-minute steps, not 5 - with a coarser step the first
+              // selectable minute could round up to nearly 5 minutes past
+              // the real current time once past minutes are disabled below.
+              minuteStep={1}
               disabledTime={() => {
                 if (!departureDate || !departureDate.isSame(dayjs(), "day")) return {};
                 const now = dayjs();
@@ -578,16 +594,30 @@ export default function CreateRidePage() {
               </Radio.Button>
             </Radio.Group>
           </Form.Item>
-          {rideType === "WITH_TIP" && (
-            <Form.Item
-              name="tipAmount"
-              label="Tip Amount (₹)"
-              rules={[{ required: true, type: "number", min: 1, message: "Tip must be greater than 0" }]}
-              extra={distanceKm != null ? `Suggested from distance: ${distanceKm.toFixed(1)} km × ₹${TIP_RATE_PER_KM}/km. Feel free to adjust.` : undefined}
-            >
-              <InputNumber size="large" style={{ width: "100%" }} min={1} placeholder="Enter tip amount" />
-            </Form.Item>
-          )}
+          <Form.Item
+            name="tipAmount"
+            label="Tip Amount (₹)"
+            rules={[{ required: rideType === "WITH_TIP", type: "number", min: rideType === "WITH_TIP" ? 1 : 0, message: "Tip must be greater than 0" }]}
+            extra={
+              rideType === "WITH_TIP" && distanceKm != null
+                ? `Suggested from distance: ${distanceKm.toFixed(1)} km × ₹${TIP_RATE_PER_KM}/km. Feel free to adjust.`
+                : rideType !== "WITH_TIP"
+                ? 'Select "With Tip" above to set an amount.'
+                : undefined
+            }
+          >
+            <InputNumber
+              size="large"
+              style={{ width: "100%" }}
+              min={0}
+              max={10000}
+              disabled={rideType !== "WITH_TIP"}
+              // Blocks anything that isn't a plain non-negative number,
+              // including a paste of "abc" or "-5" - not just the keyboard.
+              parser={(value) => (value == null ? "" : value.replace(/[^\d.]/g, ""))}
+              placeholder={rideType === "WITH_TIP" ? "Enter tip amount" : "—"}
+            />
+          </Form.Item>
         </FormCard>
 
         {/* Additional Info Section */}

@@ -1,7 +1,9 @@
 import { Form, Input, AutoComplete, Spin, message } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { useEffect, useState, useRef } from "react";
-import { countryMismatch } from "../utils/geo.js";
+import { countryMismatch, reverseGeocode, geocodePlaceName } from "../utils/geo.js";
+import { isGoogleLocationLink, resolveSharedLocationLink } from "../utils/parseSharedLocation.js";
+import { locationService } from "../services/locationService.js";
 
 // Replace manual place name input with an autocomplete backed by
 // OpenStreetMap's Nominatim search. When a suggestion is selected,
@@ -13,9 +15,47 @@ export default function LocationFields({ prefix, label, placeholder }) {
   const [loading, setLoading] = useState(false);
   const timerRef = useRef(null);
 
+  // A pasted Google Maps / WhatsApp shared-location link isn't a search
+  // term - resolve and apply it directly instead of sending it to Nominatim
+  // (which would just return no results for a URL).
+  async function applySharedLink(value) {
+    setLoading(true);
+    try {
+      const point = await resolveSharedLocationLink(value, locationService.resolveLink, geocodePlaceName);
+      if (!point) {
+        message.error("Couldn't read a location from that link.");
+        return;
+      }
+      const { name, country } = await reverseGeocode(point.latitude, point.longitude);
+      const mismatchError = countryMismatch(form, prefix, country);
+      if (mismatchError) {
+        message.error(mismatchError);
+        return;
+      }
+      form.setFieldsValue({
+        [`${prefix}Name`]: name.length > 150 ? name.slice(0, 150) : name,
+        [`${prefix}Latitude`]: point.latitude,
+        [`${prefix}Longitude`]: point.longitude,
+        [`${prefix}Country`]: country,
+      });
+    } catch {
+      message.error("Couldn't resolve that link. Please try again.");
+    } finally {
+      setLoading(false);
+      setOptions([]);
+    }
+  }
+
   const handleSearch = (value) => {
-    // debounce queries
     if (timerRef.current) clearTimeout(timerRef.current);
+
+    if (isGoogleLocationLink(value)) {
+      setOptions([]);
+      applySharedLink(value);
+      return;
+    }
+
+    // debounce queries
     if (!value || value.trim().length < 2) {
       setOptions([]);
       return;

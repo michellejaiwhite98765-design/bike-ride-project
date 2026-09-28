@@ -10,6 +10,7 @@ import { notificationRoutes } from "./notification.routes.js";
 import { ratingRoutes } from "./rating.routes.js";
 import { safetyReportRoutes } from "./safetyReport.routes.js";
 import { adminRoutes } from "./admin.routes.js";
+import { locationRoutes } from "./location.routes.js";
 
 export const apiRouter = Router();
 
@@ -24,3 +25,4 @@ apiRouter.use("/notifications", notificationRoutes);
 apiRouter.use("/ratings", ratingRoutes);
 apiRouter.use("/safety-reports", safetyReportRoutes);
 apiRouter.use("/admin", adminRoutes);
+apiRouter.use("/locations", locationRoutes);

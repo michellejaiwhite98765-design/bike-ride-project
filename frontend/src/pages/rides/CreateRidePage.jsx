@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal, Space } from "antd";
+import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal } from "antd";
 import {
   EnvironmentOutlined,
   CarOutlined,
@@ -8,7 +8,6 @@ import {
   DollarCircleOutlined,
   FileTextOutlined,
   AimOutlined,
-  LinkOutlined,
   MenuOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
@@ -18,15 +17,13 @@ import dayjs from "dayjs";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import { rideService } from "../../services/rideService.js";
-import { locationService } from "../../services/locationService.js";
 import LocationFields from "../../components/LocationFields.jsx";
 import RideCreationMap from "../../components/RideCreationMap.jsx";
 import colors from "../../theme/colors.js";
 import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
-import { haversineKm, reverseGeocode, countryMismatch, geocodePlaceName } from "../../utils/geo.js";
-import { isGoogleLocationLink, resolveSharedLocationLink } from "../../utils/parseSharedLocation.js";
+import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
 
 const SectionHeader = styled.div`
@@ -111,10 +108,8 @@ export default function CreateRidePage() {
   const [form] = Form.useForm();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(null); // "draft" | "publish" | null
   const [locatingMe, setLocatingMe] = useState(false);
-  const [sharedLinkInput, setSharedLinkInput] = useState("");
-  const [resolvingLink, setResolvingLink] = useState(false);
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -219,29 +214,6 @@ export default function CreateRidePage() {
     );
   }
 
-  async function applySharedLink(prefix) {
-    if (!isGoogleLocationLink(sharedLinkInput)) {
-      message.error("Paste a Google Maps (or WhatsApp shared location) link.");
-      return;
-    }
-    setResolvingLink(true);
-    let point;
-    try {
-      point = await resolveSharedLocationLink(sharedLinkInput, locationService.resolveLink, geocodePlaceName);
-    } catch {
-      message.error("Couldn't resolve that link. Please try again.");
-      setResolvingLink(false);
-      return;
-    }
-    setResolvingLink(false);
-    if (!point) {
-      message.error("Couldn't read a location from that link.");
-      return;
-    }
-    const ok = await applyPoint(prefix, point.latitude, point.longitude);
-    if (ok) setSharedLinkInput("");
-  }
-
   function handleVehicleChange() {
     const vehicle = verifiedVehicles.find((v) => v.id === form.getFieldValue("vehicleId"));
     const cap = vehicle?.seatCapacity ?? 1;
@@ -252,7 +224,6 @@ export default function CreateRidePage() {
 
   function handleReset() {
     form.resetFields();
-    setSharedLinkInput("");
   }
 
   useEffect(() => {
@@ -295,7 +266,7 @@ export default function CreateRidePage() {
         message.error("Start and end locations must be in the same country");
         return;
       }
-      setSubmitting(true);
+      setSubmittingAction(publish ? "publish" : "draft");
       const {
         agreeTerms: _agreeTerms,
         agreeSecurity: _agreeSecurity,
@@ -361,7 +332,7 @@ export default function CreateRidePage() {
       if (err?.errorFields) return;
       message.error(err.message);
     } finally {
-      setSubmitting(false);
+      setSubmittingAction(null);
     }
   }
 
@@ -454,20 +425,6 @@ export default function CreateRidePage() {
             label="End Location"
             placeholder="Where does your ride end?"
           />
-
-          <Form.Item label="Or paste a shared location link" extra="Works with Google Maps and WhatsApp-shared location links.">
-            <Space.Compact style={{ display: "flex" }}>
-              <Input
-                prefix={<LinkOutlined />}
-                placeholder="https://maps.google.com/..."
-                value={sharedLinkInput}
-                onChange={(e) => setSharedLinkInput(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <Button loading={resolvingLink} onClick={() => applySharedLink("source")}>Set as start</Button>
-              <Button loading={resolvingLink} onClick={() => applySharedLink("destination")}>Set as end</Button>
-            </Space.Compact>
-          </Form.Item>
 
           <Form.Item
             name="pickupPreference"
@@ -619,7 +576,7 @@ export default function CreateRidePage() {
             rules={[{ required: rideType === "WITH_TIP", type: "number", min: rideType === "WITH_TIP" ? 1 : 0, message: "Tip must be greater than 0" }]}
             extra={
               rideType === "WITH_TIP" && distanceKm != null
-                ? `Suggested from distance: ${distanceKm.toFixed(1)} km × ₹${TIP_RATE_PER_KM}/km. Feel free to adjust.`
+                ? `Auto-calculated from distance: ${distanceKm.toFixed(1)} km × ₹${TIP_RATE_PER_KM}/km.`
                 : rideType !== "WITH_TIP"
                 ? 'Select "With Tip" above to set an amount.'
                 : undefined
@@ -630,7 +587,7 @@ export default function CreateRidePage() {
               style={{ width: "100%" }}
               min={0}
               max={10000}
-              disabled={rideType !== "WITH_TIP"}
+              disabled
               // Blocks anything that isn't a plain non-negative number,
               // including a paste of "abc" or "-5" - not just the keyboard.
               parser={(value) => (value == null ? "" : value.replace(/[^\d.]/g, ""))}
@@ -683,10 +640,25 @@ export default function CreateRidePage() {
           <Button size="large" icon={<ReloadOutlined />} onClick={handleReset}>
             Reset
           </Button>
-          <Button size="large" block loading={submitting} onClick={() => submit(false)} style={{ background: colors.bgSecondary }}>
+          <Button
+            size="large"
+            block
+            loading={submittingAction === "draft"}
+            disabled={submittingAction === "publish"}
+            onClick={() => submit(false)}
+            style={{ background: colors.bgSecondary }}
+          >
             Save as Draft
           </Button>
-          <Button size="large" type="primary" block loading={submitting} style={{ background: colors.primary }} onClick={() => submit(true)}>
+          <Button
+            size="large"
+            type="primary"
+            block
+            loading={submittingAction === "publish"}
+            disabled={submittingAction === "draft"}
+            style={{ background: colors.primary }}
+            onClick={() => submit(true)}
+          >
             Publish Ride
           </Button>
         </ActionButtons>
@@ -719,13 +691,18 @@ export default function CreateRidePage() {
         .cr-shell{position:relative;height:100%}
         .cr-map-stage{position:absolute;inset:0;z-index:1}
 
-        .cr-open-drawer-btn{position:absolute;top:186px;left:14px;z-index:600;display:flex;align-items:center;gap:8px;background:var(--surface-glass);border:1px solid var(--chrome-border);color:var(--text-primary);border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
+        .cr-open-drawer-btn{position:absolute;top:92px;left:14px;z-index:600;display:flex;align-items:center;gap:8px;background:var(--surface-glass);border:1px solid var(--chrome-border);color:var(--text-primary);border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
         .cr-open-drawer-btn:hover{background:var(--bg-tertiary)}
 
-        .cr-drawer .ant-drawer-content{background:${colors.bgSecondary}}
-        .cr-drawer .ant-drawer-header{background:${colors.bgPrimary};border-color:${colors.border}}
+        .cr-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}
+        .cr-drawer .ant-drawer-section{background:var(--surface-glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
+        .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}
+
+        @media (max-width: 650px) {
+          .cr-open-drawer-btn{top:140px}
+        }
       `}</style>
     </div>
   );

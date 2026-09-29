@@ -47,6 +47,16 @@ export function parseSharedLocationLink(input) {
     return { latitude: Number(atMatch[1]), longitude: Number(atMatch[2]) };
   }
 
+  // A maps.app.goo.gl short link for a dropped pin (rather than a named
+  // place) commonly resolves to .../maps/search/<lat>,+<lng> instead of a
+  // /maps/place/.../@lat,lng,zoom URL - no "@" segment and no q= param, just
+  // the coordinate pair as the path itself (with the space before the
+  // longitude written as a literal "+").
+  const searchPathMatch = url.pathname.match(/\/maps\/search\/(-?\d+(?:\.\d+)?),\+?\s*(-?\d+(?:\.\d+)?)/);
+  if (searchPathMatch) {
+    return { latitude: Number(searchPathMatch[1]), longitude: Number(searchPathMatch[2]) };
+  }
+
   for (const param of ["q", "query"]) {
     const value = url.searchParams.get(param);
     const match = value && value.match(COORD_PAIR);

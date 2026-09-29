@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Polyline, Tooltip, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Tooltip, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { Button, Segmented, Spin, Tag, message } from "antd";
+import { Button, Segmented, Spin, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
 import { reverseGeocode, countryMismatch } from "../utils/geo.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
@@ -225,16 +225,6 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
 
   return (
     <div className="ride-creation-map-shell">
-      <div className="ride-creation-map-toolbar">
-        <div>
-          <div className="ride-map-title">Plan your route</div>
-          <div className="ride-map-subtitle">Choose a point on the map or use the location fields.</div>
-        </div>
-        <Tag icon={<AimOutlined />} color="blue">
-          {mode === "source" ? "Set start" : "Set end"}
-        </Tag>
-      </div>
-
       <div className="ride-map-control">
         <Segmented
           value={mode}
@@ -266,10 +256,12 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
           touchZoom
           doubleClickZoom
           dragging
+          zoomControl={false}
           style={{ height: "100%", width: "100%" }}
           className={isDark ? "rcm-dark-tiles" : ""}
         >
           <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
+          <ZoomControl position="bottomright" />
 
           <MapViewport source={source} destination={destination} occludedLeft={occludedLeft} />
           <MapClickHandler mode={mode} onMapLocation={handleMapLocation} />

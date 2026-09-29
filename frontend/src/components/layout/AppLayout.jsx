@@ -435,8 +435,8 @@ function AppLayoutInner() {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <HeaderOuter $scrolled={scrolled} $floating={isFullBleedPage}>
-        <Capsule $scrolled={scrolled}>
+      <HeaderOuter $scrolled={scrolled || isCreateRidePage} $floating={isFullBleedPage}>
+        <Capsule $scrolled={scrolled || isCreateRidePage}>
           <AnimatePresence mode="wait" initial={false}>
             {isSearchPage && searchForm ? (
               <motion.div

@@ -121,8 +121,25 @@ export const rideRepository = {
       const windowParam = p(timeWindowMinutes);
       timeClause = `AND LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam}`;
     }
+
+    // We only store a ride's two endpoints, not its actual road geometry, so
+    // the straight line between them stands in as an approximation of the
+    // route. Matching against the line (not just the two endpoints) lets a
+    // pickup/drop-off that's genuinely along the way - e.g. a town the ride
+    // passes through - match even though it's nowhere near either endpoint.
+    const routeLine = `ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography`;
+
     const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
     const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${p(pickupRadiusM)})`;
+    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+
+    // Guard against matching a ride "backwards": require the pickup point to
+    // fall no later along the route line than the drop-off point (with a
+    // little slack for the corridor width itself).
+    const sourceFraction = `ST_LineLocatePoint(${routeLine}::geometry, ${sourcePoint()}::geometry)`;
+    const destinationFraction = `ST_LineLocatePoint(${routeLine}::geometry, ${destinationPoint()}::geometry)`;
+    const directionOk = `${sourceFraction} <= ${destinationFraction} + 0.05`;
 
     const { rows } = await pool.query(
       `SELECT id, source_distance_m, destination_distance_m
@@ -140,8 +157,8 @@ export const rideRepository = {
            ${seatsClause}
            ${rideTypeClause}
            ${timeClause}
-           AND ${sourceDWithin}
-           AND ${destinationDWithin}
+           AND (${sourceDWithin} OR (${sourceOnRoute} AND ${directionOk}))
+           AND (${destinationDWithin} OR (${destinationOnRoute} AND ${directionOk}))
        ) candidates
        ORDER BY (source_distance_m + destination_distance_m) ASC
        LIMIT 50`,

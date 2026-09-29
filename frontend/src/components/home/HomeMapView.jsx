@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import { AimOutlined, ArrowRightOutlined, EnvironmentOutlined, TeamOutlined } from "@ant-design/icons";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
@@ -9,6 +9,34 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 
 const DEFAULT_CENTER = [9.9252, 78.1198]; // Madurai fallback, same as the rest of the app.
 const ZOOM = 14;
+
+// Cycled by ride index so every trip drawn on the map (route + its two pins)
+// gets its own consistent, easily-told-apart color.
+const TRIP_COLORS = [
+  "#2563eb",
+  "#f97316",
+  "#db2777",
+  "#16a34a",
+  "#9333ea",
+  "#eab308",
+  "#0891b2",
+  "#dc2626",
+  "#65a30d",
+  "#7c3aed",
+];
+
+function tripColor(index) {
+  return TRIP_COLORS[index % TRIP_COLORS.length];
+}
+
+async function getRoute(source, destination) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Unable to load route");
+  const data = await response.json();
+  const coordinates = data?.routes?.[0]?.geometry?.coordinates || [];
+  return coordinates.map(([longitude, latitude]) => [latitude, longitude]);
+}
 
 function meIcon() {
   return L.divIcon({
@@ -19,15 +47,24 @@ function meIcon() {
   });
 }
 
-function priceIcon(ride) {
+function priceIcon(ride, color) {
   const isFull = ride.availableSeats <= 0;
   const isFree = ride.rideType === "WITHOUT_TIP";
   const label = isFull ? "Full" : isFree ? "Free" : `₹${ride.tipAmount}`;
   return L.divIcon({
     className: "hmv-marker-wrap",
-    html: `<div class="hmv-price-pin${isFull ? " hmv-price-pin-full" : ""}"><span>${label}</span><i></i></div>`,
+    html: `<div class="hmv-price-pin${isFull ? " hmv-price-pin-full" : ""}" style="--pin-color:${color}"><span>${label}</span><i></i></div>`,
     iconSize: [70, 40],
     iconAnchor: [35, 40],
+  });
+}
+
+function endPinIcon(color) {
+  return L.divIcon({
+    className: "hmv-marker-wrap",
+    html: `<div class="hmv-end-pin" style="--pin-color:${color}"><span class="hmv-end-pin-core"></span></div>`,
+    iconSize: [24, 30],
+    iconAnchor: [12, 28],
   });
 }
 
@@ -92,18 +129,54 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
   const { mode } = useTheme();
   const isDark = mode === "dark";
   const [recenterSignal, setRecenterSignal] = useState(0);
+  const [routesById, setRoutesById] = useState({});
 
   const ridePoints = useMemo(
     () =>
       nearbyRides
-        .map((ride) => ({ ride, position: [Number(ride.sourceLatitude), Number(ride.sourceLongitude)] }))
-        .filter((p) => Number.isFinite(p.position[0]) && Number.isFinite(p.position[1])),
+        .map((ride) => ({
+          ride,
+          source: { latitude: Number(ride.sourceLatitude), longitude: Number(ride.sourceLongitude) },
+          destination: { latitude: Number(ride.destinationLatitude), longitude: Number(ride.destinationLongitude) },
+        }))
+        .filter(
+          (p) =>
+            Number.isFinite(p.source.latitude) &&
+            Number.isFinite(p.source.longitude) &&
+            Number.isFinite(p.destination.latitude) &&
+            Number.isFinite(p.destination.longitude)
+        ),
     [nearbyRides]
   );
 
+  // Fetch the real driving route for each trip so it draws as an actual road
+  // path rather than a straight line. Skips trips whose route is already
+  // loaded, so this only re-fetches when the ride list itself changes.
+  useEffect(() => {
+    let cancelled = false;
+    ridePoints.forEach(({ ride, source, destination }) => {
+      if (routesById[ride.id]) return;
+      getRoute(source, destination)
+        .then((points) => {
+          if (cancelled || points.length < 2) return;
+          setRoutesById((prev) => ({ ...prev, [ride.id]: points }));
+        })
+        .catch(() => {
+          // Leave it unset - the render falls back to a straight line.
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ridePoints]);
+
   const center = userLocation ? [userLocation.latitude, userLocation.longitude] : DEFAULT_CENTER;
   const fitPoints = useMemo(() => {
-    const points = ridePoints.map((p) => p.position);
+    const points = ridePoints.flatMap((p) => [
+      [p.source.latitude, p.source.longitude],
+      [p.destination.latitude, p.destination.longitude],
+    ]);
     if (userLocation) points.push([userLocation.latitude, userLocation.longitude]);
     return points;
   }, [ridePoints, userLocation]);
@@ -133,8 +206,32 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
           </Marker>
         )}
 
-        {ridePoints.map(({ ride, position }) => (
-          <Marker key={ride.id} position={position} icon={priceIcon(ride)}>
+        {ridePoints.map(({ ride, source, destination }, index) => {
+          const color = tripColor(index);
+          const routePoints = routesById[ride.id];
+          const linePoints =
+            routePoints || [
+              [source.latitude, source.longitude],
+              [destination.latitude, destination.longitude],
+            ];
+          return (
+            <Polyline
+              key={`route-${ride.id}`}
+              positions={linePoints}
+              pathOptions={{
+                color,
+                weight: 4,
+                opacity: 0.85,
+                lineCap: "round",
+                lineJoin: "round",
+                dashArray: routePoints ? undefined : "1 8",
+              }}
+            />
+          );
+        })}
+
+        {ridePoints.map(({ ride, source }, index) => (
+          <Marker key={ride.id} position={[source.latitude, source.longitude]} icon={priceIcon(ride, tripColor(index))}>
             <Popup>
               <div className="hmv-popup">
                 <strong>
@@ -147,6 +244,21 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
                   </span>
                 </div>
                 <Link to={`/rides/${ride.id}`}>View ride</Link>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {ridePoints.map(({ ride, destination }, index) => (
+          <Marker
+            key={`end-${ride.id}`}
+            position={[destination.latitude, destination.longitude]}
+            icon={endPinIcon(tripColor(index))}
+          >
+            <Popup>
+              <div className="hmv-popup">
+                <strong>{ride.destinationName?.split(",")[0]}</strong>
+                <span className="hmv-popup-meta">Drop-off point</span>
               </div>
             </Popup>
           </Marker>
@@ -206,8 +318,11 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         .hmv-me-ring{position:absolute;inset:0;border-radius:50%;background:rgba(37,99,235,.35);animation:hmvPulse 1.8s infinite}
         @keyframes hmvPulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 
-        .hmv-price-pin{position:relative;background:#fff;color:#0f172a;font-size:12px;font-weight:700;padding:6px 10px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.3);white-space:nowrap;text-align:center}
+        .hmv-price-pin{position:relative;background:#fff;color:#0f172a;font-size:12px;font-weight:700;padding:6px 10px 6px 13px;border-radius:10px;border-left:4px solid var(--pin-color,#2563eb);box-shadow:0 3px 10px rgba(0,0,0,.3);white-space:nowrap;text-align:center}
         .hmv-price-pin i{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%) rotate(45deg);width:9px;height:9px;background:#fff;box-shadow:2px 2px 4px rgba(0,0,0,.12)}
+
+        .hmv-end-pin{width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--pin-color,#0f766e);border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.35);display:grid;place-items:center}
+        .hmv-end-pin-core{width:6px;height:6px;border-radius:50%;background:#fff;transform:rotate(45deg)}
 
         .hmv-popup{min-width:160px;display:flex;flex-direction:column;gap:4px}
         .hmv-popup strong{font-size:13px;color:#0f172a}

@@ -21,13 +21,27 @@ export default function SearchPage() {
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
   const destinationLongitude = Form.useWatch("destinationLongitude", form);
 
+  const hasSource = Boolean(sourceLatitude && sourceLongitude);
+  const hasDestination = Boolean(destinationLatitude && destinationLongitude);
+  const hasBoth = hasSource && hasDestination;
+
   // No filter UI: every search is always "today", any seat count, any ride
   // type (with tip and without), including rides with no seats left - the
   // map should show the full picture, not a pre-filtered slice.
+  //
+  // Mirrors the home page until both ends are known: with only one point set
+  // (source auto-filled by geolocation, or the user typed just one field),
+  // search broadly around that single point instead of showing nothing.
+  // Once both source and destination are set, switch to the precise,
+  // directional route match.
   useEffect(() => {
-    if (!sourceLatitude || !sourceLongitude || !destinationLatitude || !destinationLongitude) {
+    if (!hasSource && !hasDestination) {
+      setResults([]);
       return undefined;
     }
+
+    const anchorLat = hasSource ? sourceLatitude : destinationLatitude;
+    const anchorLng = hasSource ? sourceLongitude : destinationLongitude;
 
     let cancelled = false;
     setLoading(true);
@@ -35,12 +49,13 @@ export default function SearchPage() {
     const timer = setTimeout(async () => {
       try {
         const params = {
-          sourceLatitude: Number(sourceLatitude),
-          sourceLongitude: Number(sourceLongitude),
-          destinationLatitude: Number(destinationLatitude),
-          destinationLongitude: Number(destinationLongitude),
+          sourceLatitude: Number(hasSource ? sourceLatitude : anchorLat),
+          sourceLongitude: Number(hasSource ? sourceLongitude : anchorLng),
+          destinationLatitude: Number(hasDestination ? destinationLatitude : anchorLat),
+          destinationLongitude: Number(hasDestination ? destinationLongitude : anchorLng),
           date: dayjs().format("YYYY-MM-DD"),
           includeFull: true,
+          ...(hasBoth ? {} : { radius: 50 }),
         };
 
         const data = await rideService.search(params);
@@ -59,9 +74,7 @@ export default function SearchPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, message]);
-
-  const needsDestination = !destinationLatitude || !destinationLongitude;
+  }, [hasSource, hasDestination, hasBoth, sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, message]);
 
   return (
     <div className="sp-shell">
@@ -103,11 +116,13 @@ export default function SearchPage() {
           loading={loading}
           emptyState={
             <div className="sp-empty-card">
-              {needsDestination
-                ? "Choose a destination above to see today's rides."
+              {!hasSource && !hasDestination
+                ? "Choose a pickup or destination above to see today's rides."
                 : hasSearched
-                ? "No rides found for this route today."
-                : "Choose a pickup above to see today's rides."}
+                ? hasBoth
+                  ? "No rides found for this exact route today."
+                  : "No rides found near this location today."
+                : "Finding rides…"}
             </div>
           }
         />

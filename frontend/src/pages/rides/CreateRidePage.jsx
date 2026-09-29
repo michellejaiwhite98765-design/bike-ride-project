@@ -55,10 +55,10 @@ const SectionHeader = styled.div`
 const FormCard = styled(Card)`
   margin-bottom: 24px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 15, 23, 0.85);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  backdrop-filter: blur(6px);
 `;
 
 const WEEKDAY_OPTIONS = [
@@ -695,7 +695,7 @@ export default function CreateRidePage() {
         .cr-open-drawer-btn:hover{background:var(--bg-tertiary)}
 
         .cr-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}
-        .cr-drawer .ant-drawer-section{background:var(--surface-glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
+        .cr-drawer .ant-drawer-section{background:rgba(11,15,23,0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
         .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}

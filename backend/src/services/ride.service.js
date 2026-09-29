@@ -33,6 +33,15 @@ export const rideService = {
       );
     }
 
+    const conflict = await rideRepository.findConflictingByVehicle({
+      vehicleId: data.vehicleId,
+      departureDate: data.departureDate,
+      departureTime: data.departureTime,
+    });
+    if (conflict) {
+      throw ApiError.badRequest("This vehicle is already booked for another ride at that date and time");
+    }
+
     const ride = await rideRepository.create(riderId, data);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
     return ride;
@@ -62,6 +71,19 @@ export const rideService = {
     if (!["DRAFT", "PUBLISHED"].includes(ride.status)) {
       throw ApiError.conflict("Ride can only be edited while it is a draft or published");
     }
+
+    if (data.departureDate || data.departureTime) {
+      const conflict = await rideRepository.findConflictingByVehicle({
+        vehicleId: ride.vehicleId,
+        departureDate: data.departureDate ?? ride.departureDate,
+        departureTime: data.departureTime ?? ride.departureTime,
+        excludeRideId: rideId,
+      });
+      if (conflict) {
+        throw ApiError.badRequest("This vehicle is already booked for another ride at that date and time");
+      }
+    }
+
     const updated = await rideRepository.update(rideId, data);
     await audit(null, { userId, action: "RIDE_UPDATED", entityType: "Ride", entityId: rideId });
     return updated;

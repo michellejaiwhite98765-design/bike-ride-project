@@ -93,6 +93,26 @@ export const rideRepository = {
   },
 
   /**
+   * A vehicle can't physically run two rides at once, so this looks for
+   * another still-active (not cancelled/completed) ride already booked for
+   * the same vehicle at the same departure date + time. `excludeRideId` lets
+   * an edit ignore the ride's own row when re-checking after a change.
+   */
+  async findConflictingByVehicle({ vehicleId, departureDate, departureTime, excludeRideId }) {
+    const { rows } = await pool.query(
+      `SELECT "id" FROM "rides"
+       WHERE "vehicle_id" = $1
+         AND "departure_date" = $2::date
+         AND "departure_time" = $3
+         AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
+         AND "id" != $4
+       LIMIT 1`,
+      [vehicleId, departureDate, departureTime, excludeRideId || ""]
+    );
+    return toCamelRow(rows[0]) || null;
+  },
+
+  /**
    * Radius search using PostGIS ST_DWithin against the geography columns kept in
    * sync by the rides_sync_geog_trigger (see the postgis_geo_columns migration).
    * Returns candidate ride ids with their pickup/destination distances in meters

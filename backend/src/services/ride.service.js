@@ -10,6 +10,8 @@ import { env } from "../config/env.js";
 import { scoreRide } from "./matching.service.js";
 import { notificationService } from "./notification.service.js";
 
+const OPEN_TRIP_MESSAGE = "Please complete or cancel your current trip before creating a new one";
+
 function assertOwner(ride, userId) {
   if (ride.riderId !== userId) throw ApiError.forbidden("You do not own this ride");
 }
@@ -33,13 +35,10 @@ export const rideService = {
       );
     }
 
-    const conflict = await rideRepository.findConflictingByVehicle({
-      vehicleId: data.vehicleId,
-      departureDate: data.departureDate,
-      departureTime: data.departureTime,
-    });
-    if (conflict) {
-      throw ApiError.badRequest("This vehicle is already booked for another ride at that date and time");
+    // One open trip at a time: a new ride is only allowed once the previous
+    // one has been completed or cancelled.
+    if (await rideRepository.findOpenByRider(riderId)) {
+      throw ApiError.badRequest(OPEN_TRIP_MESSAGE);
     }
 
     const ride = await rideRepository.create(riderId, data);
@@ -70,18 +69,6 @@ export const rideService = {
     assertOwner(ride, userId);
     if (!["DRAFT", "PUBLISHED"].includes(ride.status)) {
       throw ApiError.conflict("Ride can only be edited while it is a draft or published");
-    }
-
-    if (data.departureDate || data.departureTime) {
-      const conflict = await rideRepository.findConflictingByVehicle({
-        vehicleId: ride.vehicleId,
-        departureDate: data.departureDate ?? ride.departureDate,
-        departureTime: data.departureTime ?? ride.departureTime,
-        excludeRideId: rideId,
-      });
-      if (conflict) {
-        throw ApiError.badRequest("This vehicle is already booked for another ride at that date and time");
-      }
     }
 
     const updated = await rideRepository.update(rideId, data);

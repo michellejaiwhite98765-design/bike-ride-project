@@ -1,20 +1,36 @@
 import { useEffect, useState } from "react";
-import { Form, Input, App } from "antd";
+import { useNavigate } from "react-router-dom";
+import { Form, Input, App, Drawer, Button } from "antd";
+import { SwapOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { rideService } from "../services/rideService.js";
 import HomeMapView from "../components/home/HomeMapView.jsx";
 import useAutoCurrentLocation from "../hooks/useAutoCurrentLocation.js";
-import { useSearchHeaderRegistration } from "../context/SearchHeaderContext.jsx";
+import LocationFields from "../components/LocationFields.jsx";
 
 export default function SearchPage() {
+  const navigate = useNavigate();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   useAutoCurrentLocation(form, "source");
-  useSearchHeaderRegistration(form);
 
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  function swapLocations() {
+    const v = form.getFieldsValue(true);
+    form.setFieldsValue({
+      sourceName: v.destinationName,
+      sourceLatitude: v.destinationLatitude,
+      sourceLongitude: v.destinationLongitude,
+      sourceCountry: v.destinationCountry,
+      destinationName: v.sourceName,
+      destinationLatitude: v.sourceLatitude,
+      destinationLongitude: v.sourceLongitude,
+      destinationCountry: v.sourceCountry,
+    });
+  }
 
   const sourceLatitude = Form.useWatch("sourceLatitude", form);
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
@@ -78,33 +94,6 @@ export default function SearchPage() {
 
   return (
     <div className="sp-shell">
-      <Form form={form} className="sp-hidden-form">
-        <Form.Item name="sourceName" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="sourceLatitude" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="sourceLongitude" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="sourceCountry" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="destinationName" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="destinationLatitude" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="destinationLongitude" hidden>
-          <Input />
-        </Form.Item>
-        <Form.Item name="destinationCountry" hidden>
-          <Input />
-        </Form.Item>
-      </Form>
-
       <div className="sp-map-stage">
         <HomeMapView
           userLocation={
@@ -117,7 +106,7 @@ export default function SearchPage() {
           emptyState={
             <div className="sp-empty-card">
               {!hasSource && !hasDestination
-                ? "Choose a pickup or destination above to see today's rides."
+                ? "Choose a pickup or destination to see today's rides."
                 : hasSearched
                 ? hasBoth
                   ? "No rides found for this exact route today."
@@ -128,12 +117,45 @@ export default function SearchPage() {
         />
       </div>
 
+      <Drawer
+        placement="left"
+        open
+        onClose={() => navigate("/", { state: { view: "map" } })}
+        mask={false}
+        width={380}
+        title="Find trip"
+        rootClassName="sp-drawer"
+      >
+        <Form form={form} layout="vertical" requiredMark={false}>
+          {["sourceLatitude", "sourceLongitude", "sourceCountry", "destinationLatitude", "destinationLongitude", "destinationCountry"].map((name) => (
+            <Form.Item key={name} name={name} hidden>
+              <Input />
+            </Form.Item>
+          ))}
+          <LocationFields prefix="source" label="Start Location" placeholder="Where do you want to be picked up?" />
+          <div style={{ display: "flex", justifyContent: "center", margin: "-8px 0 8px" }}>
+            <Button shape="round" icon={<SwapOutlined />} onClick={swapLocations}>
+              Swap
+            </Button>
+          </div>
+          <LocationFields prefix="destination" label="End Location" placeholder="Where are you going?" />
+        </Form>
+        <div className="sp-hint">
+          Rides along your route show up on the map as you fill in the start and end.
+        </div>
+      </Drawer>
+
       <style>{`
         .sp-shell{position:relative;height:100%}
-        .sp-hidden-form{display:none}
         .sp-map-stage{position:absolute;inset:0;z-index:1}
 
-        .sp-empty-card{background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:14px;text-align:center;color:#475569;font-size:13px}
+        .sp-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}
+        .sp-drawer .ant-drawer-section{background:rgba(11,15,23,0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
+        .sp-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
+        .sp-drawer .ant-drawer-title{color:var(--text-primary)}
+        .sp-hint{margin-top:8px;font-size:12.5px;color:var(--text-secondary)}
+
+        .sp-empty-card{position:absolute;left:14px;right:14px;bottom:14px;z-index:500;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:14px;text-align:center;color:#475569;font-size:13px}
       `}</style>
     </div>
   );

@@ -14,6 +14,7 @@ import {
   CarOutlined,
   ClockCircleOutlined,
   CompassOutlined,
+  CopyOutlined,
   EnvironmentFilled,
   EnvironmentOutlined,
   EyeOutlined,
@@ -26,6 +27,7 @@ import dayjs from "dayjs";
 import { rideService } from "../../services/rideService.js";
 import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
 import RideDetailsModal from "../../components/ride/RideDetailsModal.jsx";
+import CloneRideModal, { getCloneBlockReason } from "../../components/ride/CloneRideModal.jsx";
 import StatusTag from "../../components/StatusTag.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -240,8 +242,9 @@ function LiveMiniStats({ ride }) {
   );
 }
 
-function RideTrackingCard({ ride, onOpenDetails }) {
+function RideTrackingCard({ ride, rides, onOpenDetails, onClone }) {
   const started = ride.status === "STARTED";
+  const cloneBlockReason = getCloneBlockReason(ride, rides);
   const [livePosition, setLivePosition] = useState(null);
 
   useEffect(() => {
@@ -300,11 +303,26 @@ function RideTrackingCard({ ride, onOpenDetails }) {
           <span className="tracking-icon"><EnvironmentOutlined /></span>
           {started ? "Your route is updating in real time" : "Your live map will appear here once the ride starts"}
         </div>
-        <Link to={`/rides/${ride.id}`}>
-          <Button type="primary" icon={<ArrowRightOutlined />}>
-            View ride
-          </Button>
-        </Link>
+        <div className="my-rides-footer-actions">
+          <Tooltip title={cloneBlockReason || "Create a copy of this ride on another date"}>
+            {/* span keeps the tooltip working while the button is disabled */}
+            <span>
+              <Button
+                className="clone-ride-btn"
+                icon={<CopyOutlined />}
+                disabled={Boolean(cloneBlockReason)}
+                onClick={() => onClone(ride)}
+              >
+                Clone
+              </Button>
+            </span>
+          </Tooltip>
+          <Link to={`/rides/${ride.id}`}>
+            <Button type="primary" icon={<ArrowRightOutlined />}>
+              View ride
+            </Button>
+          </Link>
+        </div>
       </div>
     </article>
   );
@@ -315,6 +333,7 @@ export default function MyRidesPage() {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [detailsRide, setDetailsRide] = useState(null);
+  const [cloneSource, setCloneSource] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -375,7 +394,7 @@ export default function MyRidesPage() {
           </div>
         ) : (
           <div className="my-rides-grid">
-            {rides.map((ride) => <RideTrackingCard key={ride.id} ride={ride} onOpenDetails={setDetailsRide} />)}
+            {rides.map((ride) => <RideTrackingCard key={ride.id} ride={ride} rides={rides} onOpenDetails={setDetailsRide} onClone={setCloneSource} />)}
           </div>
         )}
       </div>
@@ -385,6 +404,14 @@ export default function MyRidesPage() {
         open={Boolean(detailsRide)}
         onClose={() => setDetailsRide(null)}
         isOwner={detailsRide ? detailsRide.riderId === user.id : false}
+      />
+
+      <CloneRideModal
+        ride={cloneSource}
+        rides={rides}
+        open={Boolean(cloneSource)}
+        onClose={() => setCloneSource(null)}
+        onCloned={(created) => setRides((list) => [created, ...list])}
       />
 
       <style>{`
@@ -403,9 +430,10 @@ export default function MyRidesPage() {
         .my-rides-live-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--divider);border-top:1px solid var(--divider)}.live-stat{display:flex;align-items:center;gap:8px;background:var(--bg-primary);padding:11px 12px}.live-stat-icon{width:27px;height:27px;border-radius:8px;display:grid;place-items:center;background:rgba(45, 212, 191, 0.12);color:#2DD4BF;font-size:12px}.live-stat-icon.speed{background:rgba(34, 197, 94, 0.14);color:#22C55E}.live-stat-icon.eta{background:rgba(167, 139, 250, 0.12);color:#A78BFA}.live-stat small{display:block;color:var(--text-secondary);font-size:9px}.live-stat strong{display:block;color:${HOME.dark};font-size:11px;margin-top:2px}.my-rides-live-stats.muted{display:flex;align-items:center;gap:8px;padding:12px 20px;background:var(--bg-primary);color:${HOME.muted};font-size:11px;border-top:1px solid var(--divider)}.stat-live-dot{width:7px;height:7px;border-radius:50%;background:var(--text-secondary)}
         .my-rides-map-shell{padding:12px;background:var(--bg-primary)}.my-rides-map-shell .live-tracking-card{margin:0!important;border:0!important;box-shadow:none!important}.my-rides-map-shell .ant-card-head{display:none}.my-rides-map-shell .live-map-frame{height:220px!important;border-radius:14px!important}.my-rides-map-shell .live-map-stats{display:none}.my-rides-map-shell .live-map-overlay{display:flex}
         .my-rides-card-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid var(--divider)}.tracking-note{display:flex;align-items:center;gap:7px;min-width:0;color:${HOME.muted};font-size:10px}.tracking-icon{width:23px;height:23px;display:grid;place-items:center;flex:0 0 23px;border-radius:7px;background:${HOME.soft};color:${HOME.primary}}.my-rides-card-footer .ant-btn{height:34px;border-radius:9px;background:${HOME.primary};border-color:${HOME.primary};font-size:11px;font-weight:700;box-shadow:none}
+        .my-rides-footer-actions{display:flex;align-items:center;gap:8px}.my-rides-card-footer .ant-btn.clone-ride-btn{background:transparent;border:1px solid ${HOME.primary};color:${HOME.primary}}.my-rides-card-footer .ant-btn.clone-ride-btn:hover:not(:disabled){background:${HOME.soft};color:${HOME.primary}}.my-rides-card-footer .ant-btn.clone-ride-btn:disabled{border-color:var(--border);color:var(--text-tertiary)}
         .my-rides-loading{display:grid;grid-template-columns:1fr 1fr;gap:20px}.my-rides-loading .ant-skeleton{background:var(--bg-primary);border-radius:18px;padding:20px}.my-rides-empty{min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:var(--surface-glass);border:1px solid ${HOME.border};border-radius:22px}.my-rides-empty .ant-btn{background:${HOME.primary};border-color:${HOME.primary};border-radius:10px}
         @media(max-width:1000px){.my-rides-grid{grid-template-columns:1fr}.my-rides-loading{grid-template-columns:1fr}}
-        @media(max-width:700px){.my-rides-page{padding:25px 0 45px}.my-rides-container{width:min(100% - 24px,620px)}.my-rides-header{align-items:flex-start;flex-direction:column}.my-rides-header h1{font-size:38px}.create-ride-btn{width:100%}.my-rides-overview{grid-template-columns:1fr}.my-rides-route-summary{grid-template-columns:30px minmax(0,1fr) 20px 30px minmax(0,1fr)}.route-current{font-size:0;padding:5px}.route-current svg{font-size:10px}.my-rides-card-footer{align-items:flex-start;flex-direction:column}.my-rides-card-footer .ant-btn{width:100%}}
+        @media(max-width:700px){.my-rides-page{padding:25px 0 45px}.my-rides-container{width:min(100% - 24px,620px)}.my-rides-header{align-items:flex-start;flex-direction:column}.my-rides-header h1{font-size:38px}.create-ride-btn{width:100%}.my-rides-overview{grid-template-columns:1fr}.my-rides-route-summary{grid-template-columns:30px minmax(0,1fr) 20px 30px minmax(0,1fr)}.route-current{font-size:0;padding:5px}.route-current svg{font-size:10px}.my-rides-card-footer{align-items:flex-start;flex-direction:column}.my-rides-footer-actions{width:100%}.my-rides-footer-actions>*{flex:1}.my-rides-footer-actions .ant-btn{width:100%}}
         @media(max-width:450px){.my-rides-summary{padding:15px}.my-rides-progress{margin:0 15px}.my-rides-route-summary{grid-template-columns:27px minmax(0,1fr) 16px 27px minmax(0,1fr);padding:10px;gap:5px}.route-icon{width:27px;height:27px}.route-copy strong{font-size:10px}.route-stop strong{max-width:82px}.my-rides-live-stats{grid-template-columns:1fr 1fr 1fr}.live-stat{padding:9px 7px;gap:5px}.live-stat-icon{width:24px;height:24px}.live-stat small{font-size:8px}.live-stat strong{font-size:10px}}
       `}</style>
     </div>

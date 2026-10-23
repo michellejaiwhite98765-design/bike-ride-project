@@ -93,21 +93,18 @@ export const rideRepository = {
   },
 
   /**
-   * A vehicle can't physically run two rides at once, so this looks for
-   * another still-active (not cancelled/completed) ride already booked for
-   * the same vehicle at the same departure date + time. `excludeRideId` lets
-   * an edit ignore the ride's own row when re-checking after a change.
+   * A rider may only have one open trip at a time: any ride of theirs that is
+   * still a draft, published or started (i.e. not yet completed, cancelled
+   * or expired) counts as open.
    */
-  async findConflictingByVehicle({ vehicleId, departureDate, departureTime, excludeRideId }) {
+  async findOpenByRider(riderId) {
     const { rows } = await pool.query(
-      `SELECT "id" FROM "rides"
-       WHERE "vehicle_id" = $1
-         AND "departure_date" = $2::date
-         AND "departure_time" = $3
-         AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
-         AND "id" != $4
+      `SELECT "id", "status", "source_name" AS "sourceName", "destination_name" AS "destinationName"
+       FROM "rides"
+       WHERE "rider_id" = $1 AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
+       ORDER BY "created_at" DESC
        LIMIT 1`,
-      [vehicleId, departureDate, departureTime, excludeRideId || ""]
+      [riderId]
     );
     return toCamelRow(rows[0]) || null;
   },

@@ -13,7 +13,6 @@ import {
   LogoutOutlined,
   SettingOutlined,
   FileTextOutlined,
-  ArrowLeftOutlined,
   SunOutlined,
   MoonOutlined,
 } from "@ant-design/icons";
@@ -23,9 +22,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { locationService } from "../../services/locationService.js";
 import { notificationService } from "../../services/notificationService.js";
 import { connectSocket, disconnectSocket } from "../../services/socket.js";
-import { SearchHeaderProvider, useSearchHeaderForm } from "../../context/SearchHeaderContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
-import SearchHeaderFields from "./SearchHeaderFields.jsx";
 import colors from "../../theme/colors.js";
 
 const { Header, Content, Footer } = Layout;
@@ -200,25 +197,6 @@ const AvatarButton = styled(Button)`
   }
 `;
 
-const BackButton = styled.button`
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: ${colors.textPrimary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 15px;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-  }
-`;
-
 const ThemeToggleButton = styled.button`
   cursor: pointer;
   width: 34px;
@@ -238,18 +216,6 @@ const ThemeToggleButton = styled.button`
     color: ${ACCENT};
     border-color: ${ACCENT};
   }
-`;
-
-const CenterTitle = styled.div`
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: ${colors.textPrimary};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 const MobileBar = styled.div`
@@ -332,14 +298,6 @@ const FooterBar = styled(Footer)`
 `;
 
 export default function AppLayout() {
-  return (
-    <SearchHeaderProvider>
-      <AppLayoutInner />
-    </SearchHeaderProvider>
-  );
-}
-
-function AppLayoutInner() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -418,7 +376,9 @@ function AppLayoutInner() {
   const isEditRide = /^\/rides\/[^/]+\/edit$/.test(location.pathname);
   const isCreateRidePage = location.pathname === "/rides/create" || isEditRide;
   const isFullBleedPage = isHome || isSearchPage || isCreateRidePage;
-  const searchForm = useSearchHeaderForm();
+  // Create/Find ride keep the normal header but in its compact size (and without
+  // the link to the page you are already on) so the map gets the room.
+  const compactHeader = isCreateRidePage || isSearchPage;
   const { mode, toggleTheme } = useTheme();
 
   const userMenu = {
@@ -428,6 +388,19 @@ function AppLayoutInner() {
       { key: "history", label: <Link to="/history">Ride History</Link> },
       { key: "safety", label: <Link to="/safety">Safety</Link> },
       ...(user?.role === "ADMIN" ? [{ key: "admin", label: <Link to="/admin">Admin</Link> }] : []),
+      {
+        key: "settings",
+        icon: <SettingOutlined />,
+        label: "Settings",
+        children: [
+          {
+            key: "theme",
+            icon: mode === "dark" ? <SunOutlined /> : <MoonOutlined />,
+            label: mode === "dark" ? "Switch to light mode" : "Switch to dark mode",
+            onClick: toggleTheme,
+          },
+        ],
+      },
       { type: "divider" },
       { key: "logout", label: "Logout", onClick: handleLogout, icon: <LogoutOutlined /> },
     ],
@@ -435,41 +408,9 @@ function AppLayoutInner() {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <HeaderOuter $scrolled={scrolled || isCreateRidePage} $floating={isFullBleedPage}>
-        <Capsule $scrolled={scrolled || isCreateRidePage}>
+      <HeaderOuter $scrolled={scrolled || compactHeader} $floating={isFullBleedPage}>
+        <Capsule $scrolled={scrolled || compactHeader}>
           <AnimatePresence mode="wait" initial={false}>
-            {isSearchPage && searchForm ? (
-              <motion.div
-                key="search"
-                style={{ display: "flex", alignItems: "center", width: "100%" }}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
-                <SearchHeaderFields form={searchForm} />
-              </motion.div>
-            ) : isCreateRidePage ? (
-              <motion.div
-                key="createRide"
-                style={{ display: "flex", alignItems: "center", width: "100%", gap: 12 }}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
-                <BackButton type="button" onClick={() => navigate(-1)} aria-label="Back">
-                  <ArrowLeftOutlined />
-                </BackButton>
-                <CenterTitle>{isEditRide ? "Edit ride" : "Create ride"}</CenterTitle>
-                <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
-                  {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
-                </ThemeToggleButton>
-                <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-                  <AvatarButton shape="circle" size="large" icon={<UserOutlined />} />
-                </Dropdown>
-              </motion.div>
-            ) : (
               <motion.div
                 key="default"
                 style={{ display: "flex", alignItems: "center", width: "100%", gap: 28 }}
@@ -488,23 +429,30 @@ function AppLayoutInner() {
                 {isAuthenticated && (
                   <DesktopNav>
                     <NavItems>
-                      <Link to="/search" className={isActive("/search")}>
-                        Find ride
-                      </Link>
+                      {!isSearchPage && (
+                        <Link to="/search" className={isActive("/search")}>
+                          Find ride
+                        </Link>
+                      )}
                       <Link to="/rides" className={isActive("/rides")}>
                         My rides
                       </Link>
                     </NavItems>
-                    <CtaLink to="/rides/create">
-                      <PlusCircleOutlined /> Create ride
-                    </CtaLink>
+                    {!isCreateRidePage && (
+                      <CtaLink to="/rides/create">
+                        <PlusCircleOutlined /> Create ride
+                      </CtaLink>
+                    )}
                   </DesktopNav>
                 )}
 
                 <UserSection>
-                  <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
-                    {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
-                  </ThemeToggleButton>
+                  {/* Signed-in users get the theme switch under Settings in the avatar menu. */}
+                  {!isAuthenticated && (
+                    <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
+                      {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
+                    </ThemeToggleButton>
+                  )}
 
                   {isAuthenticated && (
                     <>
@@ -547,7 +495,6 @@ function AppLayoutInner() {
                   </MobileBar>
                 </UserSection>
               </motion.div>
-            )}
           </AnimatePresence>
         </Capsule>
       </HeaderOuter>

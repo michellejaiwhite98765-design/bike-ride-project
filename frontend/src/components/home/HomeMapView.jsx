@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
-import { AimOutlined, ArrowRightOutlined, EnvironmentOutlined, TeamOutlined } from "@ant-design/icons";
+import { AimOutlined, ArrowRightOutlined, TeamOutlined } from "@ant-design/icons";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { PERSON_ICON_SVG } from "../../utils/mapIcons.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
@@ -120,10 +120,9 @@ function RecenterOnSignal({ target, signal }) {
 
 /**
  * Full-screen, Google-Maps-style view of nearby rides: colorful basemap,
- * price-bubble pins, a locate-me button and a floating card previewing the
- * closest ride. `emptyState` optionally overrides the bottom card shown
- * when there are no rides (e.g. the search page doesn't need a link back
- * to itself).
+ * price-bubble pins and a locate-me button. `emptyState` optionally renders
+ * a message card when there are no rides (used by the search page; the home
+ * page shows nothing).
  */
 export default function HomeMapView({ userLocation, nearbyRides, loading, emptyState }) {
   const { mode } = useTheme();
@@ -278,34 +277,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         <AimOutlined />
       </button>
 
-      {nearest ? (
-        <Link to={`/rides/${nearest.id}`} className="hmv-bottom-card">
-          <span className="hmv-bottom-avatar">{nearest.rider?.firstName?.[0] || "R"}</span>
-          <span className="hmv-bottom-info">
-            <strong>
-              {nearest.sourceName?.split(",")[0]} <ArrowRightOutlined /> {nearest.destinationName?.split(",")[0]}
-            </strong>
-            <small>
-              <EnvironmentOutlined /> {nearest.departureTime} · {nearest.availableSeats} seat
-              {nearest.availableSeats === 1 ? "" : "s"} left
-            </small>
-          </span>
-          <span className="hmv-bottom-price">
-            {nearest.rideType === "WITHOUT_TIP" ? "Free" : `₹${nearest.tipAmount}`}
-          </span>
-        </Link>
-      ) : !loading ? (
-        emptyState !== undefined ? (
-          emptyState
-        ) : (
-          <div className="hmv-bottom-card hmv-bottom-empty">
-            <span>No rides nearby right now.</span>
-            <Link to="/search">
-              Search all rides <ArrowRightOutlined />
-            </Link>
-          </div>
-        )
-      ) : null}
+      {/* Only pages that pass their own empty-state card (e.g. search) get a bottom bar. */}
+      {!nearest && !loading && emptyState !== undefined ? emptyState : null}
 
       <style>{`
         .hmv-shell{position:absolute;inset:0}
@@ -336,14 +309,6 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         .hmv-locate-btn{position:absolute;right:14px;bottom:108px;width:40px;height:40px;border-radius:50%;background:#fff;border:0;box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:17px;color:#0f172a;cursor:pointer;z-index:500}
         .hmv-locate-btn:hover{color:#0f766e}
 
-        .hmv-bottom-card{position:absolute;left:14px;right:14px;bottom:14px;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:12px 14px;display:flex;align-items:center;gap:12px;text-decoration:none;z-index:500}
-        .hmv-bottom-avatar{width:40px;height:40px;border-radius:50%;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
-        .hmv-bottom-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-        .hmv-bottom-info strong{font-size:13px;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
-        .hmv-bottom-info small{font-size:11.5px;color:#64748b;display:flex;align-items:center;gap:5px}
-        .hmv-bottom-price{font-size:14px;font-weight:700;color:#0f766e;flex-shrink:0}
-        .hmv-bottom-empty{justify-content:space-between;color:#475569;font-size:13px}
-        .hmv-bottom-empty a{color:#0f766e;font-weight:700;font-size:13px}
       `}</style>
     </div>
   );

@@ -1,19 +1,29 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { rideService } from "../services/rideService.js";
 import HomeMapView from "../components/home/HomeMapView.jsx";
 import HomeCardView from "../components/home/HomeCardView.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function HomePage() {
   const navigate = useNavigate();
-  const [view, setView] = useState("map");
+  const { isAuthenticated } = useAuth();
+  // Guests only get the map; once logged in the card view is the default,
+  // with a toggle to switch back to the map.
+  // Callers can ask for a specific view via navigate("/", { state: { view } })
+  // (e.g. closing the create-ride drawer lands on the map).
+  const requestedView = useLocation().state?.view;
+  const [view, setView] = useState(requestedView || (isAuthenticated ? "card" : "map"));
+  useEffect(() => {
+    setView(requestedView || (isAuthenticated ? "card" : "map"));
+  }, [isAuthenticated, requestedView]);
+
+  const findRide = () => navigate("/search");
 
   const [nearbyRides, setNearbyRides] = useState([]);
   const [loadingNearby, setLoadingNearby] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
-
-  const findRide = () => navigate("/search");
 
   // Fetch nearby available rides using the browser's geolocation as the
   // starting point, defaulting to today and 1 seat.
@@ -62,22 +72,24 @@ function HomePage() {
 
   return (
     <div className="hp-shell">
-      <div className="hp-tabs">
-        <div className="hp-tabs-inner">
-          <button type="button" className={view === "map" ? "active" : ""} onClick={() => setView("map")}>
-            Map view
-          </button>
-          <button type="button" className={view === "card" ? "active" : ""} onClick={() => setView("card")}>
-            Card view
-          </button>
+      {isAuthenticated && (
+        <div className="hp-tabs">
+          <div className="hp-tabs-inner">
+            <button type="button" className={view === "map" ? "active" : ""} onClick={() => setView("map")}>
+              Map view
+            </button>
+            <button type="button" className={view === "card" ? "active" : ""} onClick={() => setView("card")}>
+              Card view
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="hp-stage">
-        {view === "map" ? (
-          <HomeMapView userLocation={userLocation} nearbyRides={nearbyRides} loading={loadingNearby} />
-        ) : (
+        {view === "card" && isAuthenticated ? (
           <HomeCardView nearbyRides={nearbyRides} loading={loadingNearby} onSearchAll={findRide} />
+        ) : (
+          <HomeMapView userLocation={userLocation} nearbyRides={nearbyRides} loading={loadingNearby} />
         )}
       </div>
 

@@ -8,10 +8,8 @@ import {
   DollarCircleOutlined,
   FileTextOutlined,
   AimOutlined,
-  MenuOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
-  SyncOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -61,21 +59,6 @@ const FormCard = styled(Card)`
   backdrop-filter: blur(6px);
 `;
 
-const WEEKDAY_OPTIONS = [
-  { label: "Mon", value: 1 },
-  { label: "Tue", value: 2 },
-  { label: "Wed", value: 3 },
-  { label: "Thu", value: 4 },
-  { label: "Fri", value: 5 },
-  { label: "Sat", value: 6 },
-  { label: "Sun", value: 0 },
-];
-
-// Safety cap on how many extra ride rows a single "repeat" submission can
-// generate - the weekday x date-range picker below can't produce more than
-// this in practice, but the cap guards against pathological inputs.
-const MAX_REPEAT_OCCURRENCES = 30;
-
 const ActionButtons = styled.div`
   display: flex;
   gap: 12px;
@@ -107,18 +90,17 @@ export default function CreateRidePage() {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [vehicles, setVehicles] = useState([]);
+  const [openTrip, setOpenTrip] = useState(null); // the rider's current un-closed ride, if any
   const [loading, setLoading] = useState(true);
   const [submittingAction, setSubmittingAction] = useState(null); // "draft" | "publish" | null
   const [locatingMe, setLocatingMe] = useState(false);
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
-  const [drawerOpen, setDrawerOpen] = useState(true);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const isOnline = useOnlineStatus();
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
   const departureDate = Form.useWatch("departureDate", form);
-  const repeatEnabled = Form.useWatch("repeatEnabled", form);
   const sourceLatitude = Form.useWatch("sourceLatitude", form);
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
@@ -240,7 +222,15 @@ export default function CreateRidePage() {
           tipAmount: Number(ride.tipAmount),
         });
       } else {
-        form.setFieldsValue({ rideType: "WITHOUT_TIP", tipAmount: 0, availableSeats: 1, pickupPreference: "ON_ROUTE", repeatEnabled: false, repeatDays: [] });
+        // One open trip at a time: look for a draft/published/started ride
+        // so the form can explain why it's locked instead of failing on submit.
+        try {
+          const mine = await rideService.listMine();
+          setOpenTrip((Array.isArray(mine) ? mine : []).find((r) => ["DRAFT", "PUBLISHED", "STARTED"].includes(r.status)) || null);
+        } catch {
+          // The backend enforces the rule on submit either way.
+        }
+        form.setFieldsValue({ rideType: "WITHOUT_TIP", tipAmount: 0, availableSeats: 1, pickupPreference: "ON_ROUTE" });
       }
       setLoading(false);
     }
@@ -272,9 +262,6 @@ export default function CreateRidePage() {
         agreeSecurity: _agreeSecurity,
         sourceCountry: _sourceCountry,
         destinationCountry: _destinationCountry,
-        repeatEnabled: _repeatEnabled,
-        repeatDays: _repeatDays,
-        repeatUntil: _repeatUntil,
         ...rest
       } = values;
       const payload = {
@@ -296,36 +283,6 @@ export default function CreateRidePage() {
       }
 
       message.success(publish ? "Ride published" : "Ride saved as draft");
-
-      // Recurring rides: fire off the same create(+publish) call once per
-      // matching weekday between the original departure date and the chosen
-      // end date. Each occurrence is an independent ride row - same model,
-      // matching, and booking logic as a normal ride, just created in a loop.
-      if (!isEdit && values.repeatEnabled && values.repeatDays?.length && values.repeatUntil) {
-        const daysSet = new Set(values.repeatDays);
-        const occurrences = [];
-        let cursor = values.departureDate.add(1, "day");
-        while (!cursor.isAfter(values.repeatUntil, "day") && occurrences.length < MAX_REPEAT_OCCURRENCES) {
-          if (daysSet.has(cursor.day())) occurrences.push(cursor);
-          cursor = cursor.add(1, "day");
-        }
-
-        let created = 0;
-        for (const occurrenceDate of occurrences) {
-          try {
-            const occurrencePayload = { ...payload, departureDate: occurrenceDate.format("YYYY-MM-DD") };
-            let occurrenceRide = await rideService.create(occurrencePayload);
-            if (publish) occurrenceRide = await rideService.publish(occurrenceRide.id);
-            created += 1;
-          } catch {
-            // Skip individual occurrence failures (e.g. a transient clash) -
-            // the primary ride above already succeeded either way.
-          }
-        }
-        if (created > 0) {
-          message.success(`${created} additional repeat ride${created === 1 ? "" : "s"} created`);
-        }
-      }
 
       navigate(`/rides/${ride.id}`);
     } catch (err) {
@@ -383,26 +340,34 @@ export default function CreateRidePage() {
           destination={destinationPoint}
           form={form}
           onRouteSelect={setSelectedRoute}
-          occludedLeft={drawerOpen ? 420 : 0}
+          occludedLeft={420}
         />
       </div>
 
-      {!drawerOpen && (
-        <button type="button" className="cr-open-drawer-btn" onClick={() => setDrawerOpen(true)}>
-          <MenuOutlined /> Ride details
-        </button>
-      )}
-
       <Drawer
         placement="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        open
+        onClose={() => navigate("/", { state: { view: "map" } })}
         mask={false}
         width={420}
-        title={isEdit ? "Edit ride details" : "Ride details"}
+        title={isEdit ? "Edit trip" : "Create trip"}
         rootClassName="cr-drawer"
       >
           <Form form={form} layout="vertical" requiredMark={false}>
+        {openTrip && !isEdit && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="You have a trip in progress"
+            description={`Complete or cancel your current trip (${openTrip.sourceName?.split(",")[0]} → ${openTrip.destinationName?.split(",")[0]}) before creating a new one.`}
+            action={
+              <Button size="small" onClick={() => navigate(`/rides/${openTrip.id}`)}>
+                View trip
+              </Button>
+            }
+          />
+        )}
         <SectionHeader>
           <EnvironmentOutlined className="icon" />
           Route
@@ -479,45 +444,6 @@ export default function CreateRidePage() {
             />
           </Form.Item>
         </FormCard>
-
-        {!isEdit && (
-          <>
-            <SectionHeader>
-              <SyncOutlined className="icon" />
-              Repeat
-            </SectionHeader>
-            <FormCard>
-              <Form.Item name="repeatEnabled" valuePropName="checked" style={{ marginBottom: repeatEnabled ? 16 : 0 }}>
-                <Checkbox>Repeat this ride on future dates</Checkbox>
-              </Form.Item>
-              {repeatEnabled && (
-                <>
-                  <Form.Item
-                    name="repeatDays"
-                    label="Repeat on"
-                    rules={[{ required: true, type: "array", min: 1, message: "Pick at least one day" }]}
-                  >
-                    <Checkbox.Group options={WEEKDAY_OPTIONS} />
-                  </Form.Item>
-                  <Form.Item
-                    name="repeatUntil"
-                    label="Repeat until"
-                    rules={[{ required: true, message: "Pick an end date" }]}
-                    extra="A separate ride is published for each matching day between your departure date and this date."
-                  >
-                    <DatePicker
-                      size="large"
-                      style={{ width: "100%" }}
-                      disabledDate={(d) =>
-                        d && (d <= (departureDate || dayjs()).startOf("day") || d > dayjs().add(12, "week").endOf("day"))
-                      }
-                    />
-                  </Form.Item>
-                </>
-              )}
-            </FormCard>
-          </>
-        )}
 
         {/* Vehicle & Capacity Section */}
         <SectionHeader>
@@ -644,7 +570,7 @@ export default function CreateRidePage() {
             size="large"
             block
             loading={submittingAction === "draft"}
-            disabled={submittingAction === "publish"}
+            disabled={submittingAction === "publish" || Boolean(openTrip && !isEdit)}
             onClick={() => submit(false)}
             style={{ background: colors.bgSecondary }}
           >
@@ -655,7 +581,7 @@ export default function CreateRidePage() {
             type="primary"
             block
             loading={submittingAction === "publish"}
-            disabled={submittingAction === "draft"}
+            disabled={submittingAction === "draft" || Boolean(openTrip && !isEdit)}
             style={{ background: colors.primary }}
             onClick={() => submit(true)}
           >
@@ -691,18 +617,11 @@ export default function CreateRidePage() {
         .cr-shell{position:relative;height:100%}
         .cr-map-stage{position:absolute;inset:0;z-index:1}
 
-        .cr-open-drawer-btn{position:absolute;top:92px;left:14px;z-index:600;display:flex;align-items:center;gap:8px;background:var(--surface-glass);border:1px solid var(--chrome-border);color:var(--text-primary);border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
-        .cr-open-drawer-btn:hover{background:var(--bg-tertiary)}
-
         .cr-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}
         .cr-drawer .ant-drawer-section{background:rgba(11,15,23,0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
         .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}
-
-        @media (max-width: 650px) {
-          .cr-open-drawer-btn{top:140px}
-        }
       `}</style>
     </div>
   );

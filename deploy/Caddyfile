@@ -1,0 +1,6 @@
+# HTTPS in front of the backend. Caddy fetches and renews the certificate
+# for PUBLIC_HOST (e.g. 3-110-20-5.sslip.io) by itself; websockets
+# (live tracking, notifications) pass through as well.
+{$PUBLIC_HOST} {
+	reverse_proxy backend:5000
+}

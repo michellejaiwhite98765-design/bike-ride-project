@@ -1,49 +1,34 @@
 #!/bin/sh
 # Updates the backend on the EC2 server to the latest code on main.
+# (First time on a new server: run deploy/ec2-setup.sh instead.)
 #
-# Run on the EC2 box, from the repo folder:
-#   cd ~/bikeride && git pull && ./deploy.sh
+# On the server:
+#   cd ~/bikeride && git pull && sh deploy.sh
 #
-# Keeps the running container's settings (DATABASE_URL, JWT_SECRET, ...),
-# rebuilds the image, restarts the container (database migrations run on
-# start) and checks the API answers.
+# Rebuilds the backend and restarts it; the database and its data are kept,
+# and migrations run on start.
 set -e
-
-NAME=bikeride-backend
-ENV_FILE="$HOME/$NAME.env"
 cd "$(dirname "$0")"
 
-echo "==> Code: $(git log -1 --oneline)"
-
-# Save the current container's settings the first time (or refresh them).
-if docker inspect "$NAME" >/dev/null 2>&1; then
-  docker inspect "$NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' \
-    | grep -v -e '^PATH=' -e '^NODE_VERSION=' -e '^YARN_VERSION=' -e '^$' > "$ENV_FILE.new"
-  mv "$ENV_FILE.new" "$ENV_FILE"
-fi
-if [ ! -s "$ENV_FILE" ] || ! grep -q '^DATABASE_URL=' "$ENV_FILE"; then
-  echo "!! No settings found in $ENV_FILE (DATABASE_URL missing). Nothing was changed."
+if [ ! -f deploy/.env ]; then
+  echo "!! deploy/.env not found - this server isn't set up yet. Run: sh deploy/ec2-setup.sh https://<your-amplify-site>"
   exit 1
 fi
-echo "==> Settings kept in $ENV_FILE"
 
-echo "==> Building backend image"
-docker build -t "$NAME" backend
+echo "==> Code: $(git log -1 --oneline)"
+COMPOSE="sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env"
+$COMPOSE up -d --build
 
-echo "==> Restarting container"
-docker rm -f "$NAME" >/dev/null 2>&1 || true
-docker run -d --name "$NAME" --restart unless-stopped -p 5000:5000 --env-file "$ENV_FILE" "$NAME" >/dev/null
-
+HOST=$(grep '^PUBLIC_HOST=' deploy/.env | cut -d= -f2)
 echo "==> Waiting for the API (migrations run first)"
-for i in $(seq 1 30); do
-  if curl -fs http://localhost:5000/health >/dev/null 2>&1; then
-    docker logs --tail 15 "$NAME"
-    echo "==> Backend is up"
+for i in $(seq 1 40); do
+  if curl -fs "https://$HOST/health" >/dev/null 2>&1; then
+    $COMPOSE logs --tail 10 backend
+    echo "==> Backend is up: https://$HOST"
     exit 0
   fi
-  sleep 2
+  sleep 3
 done
-
-docker logs --tail 40 "$NAME"
-echo "!! Backend did not answer on /health - see the logs above."
+$COMPOSE logs --tail 40 backend
+echo "!! Backend did not answer on https://$HOST/health - see the logs above."
 exit 1

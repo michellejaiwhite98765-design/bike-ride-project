@@ -1,0 +1,52 @@
+# Production stack for one EC2 server: database + backend API + HTTPS.
+# Set up by deploy/ec2-setup.sh; updated by ./deploy.sh.
+#
+#   caddy   - public entry on ports 80/443, gets a free HTTPS certificate for
+#             PUBLIC_HOST automatically and forwards to the backend
+#   backend - the Node API (runs database migrations on every start)
+#   db      - Postgres with PostGIS; data is kept in the bikeride_db volume
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bikeride
+      POSTGRES_USER: bikeride
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - bikeride_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikeride -d bikeride"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      PORT: "5000"
+      NODE_ENV: production
+      DATABASE_URL: postgresql://bikeride:${POSTGRES_PASSWORD}@db:5432/bikeride?schema=public
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
+volumes:
+  bikeride_db:
+  caddy_data:

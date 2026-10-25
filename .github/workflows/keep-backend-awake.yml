@@ -1,0 +1,29 @@
+# Keeps the free Render backend from sleeping.
+#
+# Render's free web service sleeps after 15 minutes without traffic and then
+# takes ~50 seconds to wake up. This pings its /health every 10 minutes so
+# the app answers straight away (free: GitHub Actions minutes are unlimited
+# for public repos, and one always-awake service fits Render's 750 free
+# hours a month).
+#
+# Turn it on: GitHub repo -> Settings -> Secrets and variables -> Actions ->
+# Variables -> New repository variable:
+#   BACKEND_URL = https://bikeride-backend.onrender.com   (your Render URL)
+# Without that variable it does nothing, so it's harmless for the AWS setup.
+#
+# Note: GitHub pauses scheduled workflows after 60 days with no commits;
+# re-enable it from the Actions tab if that happens.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: ${{ vars.BACKEND_URL != '' }}
+    steps:
+      - name: Ping /health
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 90 "${{ vars.BACKEND_URL }}/health"

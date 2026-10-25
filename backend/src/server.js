@@ -23,6 +23,14 @@ async function sweepStaleRides() {
   } catch (err) {
     logger.warn(`Stale ride sweep failed: ${err.message}`);
   }
+  // Open rides without a saved road route (older rides, or routing was down)
+  // only match passengers near the straight start-end line - fill them in.
+  try {
+    const filled = await rideService.backfillRoadRoutes();
+    if (filled > 0) logger.info(`Saved road routes for ${filled} ride(s)`);
+  } catch (err) {
+    logger.warn(`Road route backfill failed: ${err.message}`);
+  }
 }
 sweepStaleRides();
 const sweepTimer = setInterval(sweepStaleRides, env.rideExpiry.sweepIntervalMs);

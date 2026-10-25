@@ -13,6 +13,7 @@ import { scoreRide } from "./matching.service.js";
 import { notificationService } from "./notification.service.js";
 import { paymentService } from "./payment.service.js";
 import { joinRadiusKmFor } from "./rideRequest.service.js";
+import { fetchRoadRoute } from "./routing.service.js";
 
 const OPEN_TRIP_MESSAGE = "Please complete or cancel your current trip before creating a new one";
 
@@ -71,8 +72,45 @@ export const rideService = {
       const copied = await rideRepository.copyRouteFrom(cloneOfRideId, ride.id, riderId);
       if (copied) ride = await rideRepository.findById(ride.id);
     }
+    // No road route from the app: look it up here, so passengers along the
+    // way (not just near the straight start-end line) can find this ride.
+    // In the background - creating the ride shouldn't wait on the routing
+    // server; if it fails, the periodic backfill retries.
+    if (!rideData.routePath) void this.ensureRoadRoute(ride);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
     return ride;
+  },
+
+  /** Saves the ride's road route from the routing service if it has none. Never throws. */
+  async ensureRoadRoute(ride) {
+    try {
+      if (await rideRepository.hasRoutePath(ride.id)) return false;
+      const path = await fetchRoadRoute(
+        { latitude: ride.sourceLatitude, longitude: ride.sourceLongitude },
+        { latitude: ride.destinationLatitude, longitude: ride.destinationLongitude }
+      );
+      if (!path) return false;
+      await rideRepository.setRoutePath(ride.id, path);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Fills in road routes for open rides that don't have one yet (created
+   * before routes were saved, or routing was down at the time). Runs with the
+   * periodic sweep in server.js; one lookup at a time to stay polite to the
+   * public routing server.
+   */
+  async backfillRoadRoutes(limit = 20) {
+    const rides = await rideRepository.findOpenWithoutRoute(limit);
+    let filled = 0;
+    for (const ride of rides) {
+      if (await this.ensureRoadRoute(ride)) filled += 1;
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    }
+    return filled;
   },
 
   async getForViewer(rideId, viewerId) {
@@ -116,6 +154,7 @@ export const rideService = {
     if (routePath !== undefined || endpointsChanged) {
       await rideRepository.setRoutePath(rideId, routePath ?? null);
       updated = await rideRepository.findById(rideId);
+      if (!routePath) void this.ensureRoadRoute(updated);
     }
     await audit(null, { userId, action: "RIDE_UPDATED", entityType: "Ride", entityId: rideId });
     return updated;
@@ -249,6 +288,15 @@ export const rideService = {
       timeWindowMinutes: env.matching.timeWindowMinutes,
       pickupRadiusM: pickupRadiusKm * 1000,
       destinationRadiusM: destinationRadiusKm * 1000,
+      // A precise route search (no explicit radius) only lists rides the
+      // passenger can actually join; an explicit radius (e.g. the home page's
+      // "rides near me") stays a broad browse.
+      joinRadii: search.radius
+        ? null
+        : {
+            onRouteM: env.matching.joinRadiusOnRouteKm * 1000,
+            passengerLocationM: env.matching.joinRadiusPassengerLocationKm * 1000,
+          },
     });
     if (candidates.length === 0) return [];
 

@@ -60,6 +60,13 @@ export const env = {
     afterDepartureMinutes: Number(process.env.RIDE_EXPIRE_AFTER_MINUTES || 120),
     sweepIntervalMs: Number(process.env.RIDE_EXPIRY_SWEEP_MS || 5 * 60 * 1000),
   },
+  // Road routing (OSRM) used to fill in a ride's road route when the app
+  // didn't send one. Same public server the frontend maps use by default.
+  routing: {
+    enabled: (process.env.ROUTING_ENABLED ?? "true") !== "false",
+    baseUrl: process.env.ROUTING_URL || "https://router.project-osrm.org",
+    timeoutMs: Number(process.env.ROUTING_TIMEOUT_MS || 8000),
+  },
   // The one country rides may take place in (bounding box; see utils/serviceArea.js).
   serviceArea: {
     countryName: process.env.SERVICE_COUNTRY_NAME || "India",

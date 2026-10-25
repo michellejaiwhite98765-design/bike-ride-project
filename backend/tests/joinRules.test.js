@@ -230,3 +230,35 @@ describe("Closing old trips", () => {
     expect(notes.body.data.some((n) => n.type === "RIDE_CANCELLED" && n.data?.rideId === ride.id)).toBe(true);
   });
 });
+
+describe("Searching along a ride's road route", () => {
+  // Road route bending north through (13.2, 80.15), far from the straight start-end line.
+  const routePath = [[13.1147, 80.1], [13.2, 80.15], [13.0827, 80.2707]];
+  const search = (token, from, extra = {}) =>
+    request(app)
+      .get("/api/rides/search")
+      .query({
+        sourceLatitude: from[0], sourceLongitude: from[1],
+        destinationLatitude: 13.0827, destinationLongitude: 80.2707,
+        date: futureDate(11), includeFull: true, ...extra,
+      })
+      .set("Authorization", `Bearer ${token}`);
+
+  it("finds a ride from a town the road passes through, not just near its start", async () => {
+    const { ride } = await riderWithRide({ routePath, departureDate: futureDate(11) });
+    const passenger = await registerUser();
+    const res = await search(passenger.token, [13.2, 80.15]);
+    expect(res.body.data.map((r) => r.id)).toContain(ride.id);
+  });
+
+  it("only lists rides the passenger could actually join", async () => {
+    const { ride } = await riderWithRide({ routePath, departureDate: futureDate(11), pickupPreference: "ON_ROUTE" });
+    const passenger = await registerUser();
+    // About 1.5 km from the road: over the 1 km ON_ROUTE limit.
+    const res = await search(passenger.token, [13.2135, 80.15]);
+    expect(res.body.data.map((r) => r.id)).not.toContain(ride.id);
+    // The home page's broad "near me" browse (explicit radius) still shows it.
+    const browse = await search(passenger.token, [13.2135, 80.15], { radius: 50 });
+    expect(browse.body.data.map((r) => r.id)).toContain(ride.id);
+  });
+});

@@ -182,6 +182,25 @@ export const rideRepository = {
     return rows;
   },
 
+  async hasRoutePath(rideId) {
+    const { rows } = await pool.query('SELECT "route_geog" IS NOT NULL AS "has" FROM "rides" WHERE "id" = $1', [rideId]);
+    return Boolean(rows[0]?.has);
+  },
+
+  /** Open rides with no saved road route yet (oldest departure first). */
+  async findOpenWithoutRoute(limit) {
+    const { rows } = await pool.query(
+      `SELECT "id", "source_latitude" AS "sourceLatitude", "source_longitude" AS "sourceLongitude",
+              "destination_latitude" AS "destinationLatitude", "destination_longitude" AS "destinationLongitude"
+       FROM "rides"
+       WHERE "route_geog" IS NULL AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
+       ORDER BY "departure_date" ASC, "departure_time" ASC
+       LIMIT $1`,
+      [limit]
+    );
+    return rows;
+  },
+
   /**
    * A rider may only have one open trip at a time: any ride of theirs that is
    * still a draft, published or started (i.e. not yet completed, cancelled
@@ -205,7 +224,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30, includeFull = false }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, joinRadii = null, timeWindowMinutes = 30, includeFull = false }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -235,10 +254,20 @@ export const rideRepository = {
     // passes through - matches even though it's nowhere near either endpoint.
     const routeLine = ROUTE_GEOG;
 
-    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
-    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
-    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${p(pickupRadiusM)})`;
-    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+    // With joinRadii, each ride is matched within its own join radius (the
+    // same limit the join request enforces, see rideRequest.service.js), so a
+    // route search never lists a ride the passenger would then be refused.
+    // Rides without a saved road route get the wider radius, as there.
+    const pickupRadius = () =>
+      joinRadii
+        ? `(CASE WHEN r.pickup_preference = 'PASSENGER_LOCATION' OR r.route_geog IS NULL THEN ${p(joinRadii.passengerLocationM)}::float8 ELSE ${p(joinRadii.onRouteM)}::float8 END)`
+        : p(pickupRadiusM);
+    const destinationRadius = () => (joinRadii ? pickupRadius() : p(destinationRadiusM));
+
+    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${pickupRadius()})`;
+    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${destinationRadius()})`;
+    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${pickupRadius()})`;
+    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${destinationRadius()})`;
 
     // Guard against matching a ride "backwards": require the pickup point to
     // fall no later along the route line than the drop-off point (with a

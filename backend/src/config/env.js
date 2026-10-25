@@ -55,6 +55,16 @@ export const env = {
     // Paid rides use their own per-km rate when it's higher.
     tipRatePerKm: Number(process.env.TIP_RATE_PER_KM || 5),
   },
+  // Trip lifecycle (see services/tripLifecycle.service.js).
+  lifecycle: {
+    // Departure times are entered in local time.
+    timeZone: process.env.RIDE_TIMEZONE || "Asia/Kolkata",
+    // A ride that never started expires this long after its departure time.
+    expireAfterHours: Number(process.env.RIDE_EXPIRE_AFTER_HOURS || 2),
+    // An accepted passenger must pay within this many minutes, or the seat is released.
+    paymentDeadlineMinutes: Number(process.env.PAYMENT_DEADLINE_MINUTES || 30),
+    sweepIntervalMs: Number(process.env.LIFECYCLE_SWEEP_INTERVAL_MS || 60 * 1000),
+  },
   // Road routing (OSRM) to save a ride's real road route.
   routing: {
     enabled: (process.env.ROUTING_ENABLED ?? "true") !== "false",

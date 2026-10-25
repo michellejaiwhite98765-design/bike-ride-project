@@ -1,4 +1,4 @@
-import { withTransaction } from "../config/db.js";
+import { tripLifecycleService } from "./tripLifecycle.service.js";
 import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { rideRequestRepository } from "../repositories/rideRequest.repository.js";
@@ -111,14 +111,14 @@ export const rideService = {
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "CANCELLED");
 
-    const updated = await withTransaction(async (tx) => {
-      const cancelled = await rideRepository.updateFlat(rideId, { status: "CANCELLED", cancelledAt: new Date() }, tx);
-      await bookingRepository.cancelAllForRide(rideId, "Ride cancelled by rider", tx);
-      return cancelled;
+    // Cancels bookings (refunding paid ones), closes pending requests and
+    // tells every passenger involved.
+    const updated = await tripLifecycleService.closeRide(rideId, {
+      status: "CANCELLED",
+      reason: reason ? `Ride cancelled by rider: ${reason}` : "Ride cancelled by rider",
+      userId,
     });
-
-    await audit(null, { userId, action: "RIDE_CANCELLED", entityType: "Ride", entityId: rideId, metadata: { reason } });
-    await notificationService.notifyRideCancelled(rideId);
+    if (!updated) throw ApiError.conflict("This ride can no longer be cancelled");
     return updated;
   },
 
@@ -127,9 +127,14 @@ export const rideService = {
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "STARTED");
     const updated = await rideRepository.update(rideId, { status: "STARTED", startedAt: new Date() });
-    await audit(null, { userId, action: "RIDE_STARTED", entityType: "Ride", entityId: rideId });
+    // Passengers who were accepted but never paid don't come along: release
+    // their bookings (they're told why). Done after the status change so no
+    // new request can be accepted in between.
+    const unpaid = await bookingRepository.findActiveByRide(rideId, ["PAYMENT_PENDING"]);
+    const releasedUnpaid = await tripLifecycleService.dropUnpaidBookings(unpaid, "the ride started before your payment was completed");
+    await audit(null, { userId, action: "RIDE_STARTED", entityType: "Ride", entityId: rideId, metadata: { releasedUnpaid } });
     await notificationService.notifyRideStarted(rideId);
-    return updated;
+    return { ...(releasedUnpaid ? await rideRepository.findById(rideId) : updated), releasedUnpaid };
   },
 
   async complete(userId, rideId) {

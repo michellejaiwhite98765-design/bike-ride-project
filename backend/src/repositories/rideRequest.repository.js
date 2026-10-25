@@ -92,6 +92,20 @@ export const rideRequestRepository = {
     return rows.map(toCamelRow);
   },
 
+  /**
+   * Closes every open (REQUESTED / ACCEPTED) request on a ride with `status`.
+   * Returns the closed rows so their passengers can be told.
+   */
+  async closeOpenForRide(rideId, status, tx) {
+    const { rows } = await (tx || pool).query(
+      `UPDATE "ride_requests" SET "status" = $2::"RideRequestStatus", "updated_at" = now()
+       WHERE "ride_id" = $1 AND "status" = ANY($3::"RideRequestStatus"[])
+       RETURNING "id", "passenger_id" AS "passengerId"`,
+      [rideId, status, ["REQUESTED", "ACCEPTED"]]
+    );
+    return rows;
+  },
+
   async updateStatus(id, status, tx) {
     const { text, values } = updateRow("ride_requests", id, { status, updatedAt: new Date() });
     const { rows } = await (tx || pool).query(text, values);

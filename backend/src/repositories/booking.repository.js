@@ -149,12 +149,26 @@ export const bookingRepository = {
     return rows;
   },
 
-  /** Used by notification.service.js when a ride is cancelled. */
-  async findActiveByRide(rideId) {
-    const { rows } = await pool.query(
-      `SELECT "id", "passenger_id" AS "passengerId"
+  /** Active bookings on a ride (optionally only these statuses), for cancelling / expiring / starting it. */
+  async findActiveByRide(rideId, statuses = ["PAYMENT_PENDING", "CONFIRMED"], tx) {
+    const { rows } = await (tx || pool).query(
+      `SELECT "id", "passenger_id" AS "passengerId", "ride_id" AS "rideId", "ride_request_id" AS "rideRequestId",
+              "seats", "booking_status" AS "bookingStatus", "payment_status" AS "paymentStatus"
        FROM "bookings" WHERE "ride_id" = $1 AND "booking_status" = ANY($2::"BookingStatus"[])`,
-      [rideId, ["PAYMENT_PENDING", "CONFIRMED"]]
+      [rideId, statuses]
+    );
+    return rows;
+  },
+
+  /** Unpaid bookings older than the payment deadline, on rides that haven't left yet. */
+  async findPaymentOverdue(minutes) {
+    const { rows } = await pool.query(
+      `SELECT b."id", b."passenger_id" AS "passengerId", b."ride_id" AS "rideId", b."ride_request_id" AS "rideRequestId",
+              b."seats", b."booking_status" AS "bookingStatus", b."payment_status" AS "paymentStatus"
+       FROM "bookings" b JOIN "rides" r ON r."id" = b."ride_id"
+       WHERE b."booking_status" = 'PAYMENT_PENDING' AND r."status" = 'PUBLISHED'
+         AND b."created_at" < now() - make_interval(mins => $1::int)`,
+      [minutes]
     );
     return rows;
   },

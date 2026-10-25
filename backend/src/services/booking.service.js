@@ -16,6 +16,10 @@ import { paymentService } from "./payment.service.js";
  * seat left can never both succeed - the second waits for the lock, re-reads the
  * now-decremented seat count, and fails cleanly instead of racing.
  */
+function passengerName(rideRequest) {
+  return [rideRequest?.passenger?.firstName, rideRequest?.passenger?.lastName].filter(Boolean).join(" ") || "A passenger";
+}
+
 export const bookingService = {
   async acceptRequest(userId, requestId) {
     const rideRequest = await rideRequestRepository.findById(requestId);
@@ -86,7 +90,20 @@ export const bookingService = {
     if (rideRequest.passengerId !== userId) throw ApiError.forbidden("You do not own this request");
     assertRideRequestTransition(rideRequest.status, "CANCELLED");
 
-    return rideRequestRepository.updateStatus(requestId, "CANCELLED");
+    // Already accepted: a seat (and maybe a payment) is held by the booking -
+    // cancel that, which gives the seat back, refunds and closes this request.
+    if (rideRequest.status === "ACCEPTED") {
+      const booking = await bookingRepository.findByRideRequestId(requestId);
+      if (booking && booking.bookingStatus !== "CANCELLED") {
+        await this.cancelBooking(userId, booking.id, "Passenger withdrew");
+        return rideRequestRepository.findById(requestId);
+      }
+    }
+
+    const updated = await rideRequestRepository.updateStatus(requestId, "CANCELLED");
+    await audit(null, { userId, action: "RIDE_REQUEST_CANCELLED", entityType: "RideRequest", entityId: requestId });
+    await notificationService.notifyPassengerLeft(rideRequest.rideId, passengerName(rideRequest), { wasAccepted: false });
+    return updated;
   },
 
   async cancelBooking(userId, bookingId, reason) {
@@ -113,6 +130,8 @@ export const bookingService = {
     }
 
     await audit(null, { userId, action: "BOOKING_CANCELLED", entityType: "Booking", entityId: bookingId, metadata: { reason } });
+    const rideRequest = await rideRequestRepository.findById(booking.rideRequestId);
+    await notificationService.notifyPassengerLeft(booking.rideId, passengerName(rideRequest), { wasAccepted: true });
     return bookingRepository.findById(bookingId);
   },
 

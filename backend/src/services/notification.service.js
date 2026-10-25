@@ -98,20 +98,68 @@ export const notificationService = {
     }
   },
 
-  async notifyRideCancelled(rideId) {
-    const [ride, bookings] = await Promise.all([
-      rideRepository.findById(rideId),
-      bookingRepository.findActiveByRide(rideId),
-    ]);
-    for (const booking of bookings) {
+  /**
+   * Tells every affected passenger (booked or still waiting on a request) the
+   * ride is off. The caller collects `passengerIds` before cancelling, since
+   * afterwards nothing on the ride is active any more.
+   */
+  async notifyRideCancelled(rideId, passengerIds, { refunded = [] } = {}) {
+    const ride = await rideRepository.findById(rideId);
+    for (const passengerId of new Set(passengerIds)) {
       await dispatch({
-        userId: booking.passengerId,
+        userId: passengerId,
         type: "RIDE_CANCELLED",
         title: "Ride cancelled",
-        message: `The ride to ${ride.destinationName} was cancelled by the rider`,
+        message: `The ride to ${ride.destinationName} was cancelled by the rider${refunded.includes(passengerId) ? ". Your payment is being refunded" : ""}`,
         data: { rideId },
       });
     }
+  },
+
+  async notifyRideExpired(rideId, passengerIds, { refunded = [] } = {}) {
+    const ride = await rideRepository.findById(rideId);
+    await dispatch({
+      userId: ride.riderId,
+      type: "RIDE_EXPIRED",
+      title: "Trip expired",
+      message: `Your trip to ${ride.destinationName} was never started and has expired`,
+      data: { rideId },
+    });
+    for (const passengerId of new Set(passengerIds)) {
+      await dispatch({
+        userId: passengerId,
+        type: "RIDE_EXPIRED",
+        title: "Ride expired",
+        message: `The ride to ${ride.destinationName} never started and has expired${refunded.includes(passengerId) ? ". Your payment is being refunded" : ""}`,
+        data: { rideId },
+      });
+    }
+  },
+
+  /** A passenger withdrew their request or cancelled their seat - tell the rider. */
+  async notifyPassengerLeft(rideId, passengerName, { wasAccepted }) {
+    const ride = await rideRepository.findById(rideId);
+    await dispatch({
+      userId: ride.riderId,
+      type: "RIDE_REQUEST_CANCELLED",
+      title: wasAccepted ? "Passenger cancelled" : "Request withdrawn",
+      message: wasAccepted
+        ? `${passengerName} cancelled their seat on your ride to ${ride.destinationName}. The seat is open again`
+        : `${passengerName} withdrew their request for your ride to ${ride.destinationName}`,
+      data: { rideId },
+    });
+  },
+
+  /** A booking was dropped because it wasn't paid in time (deadline passed, or the ride started). */
+  async notifyBookingDropped(booking, reason) {
+    const ride = await rideRepository.findById(booking.rideId);
+    await dispatch({
+      userId: booking.passengerId,
+      type: "BOOKING_CANCELLED",
+      title: "Booking cancelled",
+      message: `Your seat on the ride to ${ride.destinationName} was released: ${reason}`,
+      data: { rideId: booking.rideId, bookingId: booking.id },
+    });
   },
 
   async notifyNewRating(rating) {

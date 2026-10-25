@@ -5,6 +5,7 @@ import { logger } from "./config/logger.js";
 import { pool } from "./config/db.js";
 import { initSocket } from "./realtime/socket.js";
 import { rideService } from "./services/ride.service.js";
+import { tripLifecycleService } from "./services/tripLifecycle.service.js";
 
 const httpServer = http.createServer(app);
 initSocket(httpServer);
@@ -22,6 +23,14 @@ async function backfillRoadRoutes() {
 }
 backfillRoadRoutes();
 setInterval(backfillRoadRoutes, 5 * 60 * 1000).unref();
+
+// Expire rides that never started and release seats nobody paid for in time.
+async function sweepTrips() {
+  const { expired, unpaidReleased } = await tripLifecycleService.sweep();
+  if (expired || unpaidReleased) logger.info(`Trip sweep: ${expired} ride(s) expired, ${unpaidReleased} unpaid seat(s) released`);
+}
+sweepTrips();
+setInterval(sweepTrips, env.lifecycle.sweepIntervalMs).unref();
 
 const server = httpServer.listen(env.port, () => {
   logger.info(`BikeRide API listening on port ${env.port} [${env.nodeEnv}]`);

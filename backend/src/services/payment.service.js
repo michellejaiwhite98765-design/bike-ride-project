@@ -12,6 +12,28 @@ import { notificationService } from "./notification.service.js";
 // gateway integration so swapping in a real provider only touches this file.
 const MOCK_SECRET = env.payment.keySecret || "dev_mock_payment_secret";
 
+/**
+ * Records a successful payment. If the booking was cancelled meanwhile (seat
+ * released at the payment deadline, ride started/cancelled/expired), the
+ * money is refunded straight away and the booking stays cancelled - a late
+ * payment must never bring a released seat back.
+ */
+async function applySuccess(payment, bookingId, providerPaymentId) {
+  const { booking, lateForCancelled } = await withTransaction(async (tx) => {
+    await paymentRepository.update(payment.id, { status: "SUCCESS", providerPaymentId }, tx);
+    const current = await bookingRepository.findById(bookingId, tx);
+    if (current.bookingStatus === "CANCELLED") {
+      return { booking: await bookingRepository.update(bookingId, { paymentStatus: "SUCCESS" }, tx), lateForCancelled: true };
+    }
+    return {
+      booking: await bookingRepository.update(bookingId, { bookingStatus: "CONFIRMED", paymentStatus: "SUCCESS" }, tx),
+      lateForCancelled: false,
+    };
+  });
+  if (lateForCancelled) await paymentService.refundPayment(bookingId);
+  return { booking, lateForCancelled };
+}
+
 function sign(orderId, paymentId) {
   return crypto.createHmac("sha256", MOCK_SECRET).update(`${orderId}|${paymentId}`).digest("hex");
 }
@@ -24,6 +46,7 @@ export const paymentService = {
     // Paid when the ride has a tip or the passenger's pickup was a paid detour.
     if (!(Number(booking.totalAmount) > 0)) throw ApiError.badRequest("This ride does not require payment");
     if (booking.paymentStatus === "SUCCESS") throw ApiError.conflict("This booking has already been paid for");
+    if (booking.bookingStatus === "CANCELLED") throw ApiError.conflict("This booking was cancelled and can no longer be paid for");
 
     const idempotencyKey = `booking:${bookingId}`;
     const existing = await paymentRepository.findByIdempotencyKey(idempotencyKey);
@@ -80,10 +103,10 @@ export const paymentService = {
       throw ApiError.badRequest("Payment verification failed");
     }
 
-    const updatedBooking = await withTransaction(async (tx) => {
-      await paymentRepository.update(payment.id, { status: "SUCCESS", providerPaymentId }, tx);
-      return bookingRepository.update(bookingId, { bookingStatus: "CONFIRMED", paymentStatus: "SUCCESS" }, tx);
-    });
+    const { booking: updatedBooking, lateForCancelled } = await applySuccess(payment, bookingId, providerPaymentId);
+    if (lateForCancelled) {
+      throw ApiError.conflict("This booking was cancelled before the payment went through. Your payment has been refunded");
+    }
 
     await audit(null, { userId, action: "PAYMENT_SUCCESSFUL", entityType: "Booking", entityId: bookingId });
     await notificationService.notifyPaymentSuccess(updatedBooking);
@@ -105,10 +128,8 @@ export const paymentService = {
     if (!payment) throw ApiError.notFound("Payment not found for webhook order");
     if (payment.status === "SUCCESS") return { alreadyProcessed: true };
 
-    const updatedBooking = await withTransaction(async (tx) => {
-      await paymentRepository.update(payment.id, { status: "SUCCESS", providerPaymentId: payload.paymentId }, tx);
-      return bookingRepository.update(payment.bookingId, { bookingStatus: "CONFIRMED", paymentStatus: "SUCCESS" }, tx);
-    });
+    const { booking: updatedBooking, lateForCancelled } = await applySuccess(payment, payment.bookingId, payload.paymentId);
+    if (lateForCancelled) return { alreadyProcessed: false, refunded: true };
 
     await notificationService.notifyPaymentSuccess(updatedBooking);
     return { alreadyProcessed: false };

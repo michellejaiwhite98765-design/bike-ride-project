@@ -171,6 +171,20 @@ export const rideRepository = {
     };
   },
 
+  /**
+   * Draft / published rides whose departure (local time in `timeZone`) was
+   * more than `hours` ago - they never started and should expire.
+   */
+  async findOverdue(hours, timeZone) {
+    const { rows } = await pool.query(
+      `SELECT "id" FROM "rides"
+       WHERE "status" IN ('DRAFT', 'PUBLISHED')
+         AND (("departure_date" + "departure_time"::time) AT TIME ZONE $2) < now() - make_interval(hours => $1::int)`,
+      [hours, timeZone]
+    );
+    return rows.map((r) => r.id);
+  },
+
   async findOpenByRider(riderId) {
     const { rows } = await pool.query(
       `SELECT "id", "status", "source_name" AS "sourceName", "destination_name" AS "destinationName"

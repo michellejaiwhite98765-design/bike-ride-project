@@ -180,9 +180,18 @@ export default function MyTripCard({ onChanged }) {
         {ride.status === "PUBLISHED" && (
           <Popconfirm
             title="Start this ride now?"
-            description={accepted.length === 0 ? "No passengers accepted yet - you'll ride alone." : `${accepted.length} passenger(s) will be notified.`}
+            description={
+              accepted.length === 0
+                ? "No passengers accepted yet - you'll ride alone."
+                : `${accepted.length} passenger(s) will be notified. Anyone who hasn't paid yet is released from the ride.`
+            }
             okText="Start"
-            onConfirm={() => act("trip", () => rideService.start(ride.id), "Ride started - have a safe trip!")}
+            onConfirm={() =>
+              act("trip", async () => {
+                const started = await rideService.start(ride.id);
+                if (started?.releasedUnpaid) message.warning(`${started.releasedUnpaid} unpaid passenger(s) were released from the ride`);
+              }, "Ride started - have a safe trip!")
+            }
           >
             <Button block size="large" className="mtc-primary" icon={<PlayCircleFilled />} loading={busy === "trip"}>
               Start ride

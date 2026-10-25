@@ -16,8 +16,12 @@ function uploadBuffer(buffer, resourceType, folder) {
 }
 
 export const cloudinaryService = {
+  isConfigured() {
+    return Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
+  },
+
   async uploadRcDocument(file, vehicleId) {
-    if (!env.cloudinary.cloudName || !env.cloudinary.apiKey || !env.cloudinary.apiSecret) {
+    if (!this.isConfigured()) {
       throw new Error("Cloudinary is not configured");
     }
     const resourceType = file.mimetype === "application/pdf" ? "raw" : "image";

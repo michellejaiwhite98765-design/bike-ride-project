@@ -5,6 +5,7 @@ import { audit } from "../utils/audit.js";
 import { cloudinaryService } from "./cloudinary.service.js";
 import { way2ApiService } from "./way2api.service.js";
 import { rcOcrService } from "./rcOcr.service.js";
+import { logger } from "../config/logger.js";
 
 async function assertOwner(vehicleId, userId) {
   const vehicle = await vehicleRepository.findById(vehicleId);
@@ -124,7 +125,15 @@ export const vehicleService = {
       throw ApiError.badRequest(`Wrong RC uploaded. The RC belongs to ${ocr.registrationNumber}, not ${expected}.`);
     }
 
-    const uploaded = await cloudinaryService.uploadRcDocument(file, vehicleId);
+    // Keep a copy of the RC in Cloudinary when it's set up. Without it (e.g. a
+    // fresh free deployment) the number check above still decides the
+    // result; only the stored copy of the document is skipped.
+    let uploaded = { secureUrl: null, publicId: null };
+    if (cloudinaryService.isConfigured()) {
+      uploaded = await cloudinaryService.uploadRcDocument(file, vehicleId);
+    } else {
+      logger.warn(`Cloudinary not configured - RC for vehicle ${vehicleId} verified without storing the document`);
+    }
     // WAY2API registry verification is skipped for now (no provider configured) —
     // auto-verify as soon as the RC's OCR'd registration number matches the vehicle.
     const updated = await vehicleRepository.update(vehicleId, {

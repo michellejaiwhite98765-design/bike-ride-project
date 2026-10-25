@@ -16,7 +16,7 @@ services:
     name: bikeride-backend
     runtime: docker
     plan: free
-    region: oregon
+    region: singapore # closest Render region to India - pick Neon "Asia Pacific (Singapore)" too
     rootDir: backend
     dockerfilePath: ./Dockerfile
     dockerContext: .

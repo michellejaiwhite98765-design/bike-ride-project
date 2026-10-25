@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Form, Input, Button, App } from "antd";
 import { MailOutlined, LockOutlined, ArrowRightOutlined } from "@ant-design/icons";
@@ -512,17 +511,14 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
-  const [signingIn, setSigningIn] = useState(false);
 
   async function onFinish(values) {
-    setSigningIn(true);
     try {
       await login(values);
       const redirectTo = location.state?.from?.pathname || "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
       message.error(err.message);
-      setSigningIn(false);
     }
   }
 
@@ -659,7 +655,7 @@ export default function LoginPage() {
                 <Link to="/forgot-password">Forgot password?</Link>
               </Row>
 
-              <BoardButton type="primary" htmlType="submit" loading={signingIn}>
+              <BoardButton type="primary" htmlType="submit">
                 Sign in
                 <ArrowRightOutlined />
               </BoardButton>

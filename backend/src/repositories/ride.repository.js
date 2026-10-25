@@ -7,7 +7,6 @@ const RIDE_JOIN_SELECT = `
   r."destination_name", r."destination_latitude", r."destination_longitude", r."pickup_preference", r."departure_date", r."departure_time",
   r."available_seats", r."total_seats", r."ride_type", r."tip_amount", r."notes", r."status",
   r."started_at", r."completed_at", r."cancelled_at", r."created_at", r."updated_at",
-  ROUND((ST_Length(r."route_geog") / 1000)::numeric, 1)::float8 AS "route_distance_km",
   v."id" AS "vehicle__id", v."owner_id" AS "vehicle__owner_id", v."vehicle_type" AS "vehicle__vehicle_type",
   v."brand" AS "vehicle__brand", v."model" AS "vehicle__model", v."registration_number" AS "vehicle__registration_number",
   v."color" AS "vehicle__color", v."manufacturing_year" AS "vehicle__manufacturing_year",
@@ -18,10 +17,6 @@ const RIDE_JOIN_SELECT = `
   u."profile_image" AS "rider__profile_image", u."phone" AS "rider__phone", u."is_verified" AS "rider__is_verified"
 `;
 const RIDE_JOIN_FROM = `FROM "rides" r JOIN "vehicles" v ON v."id" = r."vehicle_id" JOIN "users" u ON u."id" = r."rider_id"`;
-
-// The ride's real road route when we have it, otherwise the straight line
-// between its start and destination. Expects the rides table aliased as `r`.
-const ROUTE_GEOG = `COALESCE(r.route_geog, ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography)`;
 
 function hydrateRide(row) {
   if (!row) return null;
@@ -53,7 +48,6 @@ export const rideRepository = {
       updatedAt: now,
     });
     const { rows } = await pool.query(text, values);
-    if (data.routePath) await this.setRoutePath(rows[0].id, data.routePath);
     return this.findById(rows[0].id);
   },
 
@@ -99,109 +93,6 @@ export const rideRepository = {
   },
 
   /**
-   * Stores the road route the rider picked (array of [lat, lng]). Passing
-   * null clears it, e.g. when the start/end changed and the old route no
-   * longer applies - distance checks then fall back to the straight line.
-   */
-  async setRoutePath(rideId, routePath, tx) {
-    const wkt = routePath && routePath.length >= 2
-      ? `LINESTRING(${routePath.map(([lat, lng]) => `${Number(lng)} ${Number(lat)}`).join(", ")})`
-      : null;
-    await (tx || pool).query(
-      `UPDATE "rides" SET "route_geog" = CASE WHEN $1::text IS NULL THEN NULL ELSE ST_GeogFromText('SRID=4326;' || $1::text) END WHERE "id" = $2`,
-      [wkt, rideId]
-    );
-  },
-
-  /** Copies a saved road route from one of the rider's rides to another with the same endpoints. */
-  async copyRouteFrom(fromRideId, toRideId, riderId) {
-    const { rowCount } = await pool.query(
-      `UPDATE "rides" t SET "route_geog" = f."route_geog"
-       FROM "rides" f
-       WHERE t."id" = $2 AND f."id" = $1 AND f."rider_id" = $3 AND t."rider_id" = $3
-         AND f."route_geog" IS NOT NULL
-         AND f."source_latitude" = t."source_latitude" AND f."source_longitude" = t."source_longitude"
-         AND f."destination_latitude" = t."destination_latitude" AND f."destination_longitude" = t."destination_longitude"`,
-      [fromRideId, toRideId, riderId]
-    );
-    return rowCount > 0;
-  },
-
-  /**
-   * How far a pickup (and optionally a drop) point is from the ride's route,
-   * plus where along the route each falls (0 = start, 1 = end) so callers
-   * can tell whether the passenger is going the same way.
-   */
-  async joinGeometry(rideId, pickup, drop) {
-    const { rows } = await pool.query(
-      `WITH ride AS (
-         SELECT ${ROUTE_GEOG} AS route, r.route_geog IS NOT NULL AS has_route
-         FROM "rides" r WHERE r."id" = $1
-       ),
-       pts AS (
-         SELECT ST_SetSRID(ST_MakePoint($2::float8, $3::float8), 4326)::geography AS pickup,
-                CASE WHEN $4::float8 IS NULL THEN NULL
-                     ELSE ST_SetSRID(ST_MakePoint($4::float8, $5::float8), 4326)::geography END AS drop
-       )
-       SELECT
-         ride.has_route,
-         ST_Distance(ride.route, pts.pickup) AS pickup_m,
-         ST_LineLocatePoint(ride.route::geometry, pts.pickup::geometry) AS pickup_frac,
-         CASE WHEN pts.drop IS NULL THEN NULL ELSE ST_Distance(ride.route, pts.drop) END AS drop_m,
-         CASE WHEN pts.drop IS NULL THEN NULL ELSE ST_LineLocatePoint(ride.route::geometry, pts.drop::geometry) END AS drop_frac
-       FROM ride, pts`,
-      [rideId, pickup.longitude, pickup.latitude, drop?.longitude ?? null, drop?.latitude ?? null]
-    );
-    const row = rows[0];
-    if (!row) return null;
-    const num = (v) => (v == null ? null : Number(v));
-    return {
-      hasRoute: row.has_route,
-      pickupM: num(row.pickup_m),
-      pickupFraction: num(row.pickup_frac),
-      dropM: num(row.drop_m),
-      dropFraction: num(row.drop_frac),
-    };
-  },
-
-  /**
-   * Closes rides that were never started and whose departure time passed
-   * more than `graceMinutes` ago (departure date/time are local time, see
-   * utils/departure.js). Returns the ids of the rides it expired.
-   */
-  async expireStale(graceMinutes, tzOffsetMinutes, tx) {
-    const { rows } = await (tx || pool).query(
-      `UPDATE "rides"
-       SET "status" = 'EXPIRED', "updated_at" = now()
-       WHERE "status" IN ('DRAFT', 'PUBLISHED')
-         AND ("departure_date" + "departure_time"::time) - make_interval(mins => $2::int) + make_interval(mins => $1::int)
-             < (now() AT TIME ZONE 'UTC')
-       RETURNING "id", "destination_name" AS "destinationName"`,
-      [graceMinutes, tzOffsetMinutes]
-    );
-    return rows;
-  },
-
-  async hasRoutePath(rideId) {
-    const { rows } = await pool.query('SELECT "route_geog" IS NOT NULL AS "has" FROM "rides" WHERE "id" = $1', [rideId]);
-    return Boolean(rows[0]?.has);
-  },
-
-  /** Open rides with no saved road route yet (oldest departure first). */
-  async findOpenWithoutRoute(limit) {
-    const { rows } = await pool.query(
-      `SELECT "id", "source_latitude" AS "sourceLatitude", "source_longitude" AS "sourceLongitude",
-              "destination_latitude" AS "destinationLatitude", "destination_longitude" AS "destinationLongitude"
-       FROM "rides"
-       WHERE "route_geog" IS NULL AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
-       ORDER BY "departure_date" ASC, "departure_time" ASC
-       LIMIT $1`,
-      [limit]
-    );
-    return rows;
-  },
-
-  /**
    * A rider may only have one open trip at a time: any ride of theirs that is
    * still a draft, published or started (i.e. not yet completed, cancelled
    * or expired) counts as open.
@@ -224,7 +115,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, joinRadii = null, timeWindowMinutes = 30, includeFull = false }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30, includeFull = false }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -248,26 +139,17 @@ export const rideRepository = {
       timeClause = `AND LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam}`;
     }
 
-    // Match against the ride's road route (or, for rides without one, the
-    // straight line between its endpoints), not just the two endpoints, so a
+    // We only store a ride's two endpoints, not its actual road geometry, so
+    // the straight line between them stands in as an approximation of the
+    // route. Matching against the line (not just the two endpoints) lets a
     // pickup/drop-off that's genuinely along the way - e.g. a town the ride
-    // passes through - matches even though it's nowhere near either endpoint.
-    const routeLine = ROUTE_GEOG;
+    // passes through - match even though it's nowhere near either endpoint.
+    const routeLine = `ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography`;
 
-    // With joinRadii, each ride is matched within its own join radius (the
-    // same limit the join request enforces, see rideRequest.service.js), so a
-    // route search never lists a ride the passenger would then be refused.
-    // Rides without a saved road route get the wider radius, as there.
-    const pickupRadius = () =>
-      joinRadii
-        ? `(CASE WHEN r.pickup_preference = 'PASSENGER_LOCATION' OR r.route_geog IS NULL THEN ${p(joinRadii.passengerLocationM)}::float8 ELSE ${p(joinRadii.onRouteM)}::float8 END)`
-        : p(pickupRadiusM);
-    const destinationRadius = () => (joinRadii ? pickupRadius() : p(destinationRadiusM));
-
-    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${pickupRadius()})`;
-    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${destinationRadius()})`;
-    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${pickupRadius()})`;
-    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${destinationRadius()})`;
+    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
+    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${p(pickupRadiusM)})`;
+    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${p(destinationRadiusM)})`;
 
     // Guard against matching a ride "backwards": require the pickup point to
     // fall no later along the route line than the drop-off point (with a

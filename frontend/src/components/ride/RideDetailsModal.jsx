@@ -19,8 +19,7 @@ const dark = {
 export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
   if (!ride) return null;
 
-  // Saved road route length when there is one (matches the map), else straight line.
-  const distanceKm = ride.routeDistanceKm ?? haversineKm(
+  const distanceKm = haversineKm(
     Number(ride.sourceLatitude),
     Number(ride.sourceLongitude),
     Number(ride.destinationLatitude),
@@ -121,16 +120,9 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         </div>
       </div>
 
-      {ride.myRequestStatus === "REQUESTED" && (
-        <div className="rdm-my-status">You've requested to join — waiting for the rider to approve.</div>
-      )}
-      {ride.myRequestStatus === "ACCEPTED" && (
-        <div className="rdm-my-status rdm-my-status-ok">Your request was accepted.</div>
-      )}
-
       <Link to={`/rides/${ride.id}`}>
         <Button type="primary" block icon={<ArrowRightOutlined />} className="rdm-full-btn">
-          {!isOwner && ride.status === "PUBLISHED" && !ride.myRequestStatus ? "View details & request to join" : "View full details"}
+          View full details
         </Button>
       </Link>
 
@@ -141,7 +133,7 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         .ride-details-modal .ant-modal-content{background:var(--bg-secondary)!important;border:1px solid ${dark.panelBorder};border-radius:20px;padding:20px!important}
         .ride-details-modal .ant-modal-close{color:${dark.textTertiary}}
         .ride-details-modal .ant-modal-close:hover{color:${dark.textPrimary}}
-        .rdm-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;padding-right:36px}
+        .rdm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
         .rdm-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:${dark.textPrimary}}
         .rdm-rider{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:${dark.panel};border:1px solid ${dark.panelBorder};margin-bottom:14px}
         .rdm-rider-avatar{background:linear-gradient(135deg,${dark.teal},#60A5FA)!important;color:#04110f!important;flex-shrink:0}
@@ -158,10 +150,7 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         .rdm-section-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:${dark.teal};margin-bottom:12px}
         .rdm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         .rdm-cell span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:${dark.textTertiary};margin-bottom:3px}
-        .rdm-cell{min-width:0}
-        .rdm-cell strong{display:block;font-size:13px;font-weight:700;line-height:1.4;color:${dark.textPrimary};overflow-wrap:anywhere}
-        .rdm-my-status{margin-bottom:12px;padding:10px 12px;border-radius:10px;font-size:12.5px;font-weight:600;color:#2DD4BF;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.3)}
-        .rdm-my-status-ok{color:#52c41a;background:rgba(82,196,26,.1);border-color:rgba(82,196,26,.3)}
+        .rdm-cell strong{display:block;font-size:13px;font-weight:700;color:${dark.textPrimary}}
         .rdm-full-btn{height:44px;border-radius:10px;background:linear-gradient(135deg,#2DD4BF,#8B5CF6)!important;border:none!important;font-weight:700}
         @media (max-width:520px){.rdm-grid{grid-template-columns:1fr}.rdm-rider{flex-wrap:wrap}.rdm-rider-call{width:100%;justify-content:center}}
       `}</style>

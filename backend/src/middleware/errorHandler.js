@@ -20,12 +20,9 @@ export function errorHandler(err, req, res, _next) {
   }
 
   if (err?.name === "ZodError") {
-    // Surface a business rule's own message (e.g. the service-area one) so the
-    // app can show the user something actionable, not a generic failure.
-    const customIssue = err.issues.find((i) => i.code === "custom");
     return res.status(400).json({
       success: false,
-      message: customIssue?.message || "Validation failed",
+      message: "Validation failed",
       errors: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
     });
   }

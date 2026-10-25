@@ -43,7 +43,6 @@ const HistoryContent = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
 
   @media (max-width: 600px) {
     flex-direction: column;
@@ -53,7 +52,6 @@ const HistoryContent = styled.div`
 
   .route {
     flex: 1;
-    min-width: 0;
 
     .title {
       font-weight: 600;
@@ -62,18 +60,6 @@ const HistoryContent = styled.div`
       align-items: center;
       gap: 8px;
       margin-bottom: 4px;
-      min-width: 0;
-
-      span {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .anticon {
-        flex-shrink: 0;
-      }
     }
 
     .date {
@@ -87,7 +73,6 @@ const HistoryContent = styled.div`
 
   .status {
     text-align: right;
-    flex-shrink: 0;
 
     @media (max-width: 600px) {
       text-align: left;

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { reverseGeocode, serviceAreaError } from "../utils/geo.js";
+import { reverseGeocode } from "../utils/geo.js";
 
 /**
  * Silently pre-fills a form's `${prefix}Name/Latitude/Longitude/Country`
@@ -26,11 +26,8 @@ export default function useAutoCurrentLocation(form, prefix = "source", { enable
       async (pos) => {
         if (cancelled) return;
         try {
-          const { name, country, countryCode } = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+          const { name, country } = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
           if (cancelled || form.getFieldValue(`${prefix}Latitude`) != null) return;
-          // Outside the service country (e.g. travelling abroad): don't pre-fill
-          // a location the app can't use - leave it for manual entry.
-          if (serviceAreaError({ countryCode, latitude: pos.coords.latitude, longitude: pos.coords.longitude })) return;
           form.setFieldsValue({
             [`${prefix}Name`]: name.slice(0, 150),
             [`${prefix}Latitude`]: pos.coords.latitude,

@@ -1,7 +1,7 @@
 import { ApiError } from "./ApiError.js";
 
 const RIDE_TRANSITIONS = {
-  DRAFT: ["PUBLISHED", "CANCELLED", "EXPIRED"],
+  DRAFT: ["PUBLISHED", "CANCELLED"],
   PUBLISHED: ["STARTED", "CANCELLED", "EXPIRED"],
   STARTED: ["COMPLETED"],
   COMPLETED: [],

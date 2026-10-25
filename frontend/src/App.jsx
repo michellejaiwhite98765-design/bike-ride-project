@@ -1,8 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout.jsx";
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
-import AppLoader from "./components/ui/AppLoader.jsx";
-import { useAuth } from "./context/AuthContext.jsx";
 
 import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/auth/LoginPage.jsx";
@@ -29,12 +27,6 @@ import AdminPage from "./pages/admin/AdminPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 export default function App() {
-  const { loading } = useAuth();
-
-  // Restoring the saved session (GET /auth/me) decides between the guest and
-  // signed-in views; show the loader instead of flashing the guest UI first.
-  if (loading) return <AppLoader />;
-
   return (
     <Routes>
         <Route path="/login" element={<LoginPage />} />

@@ -168,17 +168,17 @@ export default function RouteOverviewMap({ ride, compact = false }) {
       <div className="ro-endpoints">
         <div className="ro-endpoint">
           <span className="ro-endpoint-dot ro-dot-start" />
-          <div className="ro-endpoint-text">
+          <div>
             <div className="ro-endpoint-label">Start</div>
-            <div className="ro-endpoint-value" title={ride.sourceName}>{ride.sourceName}</div>
+            <div className="ro-endpoint-value">{ride.sourceName}</div>
           </div>
         </div>
         <div className="ro-endpoint-divider" />
         <div className="ro-endpoint">
           <span className="ro-endpoint-dot ro-dot-end" />
-          <div className="ro-endpoint-text">
+          <div>
             <div className="ro-endpoint-label">End</div>
-            <div className="ro-endpoint-value" title={ride.destinationName}>{ride.destinationName}</div>
+            <div className="ro-endpoint-value">{ride.destinationName}</div>
           </div>
         </div>
       </div>
@@ -213,11 +213,10 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         .ro-chip.ant-tag{margin:0;border:1px solid var(--chrome-border)!important;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--text-primary)!important;background:var(--surface-glass)!important;box-shadow:var(--shadow-md);backdrop-filter:blur(10px)}
 
         .ro-endpoints{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--chrome-tint);border-top:1px solid var(--chrome-border)}
-        .ro-endpoint{display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0}
-        .ro-endpoint-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:4px}
+        .ro-endpoint{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+        .ro-endpoint-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
         .ro-endpoint-label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary)}
-        .ro-endpoint-text{flex:1;min-width:0}
-        .ro-endpoint-value{font-size:13px;font-weight:700;line-height:1.35;color:var(--text-primary);overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+        .ro-endpoint-value{font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .ro-endpoint-divider{width:28px;height:2px;flex-shrink:0;background:repeating-linear-gradient(90deg,var(--chrome-border) 0 5px,transparent 5px 9px);border-radius:2px}
 
         @media (max-width:600px){

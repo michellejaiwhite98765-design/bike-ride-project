@@ -62,14 +62,8 @@ export const rideRequestRepository = {
 
   async findByRide(rideId) {
     const { rows } = await pool.query(
-      `SELECT ${RR_COLUMNS}, ${PASSENGER_COLUMNS},
-              ROUND((ST_Distance(
-                COALESCE(r.route_geog, ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography),
-                rr.pickup_geog
-              ) / 1000)::numeric, 1)::float8 AS "pickup_distance_km"
-       FROM "ride_requests" rr
-       JOIN "users" u ON u."id" = rr."passenger_id"
-       JOIN "rides" r ON r."id" = rr."ride_id"
+      `SELECT ${RR_COLUMNS}, ${PASSENGER_COLUMNS}
+       FROM "ride_requests" rr JOIN "users" u ON u."id" = rr."passenger_id"
        WHERE rr."ride_id" = $1 ORDER BY rr."created_at" DESC`,
       [rideId]
     );
@@ -84,48 +78,6 @@ export const rideRequestRepository = {
       [rideId, passengerId, ["REQUESTED", "ACCEPTED"]]
     );
     return toCamelRow(rows[0]) || null;
-  },
-
-  /** { rideId: status } for the passenger's active requests among the given rides. */
-  async activeStatusByRideIds(passengerId, rideIds) {
-    if (!passengerId || rideIds.length === 0) return new Map();
-    const { rows } = await pool.query(
-      `SELECT "ride_id", "status" FROM "ride_requests"
-       WHERE "passenger_id" = $1 AND "ride_id" = ANY($2) AND "status" = ANY($3::"RideRequestStatus"[])`,
-      [passengerId, rideIds, ["REQUESTED", "ACCEPTED"]]
-    );
-    return new Map(rows.map((r) => [r.ride_id, r.status]));
-  },
-
-  /**
-   * Once a passenger is accepted on one ride, their other still-pending
-   * requests for rides leaving around the same time (same day, within
-   * `windowMinutes`) are withdrawn so a second rider can't also accept them
-   * and double-book the passenger. A return trip later that day is untouched.
-   */
-  async cancelOverlappingPending(passengerId, acceptedRideId, windowMinutes, tx) {
-    const { rows } = await (tx || pool).query(
-      `UPDATE "ride_requests" rr SET "status" = 'CANCELLED', "updated_at" = now()
-       FROM "rides" r, "rides" accepted
-       WHERE rr."ride_id" = r."id" AND accepted."id" = $2
-         AND rr."passenger_id" = $1 AND rr."ride_id" <> $2 AND rr."status" = 'REQUESTED'
-         AND r."departure_date" = accepted."departure_date"
-         AND ABS((split_part(r."departure_time", ':', 1)::int * 60 + split_part(r."departure_time", ':', 2)::int) - (split_part(accepted."departure_time", ':', 1)::int * 60 + split_part(accepted."departure_time", ':', 2)::int)) < $3
-       RETURNING rr."id", rr."ride_id" AS "rideId"`,
-      [passengerId, acceptedRideId, windowMinutes]
-    );
-    return rows;
-  },
-
-  /** When a ride starts, requests the rider never answered can no longer be accepted. */
-  async expirePendingForRide(rideId, tx) {
-    const { rows } = await (tx || pool).query(
-      `UPDATE "ride_requests" SET "status" = 'EXPIRED', "updated_at" = now()
-       WHERE "ride_id" = $1 AND "status" = 'REQUESTED'
-       RETURNING "id", "passenger_id" AS "passengerId"`,
-      [rideId]
-    );
-    return rows;
   },
 
   async updateStatus(id, status, tx) {

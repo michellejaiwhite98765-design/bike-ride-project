@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import AppLoader from "../ui/AppLoader.jsx";
+import { Spin } from "antd";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ProtectedRoute() {
@@ -7,7 +7,11 @@ export default function ProtectedRoute() {
   const location = useLocation();
 
   if (loading) {
-    return <AppLoader />;
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {

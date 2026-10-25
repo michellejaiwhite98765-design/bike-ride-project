@@ -1,12 +1,7 @@
 import { z } from "zod";
-import { departureInstant } from "../utils/departure.js";
-import { refineServiceArea } from "../utils/serviceArea.js";
 
 const latitude = z.coerce.number().min(-90).max(90);
 const longitude = z.coerce.number().min(-180).max(180);
-// The road route drawn for the ride: [lat, lng] points, start to end.
-const routePath = z.array(z.tuple([latitude, longitude])).min(2).max(2000);
-const ENDPOINTS = [["sourceLatitude", "sourceLongitude"], ["destinationLatitude", "destinationLongitude"]];
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be in HH:mm format");
 
 // A couple of minutes of slack so a request that's mid-flight when the
@@ -26,8 +21,9 @@ const PAST_DEPARTURE_GRACE_MS = 2 * 60 * 1000;
  * accounted for departureTime at all.
  */
 function isDepartureInPast(departureDate, departureTime) {
-  // departureTime is the rider's local time, not UTC (see utils/departure.js).
-  return departureInstant(departureDate, departureTime).getTime() < Date.now() - PAST_DEPARTURE_GRACE_MS;
+  const dateOnly = departureDate.toISOString().slice(0, 10);
+  const departureInstant = new Date(`${dateOnly}T${departureTime}:00.000Z`);
+  return departureInstant.getTime() < Date.now() - PAST_DEPARTURE_GRACE_MS;
 }
 
 export const createRideSchema = z
@@ -46,12 +42,7 @@ export const createRideSchema = z
     rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]),
     tipAmount: z.coerce.number().min(0).max(10000).default(0),
     notes: z.string().trim().max(500).optional(),
-    routePath: routePath.optional(),
-    // Set when re-creating one of the rider's earlier rides ("Clone"), so its
-    // saved road route can be reused.
-    cloneOfRideId: z.string().uuid().optional(),
   })
-  .superRefine(refineServiceArea(ENDPOINTS))
   .refine((data) => data.rideType !== "WITHOUT_TIP" || data.tipAmount === 0, {
     message: "tipAmount must be 0 when rideType is WITHOUT_TIP",
     path: ["tipAmount"],
@@ -79,10 +70,7 @@ export const updateRideSchema = z
     rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]).optional(),
     tipAmount: z.coerce.number().min(0).max(10000).optional(),
     notes: z.string().trim().max(500).optional(),
-    // null clears a stored route (e.g. the endpoints changed but routing failed).
-    routePath: routePath.nullable().optional(),
   })
-  .superRefine(refineServiceArea(ENDPOINTS))
   .refine(
     (data) => !(data.rideType === "WITHOUT_TIP" && data.tipAmount && data.tipAmount > 0),
     { message: "tipAmount must be 0 when rideType is WITHOUT_TIP", path: ["tipAmount"] }
@@ -110,4 +98,4 @@ export const searchRideSchema = z.object({
   // map views that want to show every ride on the route, not just bookable
   // ones.
   includeFull: z.coerce.boolean().optional().default(false),
-}).superRefine(refineServiceArea(ENDPOINTS));
+});

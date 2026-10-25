@@ -128,70 +128,14 @@ export const bookingRepository = {
     return rows.length > 0;
   },
 
-  /**
-   * Bulk-cancels every active booking on a ride (rider cancelled it, or it
-   * expired). Returns the cancelled bookings so callers can refund paid ones
-   * and notify the passengers - after this runs they're no longer "active",
-   * so they can't be looked up that way any more.
-   */
+  /** Bulk-cancels every active booking on a ride; replaces the inline tx.booking.updateMany(...) that used to live in ride.service.js#cancel. */
   async cancelAllForRide(rideId, reason, tx) {
-    const { rows } = await (tx || pool).query(
+    await (tx || pool).query(
       `UPDATE "bookings"
        SET "booking_status" = 'CANCELLED', "cancelled_at" = now(), "cancel_reason" = $1, "updated_at" = now()
-       WHERE "ride_id" = $2 AND "booking_status" = ANY($3::"BookingStatus"[])
-       RETURNING "id", "passenger_id" AS "passengerId", "payment_status" AS "paymentStatus", "ride_request_id" AS "rideRequestId"`,
+       WHERE "ride_id" = $2 AND "booking_status" = ANY($3::"BookingStatus"[])`,
       [reason, rideId, ["PAYMENT_PENDING", "CONFIRMED"]]
     );
-    return rows;
-  },
-
-  async countConfirmedForRide(rideId) {
-    const { rows } = await pool.query(
-      `SELECT COUNT(*) AS "count" FROM "bookings" WHERE "ride_id" = $1 AND "booking_status" = 'CONFIRMED'`,
-      [rideId]
-    );
-    return Number(rows[0].count);
-  },
-
-  /** Unpaid bookings can't ride along once the ride has started: cancel them and release their seats. */
-  async cancelUnpaidForRide(rideId, reason, tx) {
-    const client = tx || pool;
-    const { rows } = await client.query(
-      `UPDATE "bookings"
-       SET "booking_status" = 'CANCELLED', "cancelled_at" = now(), "cancel_reason" = $1, "updated_at" = now()
-       WHERE "ride_id" = $2 AND "booking_status" = 'PAYMENT_PENDING'
-       RETURNING "id", "passenger_id" AS "passengerId", "seats", "ride_request_id" AS "rideRequestId"`,
-      [reason, rideId]
-    );
-    for (const booking of rows) {
-      await client.query(
-        'UPDATE "rides" SET "available_seats" = "available_seats" + $1, "updated_at" = now() WHERE "id" = $2',
-        [booking.seats, rideId]
-      );
-      await client.query(
-        `UPDATE "ride_requests" SET "status" = 'CANCELLED', "updated_at" = now() WHERE "id" = $1`,
-        [booking.rideRequestId]
-      );
-    }
-    return rows;
-  },
-
-  /** The passenger's live booking on another ride leaving within `windowMinutes` of this one, if any. */
-  async findOverlappingForPassenger(passengerId, rideId, windowMinutes) {
-    const { rows } = await pool.query(
-      `SELECT b."id", r."source_name" AS "sourceName", r."destination_name" AS "destinationName", r."departure_time" AS "departureTime"
-       FROM "bookings" b
-       JOIN "rides" r ON r."id" = b."ride_id"
-       JOIN "rides" target ON target."id" = $2
-       WHERE b."passenger_id" = $1 AND b."ride_id" <> $2
-         AND b."booking_status" IN ('PAYMENT_PENDING', 'CONFIRMED')
-         AND r."status" IN ('PUBLISHED', 'STARTED')
-         AND r."departure_date" = target."departure_date"
-         AND ABS((split_part(r."departure_time", ':', 1)::int * 60 + split_part(r."departure_time", ':', 2)::int) - (split_part(target."departure_time", ':', 1)::int * 60 + split_part(target."departure_time", ':', 2)::int)) < $3
-       LIMIT 1`,
-      [passengerId, rideId, windowMinutes]
-    );
-    return rows[0] || null;
   },
 
   /** Used by notification.service.js when a ride starts/completes. */

@@ -8,7 +8,6 @@ import { assertRideRequestTransition, assertBookingTransition } from "../utils/s
 import { audit } from "../utils/audit.js";
 import { notificationService } from "./notification.service.js";
 import { paymentService } from "./payment.service.js";
-import { OVERLAP_WINDOW_MINUTES } from "./rideRequest.service.js";
 
 /**
  * Accepting a request is the one place seats actually get reserved (spec section
@@ -53,12 +52,6 @@ export const bookingService = {
       });
 
       const newRequest = await rideRequestRepository.updateStatus(requestId, "ACCEPTED", tx);
-      await rideRequestRepository.cancelOverlappingPending(
-        rideRequest.passengerId,
-        rideRequest.rideId,
-        OVERLAP_WINDOW_MINUTES,
-        tx
-      );
 
       return { booking: newBooking, updatedRequest: newRequest };
     });

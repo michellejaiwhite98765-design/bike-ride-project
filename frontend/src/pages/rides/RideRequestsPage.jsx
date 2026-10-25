@@ -7,8 +7,6 @@ import { rideService } from "../../services/rideService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import colors from "../../theme/colors.js";
 
-const shortPlace = (name) => (name || "").split(",")[0].trim();
-
 const PageContainer = styled.div`
   max-width: 700px;
   margin: 0 auto;
@@ -116,18 +114,6 @@ const RequestDetails = styled.div`
       color: ${colors.primary};
       flex-shrink: 0;
     }
-
-    .route-distance {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 0 8px;
-      border-radius: 999px;
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #2DD4BF;
-      background: rgba(45, 212, 191, 0.12);
-      white-space: nowrap;
-    }
   }
 `;
 
@@ -207,7 +193,7 @@ export default function RideRequestsPage() {
           <ArrowLeftOutlined /> Back to Ride
         </Link>
         <h1>
-          Join Requests for {shortPlace(ride.sourceName)} → {shortPlace(ride.destinationName)}
+          Join Requests for {ride.sourceName} → {ride.destinationName}
         </h1>
         <p className="subtitle">
           {ride.availableSeats} seat{ride.availableSeats !== 1 ? "s" : ""} available
@@ -244,9 +230,6 @@ export default function RideRequestsPage() {
                     <EnvironmentOutlined className="icon" />
                     <span>
                       Pickup: <strong>{req.pickupName}</strong>
-                      {req.pickupDistanceKm != null && (
-                        <span className="route-distance">{req.pickupDistanceKm} km from your route</span>
-                      )}
                     </span>
                   </div>
                   <div className="detail-item">

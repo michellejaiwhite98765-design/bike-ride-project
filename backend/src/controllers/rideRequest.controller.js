@@ -18,11 +18,6 @@ export const rideRequestController = {
     ok(res, rideRequest);
   },
 
-  async joinCheck(req, res) {
-    const result = await rideRequestService.joinCheck(req.params.rideId, req.validatedQuery);
-    ok(res, result);
-  },
-
   async accept(req, res) {
     const booking = await bookingService.acceptRequest(req.user.id, req.params.id);
     ok(res, booking, "Request accepted");

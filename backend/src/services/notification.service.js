@@ -85,20 +85,6 @@ export const notificationService = {
     }
   },
 
-  /** Passengers whose request/booking was closed because the rider started without them. */
-  async notifyLeftBehind(ride, expiredRequests, cancelledBookings) {
-    const message = `The ride to ${ride.destinationName} has already started, so your request was closed. Please find another ride.`;
-    for (const { passengerId } of [...expiredRequests, ...cancelledBookings]) {
-      await dispatch({
-        userId: passengerId,
-        type: "RIDE_CANCELLED",
-        title: "Ride left without you",
-        message,
-        data: { rideId: ride.id },
-      });
-    }
-  },
-
   async notifyRideCompleted(rideId) {
     const bookings = await bookingRepository.findConfirmedByRide(rideId);
     for (const booking of bookings) {
@@ -112,27 +98,18 @@ export const notificationService = {
     }
   },
 
-  /** `bookings` are the ones the cancellation just closed (see bookingRepository.cancelAllForRide). */
-  async notifyRideCancelled(ride, bookings) {
+  async notifyRideCancelled(rideId) {
+    const [ride, bookings] = await Promise.all([
+      rideRepository.findById(rideId),
+      bookingRepository.findActiveByRide(rideId),
+    ]);
     for (const booking of bookings) {
       await dispatch({
         userId: booking.passengerId,
         type: "RIDE_CANCELLED",
         title: "Ride cancelled",
-        message: `The ride to ${ride.destinationName} was cancelled by the rider${booking.paymentStatus === "SUCCESS" ? ". Your payment has been refunded." : ""}`,
-        data: { rideId: ride.id },
-      });
-    }
-  },
-
-  async notifyRideExpired(ride, bookings) {
-    for (const booking of bookings) {
-      await dispatch({
-        userId: booking.passengerId,
-        type: "RIDE_CANCELLED",
-        title: "Ride didn't happen",
-        message: `The ride to ${ride.destinationName} was never started, so it has been closed${booking.paymentStatus === "SUCCESS" ? " and your payment refunded" : ""}.`,
-        data: { rideId: ride.id },
+        message: `The ride to ${ride.destinationName} was cancelled by the rider`,
+        data: { rideId },
       });
     }
   },

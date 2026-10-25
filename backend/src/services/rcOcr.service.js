@@ -16,7 +16,12 @@ const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 // high-DPI scans well but is unreliable on that kind of input, so we
 // normalize orientation/contrast/size before OCR instead of feeding it the
 // untouched camera buffer.
-const MIN_OCR_WIDTH = 2000;
+//
+// Width the (cropped) card is scaled to before OCR. ~1600 px keeps RC text
+// comfortably legible while staying fast on small servers: tesseract's time
+// grows with pixel count, and the free hosting tier has only a fraction of
+// a CPU (a forced 2000+ px minimum made phone photos time out there).
+const OCR_WIDTH = 1600;
 
 // A single PSM mode doesn't suit every layout (dense card vs. sparse text
 // against a busy background), so we retry with a few modes until one finds
@@ -99,9 +104,13 @@ async function detectDocumentBounds(orientedBuffer) {
   return { left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight };
 }
 
+// One thread: on a server with a fraction of a CPU, tesseract's default
+// multi-threading only makes its threads fight over it and run slower.
+const CHILD_ENV = { ...process.env, OMP_THREAD_LIMIT: "1" };
+
 function run(command, args, { input, timeoutMs = env.rcOcr.timeoutMs } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], env: CHILD_ENV });
     let stdout = "";
     let stderr = "";
     const timer = setTimeout(() => {
@@ -157,18 +166,12 @@ async function preprocessImage(buffer) {
   const bounds = await detectDocumentBounds(orientedBuffer).catch(() => null);
 
   let image = sharp(orientedBuffer);
-  let width;
-  if (bounds) {
-    image = image.extract(bounds);
-    width = bounds.width;
-  } else {
-    // No confident crop found (e.g. the card already fills the frame) -
-    // fall back to the untouched full photo, same as before this existed.
-    width = (await sharp(orientedBuffer).metadata()).width || 0;
-  }
+  if (bounds) image = image.extract(bounds);
+  // No confident crop found (e.g. the card already fills the frame) - fall
+  // back to the full photo. Either way, scale to OCR_WIDTH (up or down).
 
   return image
-    .resize({ width: Math.max(width, MIN_OCR_WIDTH), withoutEnlargement: false })
+    .resize({ width: OCR_WIDTH, withoutEnlargement: false })
     .grayscale()
     .normalize()
     .sharpen()
@@ -176,21 +179,36 @@ async function preprocessImage(buffer) {
     .toBuffer();
 }
 
-async function ocrWithPsm(buffer, psm) {
-  return run("tesseract", ["stdin", "stdout", "-l", "eng", "--psm", psm], { input: buffer, timeoutMs: env.rcOcr.timeoutMs });
+// tessedit_do_invert=0 skips the extra pass for white-on-dark text, which
+// RCs don't have - a large speed-up for no loss here.
+async function ocrWithPsm(buffer, psm, timeoutMs) {
+  return run("tesseract", ["stdin", "stdout", "-l", "eng", "--psm", psm, "-c", "tessedit_do_invert=0"], { input: buffer, timeoutMs });
 }
 
 // Preprocesses once, then tries PSM modes until one yields a registration
-// number. Returns the first match, or the first mode's raw text if none match.
+// number. All modes share one time budget (RC_OCR_TIMEOUT_MS), so a slow
+// server gives up cleanly instead of waiting the full timeout per mode.
+// Returns the first match, or all text read if none match.
 async function ocrImage(buffer, expected) {
+  const deadline = Date.now() + env.rcOcr.timeoutMs;
   const processed = await preprocessImage(buffer);
-  let firstText = null;
+  let allText = "";
   for (const psm of PSM_MODES) {
-    const text = await ocrWithPsm(processed, psm);
-    if (firstText === null) firstText = text;
+    const remaining = deadline - Date.now();
+    if (remaining < 2000) break;
+    let text;
+    try {
+      text = await ocrWithPsm(processed, psm, remaining);
+    } catch (error) {
+      // Out of time (or this mode failed): use what earlier modes read.
+      if (allText) break;
+      throw error;
+    }
+    allText += `
+${text}`;
     if (extractRegistrationNumber(text) || findExpectedRegistrationNumber(text, expected)) return text;
   }
-  return firstText;
+  return allText;
 }
 
 async function renderPdfPages(buffer) {

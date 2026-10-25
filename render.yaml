@@ -52,3 +52,7 @@ services:
         value: "20000"
       - key: TRACKING_STALE_AFTER_MS
         value: "30000"
+      # The free plan has a fraction of a CPU: give RC reading (OCR) a full
+      # minute in total before giving up.
+      - key: RC_OCR_TIMEOUT_MS
+        value: "60000"

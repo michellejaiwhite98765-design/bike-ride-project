@@ -680,9 +680,12 @@ export default function VehicleFormPage() {
                 Back
               </SecondaryBtn>
               <PrimaryBtn type="primary" block loading={submitting} onClick={handleUploadContinue}>
-                Continue
+                {submitting ? "Reading your RC…" : "Continue"}
               </PrimaryBtn>
             </NavRow>
+            {submitting && (
+              <BrandLoader variant="inline" label="Reading the registration number from your RC - this can take up to a minute." />
+            )}
           </div>
         )}
 

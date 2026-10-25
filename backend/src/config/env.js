@@ -40,7 +40,38 @@ export const env = {
     pickupRadiusKm: Number(process.env.DEFAULT_PICKUP_RADIUS_KM || 2),
     destinationRadiusKm: Number(process.env.DEFAULT_DESTINATION_RADIUS_KM || 2),
     timeWindowMinutes: Number(process.env.DEFAULT_TIME_WINDOW_MINUTES || 30),
+    // How far a passenger's pickup/drop may be from the ride's route to join,
+    // depending on the ride's pickup preference:
+    // - ON_ROUTE: the passenger comes to the road the rider is already taking,
+    //   so roughly a short walk.
+    // - PASSENGER_LOCATION: the rider detours to the passenger, so a little
+    //   more, but still a small detour on a bike.
+    joinRadiusOnRouteKm: Number(process.env.JOIN_RADIUS_ON_ROUTE_KM || 1),
+    joinRadiusPassengerLocationKm: Number(process.env.JOIN_RADIUS_PASSENGER_LOCATION_KM || 2),
   },
+  rideStart: {
+    // How early before the scheduled departure the rider may start the ride.
+    earlyStartMinutes: Number(process.env.RIDE_EARLY_START_MINUTES || 30),
+  },
+  rideExpiry: {
+    // A ride that was never started is closed (EXPIRED) this long after its
+    // departure time, so it stops showing in search and no longer blocks the
+    // rider from creating their next trip.
+    afterDepartureMinutes: Number(process.env.RIDE_EXPIRE_AFTER_MINUTES || 120),
+    sweepIntervalMs: Number(process.env.RIDE_EXPIRY_SWEEP_MS || 5 * 60 * 1000),
+  },
+  // The one country rides may take place in (bounding box; see utils/serviceArea.js).
+  serviceArea: {
+    countryName: process.env.SERVICE_COUNTRY_NAME || "India",
+    minLat: Number(process.env.SERVICE_MIN_LAT ?? 6.0),
+    maxLat: Number(process.env.SERVICE_MAX_LAT ?? 37.6),
+    minLng: Number(process.env.SERVICE_MIN_LNG ?? 68.0),
+    maxLng: Number(process.env.SERVICE_MAX_LNG ?? 97.5),
+  },
+  // departureDate/departureTime are entered in the riders' local time. They are
+  // stored without a zone, so this offset turns them into a real instant
+  // (default IST, UTC+05:30).
+  timezoneOffsetMinutes: Number(process.env.APP_TZ_OFFSET_MINUTES ?? 330),
   platformFeeFlat: Number(process.env.PLATFORM_FEE_FLAT || 5),
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",

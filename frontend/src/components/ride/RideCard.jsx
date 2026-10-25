@@ -41,14 +41,22 @@ export default function RideCard({ ride, showMatch = false }) {
               </div>
             </div>
           </div>
-          <StatusTag status={ride.status} />
+          <div className="rc-tags">
+            {ride.myRequestStatus === "REQUESTED" && <span className="rc-my-status">Requested</span>}
+            {ride.myRequestStatus === "ACCEPTED" && <span className="rc-my-status rc-my-status-ok">Accepted</span>}
+            <StatusTag status={ride.status} />
+          </div>
         </div>
 
         <div className="rc-route">
-          <EnvironmentOutlined />
-          <span className="rc-route-text">
-            {ride.sourceName} <ArrowRightOutlined className="rc-route-arrow" /> {ride.destinationName}
-          </span>
+          <div className="rc-route-row" title={ride.sourceName}>
+            <EnvironmentOutlined className="rc-route-start" />
+            <span className="rc-route-text">{ride.sourceName}</span>
+          </div>
+          <div className="rc-route-row" title={ride.destinationName}>
+            <ArrowRightOutlined className="rc-route-end" />
+            <span className="rc-route-text">{ride.destinationName}</span>
+          </div>
         </div>
 
         <div className="rc-meta">
@@ -92,17 +100,24 @@ export default function RideCard({ ride, showMatch = false }) {
         .rc-card:active{transform:translateY(-1px) scale(.995)}
         .rc-card:focus-visible{outline:2px solid #2DD4BF;outline-offset:2px}
 
-        .rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-        .rc-person{display:flex;gap:10px;min-width:0}
+        .rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0}
+        .rc-top .ant-tag{flex-shrink:0;margin-inline-end:0}
+        .rc-tags{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+        .rc-my-status{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;color:#2DD4BF;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.35)}
+        .rc-my-status-ok{color:#52c41a;background:rgba(82,196,26,.12);border-color:rgba(82,196,26,.35)}
+        .rc-person{display:flex;gap:10px;min-width:0;flex:1}
+        .rc-person > div:last-child{min-width:0}
         .rc-avatar{background:#0f766e;flex-shrink:0}
-        .rc-name{font-weight:700;font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+        .rc-name{font-weight:700;font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .rc-rating{color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:4px}
         .rc-rating svg{color:#faad14}
 
-        .rc-route{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;color:var(--text-primary)}
-        .rc-route svg{color:#2DD4BF;flex-shrink:0}
-        .rc-route-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
-        .rc-route-arrow{font-size:11px;color:var(--text-tertiary);flex-shrink:0}
+        .rc-route{display:flex;flex-direction:column;gap:4px;font-weight:650;font-size:14px;color:var(--text-primary);min-width:0}
+        .rc-route-row{display:flex;align-items:center;gap:8px;min-width:0}
+        .rc-route-row svg{flex-shrink:0}
+        .rc-route-start{color:#2DD4BF}
+        .rc-route-end{font-size:12px;color:var(--text-tertiary)}
+        .rc-route-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
         .rc-meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--text-secondary);font-size:12.5px}
         .rc-meta span{display:inline-flex;align-items:center;gap:6px}
@@ -120,7 +135,7 @@ export default function RideCard({ ride, showMatch = false }) {
 
         @media (max-width:480px){
           .rc-card{padding:13px;border-radius:14px}
-          .rc-name{max-width:130px;font-size:13px}
+          .rc-name{font-size:13px}
           .rc-route{font-size:13px}
           .rc-meta{font-size:11.5px}
           .rc-footer{flex-direction:column;align-items:stretch;gap:8px}

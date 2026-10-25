@@ -353,7 +353,8 @@ const ActionButtons = styled.div`
   @media (max-width: 600px) {
     flex-direction: column;
     position: fixed;
-    bottom: 0;
+    /* Sit above the app's 64px bottom menu (AppLayout BottomNav), not under it. */
+    bottom: 64px;
     left: 0;
     right: 0;
     gap: 8px;
@@ -385,6 +386,57 @@ export default function RideDetailsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [myRequest, setMyRequest] = useState(null);
   const [withdrawing, setWithdrawing] = useState(false);
+  // Passenger's current position, used to tell them up front when they're
+  // too far from this ride's route to join. Both this and the pickup/drop
+  // chosen in the request form are checked by the server against the ride's
+  // real road route (the same check it applies when the request is sent).
+  const [myPosition, setMyPosition] = useState(null);
+  const [myJoin, setMyJoin] = useState(null);
+  const [formJoin, setFormJoin] = useState(null);
+  const pickupLatitude = Form.useWatch("pickupLatitude", requestForm);
+  const pickupLongitude = Form.useWatch("pickupLongitude", requestForm);
+  const dropLatitude = Form.useWatch("dropLatitude", requestForm);
+  const dropLongitude = Form.useWatch("dropLongitude", requestForm);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setMyPosition({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      () => setMyPosition(null),
+      { timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!myPosition) return;
+    let cancelled = false;
+    rideService
+      .joinCheck(id, { pickupLatitude: myPosition.latitude, pickupLongitude: myPosition.longitude })
+      .then((result) => !cancelled && setMyJoin(result))
+      // A position outside the service area etc. - leave the button as-is;
+      // the request form still validates whatever pickup is chosen.
+      .catch(() => !cancelled && setMyJoin(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, myPosition]);
+
+  useEffect(() => {
+    if (pickupLatitude == null || pickupLongitude == null) {
+      setFormJoin(null);
+      return;
+    }
+    let cancelled = false;
+    const params = { pickupLatitude, pickupLongitude };
+    if (dropLatitude != null && dropLongitude != null) Object.assign(params, { dropLatitude, dropLongitude });
+    rideService
+      .joinCheck(id, params)
+      .then((result) => !cancelled && setFormJoin(result))
+      .catch((err) => !cancelled && setFormJoin({ ok: false, message: err.message }));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, pickupLatitude, pickupLongitude, dropLatitude, dropLongitude]);
 
   async function load() {
     setLoading(true);
@@ -442,13 +494,19 @@ export default function RideDetailsPage() {
   }
 
   const isOwner = ride.riderId === user.id;
-  const distanceKm = haversineKm(
+  // The saved road route's length when there is one (matches the map), else
+  // the straight-line distance for older rides.
+  const distanceKm = ride.routeDistanceKm ?? haversineKm(
     Number(ride.sourceLatitude),
     Number(ride.sourceLongitude),
     Number(ride.destinationLatitude),
     Number(ride.destinationLongitude)
   );
   const estimatedMinutes = Math.round((distanceKm / 25) * 60);
+
+  const joinRadiusKm = ride.joinRadiusKm ?? 1;
+  const tooFarToJoin = myJoin?.ok === false;
+  const pickupTooFar = formJoin?.ok === false;
 
   async function handleRequestSubmit() {
     try {
@@ -461,8 +519,14 @@ export default function RideDetailsPage() {
         message.error("Please select a drop location");
         return;
       }
+      if (pickupTooFar) {
+        message.error(formJoin.message || `Pick a pickup point within ${joinRadiusKm} km of this ride's route`);
+        return;
+      }
       setActionLoading(true);
-      await rideService.createRequest(ride.id, values);
+      const created = await rideService.createRequest(ride.id, values);
+      // Flip the button to "Requested" right away instead of waiting for the reload.
+      setMyRequest(created);
       message.success("Request sent to the rider");
       setRequestModalOpen(false);
       requestForm.resetFields();
@@ -523,7 +587,7 @@ export default function RideDetailsPage() {
 
   return (
     <Stage>
-      <PageContainer style={{ paddingBottom: "100px" }}>
+      <PageContainer className="rd-page" style={{ paddingBottom: "100px" }}>
           {/* Route / Live Tracking Map — always shown, live tracking kicks in once the ride starts */}
           {ride.status === "STARTED" ? (
             <LiveTrackingMap ride={ride} isOwner={isOwner} />
@@ -721,7 +785,7 @@ export default function RideDetailsPage() {
 
           {/* Action Buttons */}
           <ActionButtons>
-            {!isOwner && ride.status === "PUBLISHED" && !myRequest && (
+            {!isOwner && ride.status === "PUBLISHED" && !myRequest && !tooFarToJoin && (
               <Button
                 type="primary"
                 size="large"
@@ -738,12 +802,36 @@ export default function RideDetailsPage() {
               </Button>
             )}
 
-            {!isOwner && myRequest?.status === "REQUESTED" && (
-              <Popconfirm title="Withdraw your request to join this ride?" onConfirm={withdrawRequest}>
-                <Button size="large" danger loading={withdrawing} style={{ flex: 1 }}>
-                  Withdraw Request (Pending)
+            {!isOwner && ride.status === "PUBLISHED" && !myRequest && tooFarToJoin && (
+              <div className="rd-too-far">
+                <Button size="large" block disabled icon={<EnvironmentOutlined />}>
+                  Too far to join
                 </Button>
-              </Popconfirm>
+                <span>
+                  You're {myJoin.pickupDistanceKm} km from this ride's route. This rider picks up passengers within{" "}
+                  {myJoin.radiusKm} km of their route.{" "}
+                  {/* Planning ahead from another place? The pickup chosen in the form is checked the same way. */}
+                  <Button type="link" size="small" className="rd-withdraw" onClick={() => setRequestModalOpen(true)}>
+                    Joining from somewhere else?
+                  </Button>
+                </span>
+              </div>
+            )}
+
+            {!isOwner && myRequest?.status === "REQUESTED" && (
+              <div className="rd-requested">
+                <Button size="large" block disabled icon={<CheckCircleOutlined />} className="rd-requested-btn">
+                  Requested
+                </Button>
+                <span>
+                  Waiting for {ride.rider?.firstName || "the rider"} to approve.{" "}
+                  <Popconfirm title="Withdraw your request to join this ride?" onConfirm={withdrawRequest}>
+                    <Button type="link" danger size="small" loading={withdrawing} className="rd-withdraw">
+                      Withdraw request
+                    </Button>
+                  </Popconfirm>
+                </span>
+              </div>
             )}
 
             {!isOwner && myRequest?.status === "ACCEPTED" && (
@@ -823,7 +911,7 @@ export default function RideDetailsPage() {
         onOk={handleRequestSubmit}
         confirmLoading={actionLoading}
         okText="Send Request"
-        okButtonProps={{ style: { background: "linear-gradient(135deg, #2DD4BF, #8B5CF6)", border: "none" } }}
+        okButtonProps={{ disabled: pickupTooFar, style: { background: "linear-gradient(135deg, #2DD4BF, #8B5CF6)", border: "none", opacity: pickupTooFar ? 0.5 : 1 } }}
       >
         <Form form={requestForm} layout="vertical" initialValues={{ seatsRequested: 1 }}>
           <Form.Item label="Pickup Location" required>
@@ -872,6 +960,16 @@ export default function RideDetailsPage() {
             </Space>
           </Form.Item>
 
+          {pickupTooFar && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="This ride can't pick you up here"
+              description={formJoin.message}
+            />
+          )}
+
           <Form.Item name="seatsRequested" label="Seats" rules={[{ required: true }]}>
             <InputNumber min={1} max={ride.availableSeats} style={{ width: "100%" }} />
           </Form.Item>
@@ -905,6 +1003,7 @@ export default function RideDetailsPage() {
       <LocationPickerModal
         open={pickupModalOpen}
         title="Select Pickup Location"
+        defaultCenter={{ latitude: ride.sourceLatitude, longitude: ride.sourceLongitude }}
         onCancel={() => setPickupModalOpen(false)}
         onConfirm={handlePickupConfirm}
         initialPosition={
@@ -917,6 +1016,7 @@ export default function RideDetailsPage() {
       <LocationPickerModal
         open={dropModalOpen}
         title="Select Drop Location"
+        defaultCenter={{ latitude: ride.destinationLatitude, longitude: ride.destinationLongitude }}
         onCancel={() => setDropModalOpen(false)}
         onConfirm={handleDropConfirm}
         initialPosition={
@@ -927,6 +1027,20 @@ export default function RideDetailsPage() {
       />
 
       <style>{`
+        /* Phones: leave room for the fixed action bar plus the bottom menu. */
+        @media (max-width: 600px) { .rd-page { padding-bottom: 260px !important; } }
+        .rd-requested, .rd-too-far { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+        .rd-requested > span, .rd-too-far > span { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+        .rd-requested .rd-requested-btn.ant-btn,
+        .rd-requested .rd-requested-btn.ant-btn:disabled {
+          background: rgba(45, 212, 191, 0.14) !important;
+          border-color: rgba(45, 212, 191, 0.45) !important;
+          color: #2DD4BF !important;
+          font-weight: 700;
+          cursor: default;
+        }
+        .rd-too-far .ant-btn:disabled { opacity: .75; cursor: not-allowed; }
+        .rd-withdraw.ant-btn, .rd-withdraw.ant-btn:hover { padding: 0; height: auto; font-size: 12.5px; background: transparent !important; border: 0 !important; box-shadow: none !important; }
         .driver-phone {
           display: flex;
           align-items: center;

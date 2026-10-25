@@ -8,9 +8,38 @@
     <meta name="theme-color" content="#0B0F17" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BikeRide — Share your journey</title>
+    <!-- Loader styles live here (not in index.css) so the splash below is
+         styled before any JS loads; src/components/ui/AppLoader.jsx reuses them. -->
+    <style>
+      .app-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:48px 16px;color:var(--text-primary,#F1F5F9);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+      .app-loader-full{position:fixed;inset:0;z-index:2000;background:radial-gradient(1200px 600px at 50% 35%,rgba(45,212,191,.10),transparent 60%),var(--bg-secondary,#05070D)}
+      .app-loader-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+      .app-loader-dot{width:10px;height:10px;border-radius:50%;background:#2DD4BF;box-shadow:0 0 0 5px rgba(45,212,191,.18);animation:app-loader-pulse 1.6s ease-in-out infinite}
+      .app-loader-route{display:flex;align-items:center;gap:8px;width:min(240px,70vw)}
+      .app-loader-pin{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid var(--bg-secondary,#05070D)}
+      .app-loader-pin-start{background:#60A5FA;box-shadow:0 0 0 2px rgba(96,165,250,.35)}
+      .app-loader-pin-end{background:#2DD4BF;box-shadow:0 0 0 2px rgba(45,212,191,.35)}
+      .app-loader-track{position:relative;flex:1;height:2px;background:repeating-linear-gradient(90deg,rgba(148,163,184,.35) 0 6px,transparent 6px 11px);border-radius:2px}
+      .app-loader-rider{position:absolute;top:50%;left:0;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:linear-gradient(135deg,#2DD4BF,#8B5CF6);box-shadow:0 0 14px rgba(45,212,191,.7);animation:app-loader-ride 1.6s cubic-bezier(.65,0,.35,1) infinite alternate}
+      .app-loader-label{font-size:13px;font-weight:600;color:var(--text-secondary,#94A3B8);letter-spacing:.01em}
+      @keyframes app-loader-ride{from{left:0}to{left:calc(100% - 14px)}}
+      @keyframes app-loader-pulse{0%,100%{transform:scale(1)}50%{transform:scale(.8)}}
+      @media (prefers-reduced-motion:reduce){.app-loader-rider,.app-loader-dot{animation:none}}
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-JS splash; React replaces it on first render. -->
+      <div class="app-loader app-loader-full" role="status">
+        <div class="app-loader-brand"><span class="app-loader-dot"></span>Liftshare</div>
+        <div class="app-loader-route" aria-hidden="true">
+          <span class="app-loader-pin app-loader-pin-start"></span>
+          <span class="app-loader-track"><span class="app-loader-rider"></span></span>
+          <span class="app-loader-pin app-loader-pin-end"></span>
+        </div>
+        <div class="app-loader-label">Getting things ready…</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

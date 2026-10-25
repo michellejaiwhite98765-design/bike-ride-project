@@ -37,6 +37,10 @@ export const rideService = {
   getMyRequest(rideId) {
     return api.get(`/rides/${rideId}/requests/mine`).then((res) => res.data);
   },
+  /** { ok, reason, message, radiusKm, pickupDistanceKm, dropDistanceKm } for a pickup (and optional drop). */
+  joinCheck(rideId, params) {
+    return api.get(`/rides/${rideId}/requests/join-check`, { params }).then((res) => res.data);
+  },
   acceptRequest(requestId) {
     return api.put(`/ride-requests/${requestId}/accept`).then((res) => res.data);
   },

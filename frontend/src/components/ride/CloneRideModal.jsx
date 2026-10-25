@@ -86,6 +86,8 @@ export default function CloneRideModal({ ride, rides = [], open, onClose, onClon
         rideType: ride.rideType,
         tipAmount: ride.rideType === "WITHOUT_TIP" ? 0 : Number(ride.tipAmount),
         ...(ride.notes ? { notes: ride.notes } : {}),
+        // Reuse the original ride's saved road route (same start and end).
+        cloneOfRideId: ride.id,
       };
 
       let created = await rideService.create(payload);

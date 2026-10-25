@@ -12,7 +12,7 @@ export const rideController = {
   },
 
   async getById(req, res) {
-    const ride = await rideService.getById(req.params.id);
+    const ride = await rideService.getForViewer(req.params.id, req.user.id);
     ok(res, ride);
   },
 
@@ -47,7 +47,7 @@ export const rideController = {
   },
 
   async search(req, res) {
-    const results = await rideService.search(req.validatedQuery);
+    const results = await rideService.search(req.validatedQuery, req.user.id);
     ok(res, results);
   },
 

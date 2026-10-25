@@ -1,7 +1,7 @@
 import { Form, Input, AutoComplete, Spin, message } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { useEffect, useState, useRef } from "react";
-import { countryMismatch, reverseGeocode, geocodePlaceName } from "../utils/geo.js";
+import { countryMismatch, reverseGeocode, geocodePlaceName, NOMINATIM_COUNTRY_FILTER, SERVICE_AREA } from "../utils/geo.js";
 import { isGoogleLocationLink, resolveSharedLocationLink } from "../utils/parseSharedLocation.js";
 import { locationService } from "../services/locationService.js";
 
@@ -13,6 +13,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
   const form = Form.useFormInstance();
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [noMatch, setNoMatch] = useState(false);
   const timerRef = useRef(null);
 
   // A pasted Google Maps / WhatsApp shared-location link isn't a search
@@ -26,8 +27,8 @@ export default function LocationFields({ prefix, label, placeholder }) {
         message.error("Couldn't read a location from that link.");
         return;
       }
-      const { name, country } = await reverseGeocode(point.latitude, point.longitude);
-      const mismatchError = countryMismatch(form, prefix, country);
+      const { name, country, countryCode } = await reverseGeocode(point.latitude, point.longitude);
+      const mismatchError = countryMismatch(form, prefix, country, { countryCode, ...point });
       if (mismatchError) {
         message.error(mismatchError);
         return;
@@ -56,6 +57,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
     }
 
     // debounce queries
+    setNoMatch(false);
     if (!value || value.trim().length < 2) {
       setOptions([]);
       return;
@@ -64,11 +66,12 @@ export default function LocationFields({ prefix, label, placeholder }) {
       try {
         setLoading(true);
         const q = encodeURIComponent(value);
-        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6${NOMINATIM_COUNTRY_FILTER}`;
         const res = await fetch(url, { headers: { "Accept-Language": "en" } });
         const data = await res.json();
         const opts = data.map((d) => ({ value: d.display_name, raw: d }));
         setOptions(opts);
+        setNoMatch(opts.length === 0);
       } catch (e) {
         setOptions([]);
       } finally {
@@ -91,7 +94,11 @@ export default function LocationFields({ prefix, label, placeholder }) {
     const lon = Number(d.lon);
     const country = d.address?.country || null;
 
-    const mismatchError = countryMismatch(form, prefix, country);
+    const mismatchError = countryMismatch(form, prefix, country, {
+      countryCode: d.address?.country_code,
+      latitude: lat,
+      longitude: lon,
+    });
     if (mismatchError) {
       message.error(mismatchError);
       setOptions([]);
@@ -123,7 +130,13 @@ export default function LocationFields({ prefix, label, placeholder }) {
           options={options}
           onSearch={handleSearch}
           onSelect={onSelect}
-          notFoundContent={loading ? <Spin size="small" /> : null}
+          notFoundContent={
+            loading ? (
+              <Spin size="small" />
+            ) : noMatch ? (
+              <span style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>No matching places in {SERVICE_AREA.countryName}. Liftshare is available only within {SERVICE_AREA.countryName}.</span>
+            ) : null
+          }
         >
           <Input prefix={<EnvironmentOutlined />} placeholder={placeholder} size="large" maxLength={150} />
         </AutoComplete>

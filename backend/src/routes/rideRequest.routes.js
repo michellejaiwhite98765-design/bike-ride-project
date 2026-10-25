@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { rideRequestController } from "../controllers/rideRequest.controller.js";
-import { validateBody } from "../middleware/validate.js";
-import { createRideRequestSchema } from "../validators/rideRequest.validator.js";
+import { validateBody, validateQuery } from "../middleware/validate.js";
+import { createRideRequestSchema, joinCheckQuerySchema } from "../validators/rideRequest.validator.js";
 
 // Mounted at /api/rides/:rideId/requests (mergeParams to reach :rideId).
 export const rideRequestRoutes = Router({ mergeParams: true });
@@ -49,3 +49,23 @@ rideRequestRoutes.get("/", rideRequestController.listForRide);
  *       200: { description: The caller's active request for this ride, or null }
  */
 rideRequestRoutes.get("/mine", rideRequestController.getMine);
+
+/**
+ * @openapi
+ * /rides/{rideId}/requests/join-check:
+ *   get:
+ *     tags: [Ride Requests]
+ *     summary: Check whether a pickup (and optional drop) is close enough to this ride's route to join
+ *     parameters:
+ *       - in: path
+ *         name: rideId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - { in: query, name: pickupLatitude, required: true, schema: { type: number } }
+ *       - { in: query, name: pickupLongitude, required: true, schema: { type: number } }
+ *       - { in: query, name: dropLatitude, schema: { type: number } }
+ *       - { in: query, name: dropLongitude, schema: { type: number } }
+ *     responses:
+ *       200: { description: "{ ok, reason, message, radiusKm, pickupDistanceKm, dropDistanceKm }" }
+ */
+rideRequestRoutes.get("/join-check", validateQuery(joinCheckQuerySchema), rideRequestController.joinCheck);

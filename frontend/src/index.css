@@ -236,6 +236,14 @@ a {
   pointer-events: none;
 }
 
+/* On wider screens the create-trip drawer covers the left of the map; centre
+   the hint in the part that's still visible instead of half under the drawer. */
+@media (min-width: 768px) {
+  .ride-creation-map-empty {
+    left: calc(50% + var(--occluded-left, 0px) / 2);
+  }
+}
+
 .map-empty-icon {
   width: 44px;
   height: 44px;

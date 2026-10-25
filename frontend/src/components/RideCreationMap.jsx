@@ -3,7 +3,7 @@ import { MapContainer, Marker, Polyline, Tooltip, TileLayer, ZoomControl, useMap
 import L from "leaflet";
 import { Button, Segmented, Spin, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
-import { reverseGeocode, countryMismatch } from "../utils/geo.js";
+import { reverseGeocode, countryMismatch, serviceAreaError } from "../utils/geo.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 
@@ -191,9 +191,9 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
 
     try {
       setMapLoading(true);
-      const { name, country } = await reverseGeocode(lat, lng);
+      const { name, country, countryCode } = await reverseGeocode(lat, lng);
 
-      const mismatchError = countryMismatch(form, prefix, country);
+      const mismatchError = countryMismatch(form, prefix, country, { countryCode, latitude: lat, longitude: lng });
       if (mismatchError) {
         message.error(mismatchError);
         return;
@@ -208,8 +208,13 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
 
       setMode(selectedMode === "source" ? "destination" : "source");
     } catch {
-      // Keep the map usable even if reverse geocoding fails - country can't
-      // be checked here, so this point is accepted as-is.
+      // Keep the map usable even if reverse geocoding fails - the exact
+      // country can't be checked here, so only the coarse service-area box is.
+      const outside = serviceAreaError({ latitude: lat, longitude: lng });
+      if (outside) {
+        message.error(outside);
+        return;
+      }
       form.setFieldsValue({
         [`${prefix}Name`]: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
         [`${prefix}Latitude`]: lat,
@@ -338,7 +343,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
         )}
 
         {!source && !destination && (
-          <div className="ride-creation-map-empty">
+          <div className="ride-creation-map-empty" style={{ "--occluded-left": `${occludedLeft}px` }}>
             <div className="map-empty-icon"><AimOutlined /></div>
             <strong>Start by choosing a location</strong>
             <span>Click anywhere on the map to set your start point.</span>

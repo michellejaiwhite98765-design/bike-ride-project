@@ -22,7 +22,9 @@ function HomePage() {
   const findRide = () => navigate("/search");
 
   const [nearbyRides, setNearbyRides] = useState([]);
-  const [loadingNearby, setLoadingNearby] = useState(false);
+  // Starts true: the first search waits on the browser's location prompt,
+  // and "no rides" shouldn't flash before that search has even run.
+  const [loadingNearby, setLoadingNearby] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
 
   // Fetch nearby available rides using the browser's geolocation as the
@@ -97,9 +99,9 @@ function HomePage() {
         .hp-shell{position:relative;height:100%}
         .hp-stage{position:absolute;inset:0;overflow:auto;z-index:1}
 
-        .hp-tabs{position:absolute;top:102px;left:50%;transform:translateX(-50%);z-index:600}
+        .hp-tabs{position:absolute;top:102px;left:50%;transform:translateX(-50%);z-index:600;width:max-content}
         .hp-tabs-inner{display:flex;background:var(--bg-primary);border:1px solid var(--chrome-border);border-radius:999px;padding:4px;gap:2px;box-shadow:var(--shadow-lg)}
-        .hp-tabs button{border:none;cursor:pointer;padding:8px 20px;border-radius:999px;font-size:13px;font-weight:600;background:transparent;color:var(--text-secondary);transition:background .2s ease,color .2s ease}
+        .hp-tabs button{white-space:nowrap;border:none;cursor:pointer;padding:8px 20px;border-radius:999px;font-size:13px;font-weight:600;background:transparent;color:var(--text-secondary);transition:background .2s ease,color .2s ease}
         .hp-tabs button.active{background:#2DD4BF;color:var(--text-inverse)}
 
         @media (max-width:480px){

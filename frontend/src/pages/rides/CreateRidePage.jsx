@@ -21,7 +21,7 @@ import colors from "../../theme/colors.js";
 import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
-import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
+import { haversineKm, reverseGeocode, countryMismatch, simplifyPath } from "../../utils/geo.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
 
 const SectionHeader = styled.div`
@@ -159,8 +159,8 @@ export default function CreateRidePage() {
 
   async function applyPoint(prefix, latitude, longitude) {
     try {
-      const { name, country } = await reverseGeocode(latitude, longitude);
-      const mismatchError = countryMismatch(form, prefix, country);
+      const { name, country, countryCode } = await reverseGeocode(latitude, longitude);
+      const mismatchError = countryMismatch(form, prefix, country, { countryCode, latitude, longitude });
       if (mismatchError) {
         message.error(mismatchError);
         return false;
@@ -270,6 +270,11 @@ export default function CreateRidePage() {
         departureTime: values.departureTime.format("HH:mm"),
       };
       if (values.rideType === "WITHOUT_TIP") payload.tipAmount = 0;
+      // The road route shown on the map, so the server can tell which
+      // passengers are actually along the way (not just near the straight line).
+      if (selectedRoute?.coordinates?.length >= 2) {
+        payload.routePath = simplifyPath(selectedRoute.coordinates);
+      }
 
       let ride;
       if (isEdit) {

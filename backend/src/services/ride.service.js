@@ -3,18 +3,39 @@ import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { ratingRepository } from "../repositories/rating.repository.js";
 import { vehicleRepository } from "../repositories/vehicle.repository.js";
+import { rideRequestRepository } from "../repositories/rideRequest.repository.js";
+import { departureInstant } from "../utils/departure.js";
 import { ApiError } from "../utils/ApiError.js";
 import { assertRideTransition } from "../utils/stateMachine.js";
 import { audit } from "../utils/audit.js";
 import { env } from "../config/env.js";
 import { scoreRide } from "./matching.service.js";
 import { notificationService } from "./notification.service.js";
+import { paymentService } from "./payment.service.js";
+import { joinRadiusKmFor } from "./rideRequest.service.js";
 
 const OPEN_TRIP_MESSAGE = "Please complete or cancel your current trip before creating a new one";
 
 function assertOwner(ride, userId) {
   if (ride.riderId !== userId) throw ApiError.forbidden("You do not own this ride");
 }
+
+/**
+ * Adds the viewer-specific fields to a ride: their own request status, the
+ * join radius, and the rider's phone number only once the viewer is the
+ * rider or an accepted passenger (it isn't shared with every searcher).
+ */
+function personalize(ride, viewerId, myRequestStatus) {
+  const canSeeContact = viewerId === ride.riderId || myRequestStatus === "ACCEPTED";
+  return {
+    ...ride,
+    rider: ride.rider ? { ...ride.rider, phone: canSeeContact ? ride.rider.phone : null } : ride.rider,
+    myRequestStatus: viewerId === ride.riderId ? null : myRequestStatus ?? null,
+    joinRadiusKm: joinRadiusKmFor(ride),
+  };
+}
+
+const ENDPOINT_FIELDS = ["sourceLatitude", "sourceLongitude", "destinationLatitude", "destinationLongitude"];
 
 export const rideService = {
   async create(riderId, data) {
@@ -36,14 +57,28 @@ export const rideService = {
     }
 
     // One open trip at a time: a new ride is only allowed once the previous
-    // one has been completed or cancelled.
+    // one has been completed, cancelled or expired. Close any trip whose time
+    // has long passed first, so an abandoned ride can't block the rider forever.
+    await this.expireStaleRides();
     if (await rideRepository.findOpenByRider(riderId)) {
       throw ApiError.badRequest(OPEN_TRIP_MESSAGE);
     }
 
-    const ride = await rideRepository.create(riderId, data);
+    const { cloneOfRideId, ...rideData } = data;
+    let ride = await rideRepository.create(riderId, rideData);
+    if (cloneOfRideId && !rideData.routePath) {
+      // Only the rider's own ride, and only if the start/end are unchanged.
+      const copied = await rideRepository.copyRouteFrom(cloneOfRideId, ride.id, riderId);
+      if (copied) ride = await rideRepository.findById(ride.id);
+    }
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
     return ride;
+  },
+
+  async getForViewer(rideId, viewerId) {
+    const ride = await this.getById(rideId);
+    const statuses = await rideRequestRepository.activeStatusByRideIds(viewerId, [rideId]);
+    return personalize(ride, viewerId, statuses.get(rideId));
   },
 
   async getById(rideId) {
@@ -71,9 +106,48 @@ export const rideService = {
       throw ApiError.conflict("Ride can only be edited while it is a draft or published");
     }
 
-    const updated = await rideRepository.update(rideId, data);
+    const { routePath, ...fields } = data;
+    const endpointsChanged = ENDPOINT_FIELDS.some(
+      (key) => fields[key] !== undefined && Number(fields[key]) !== Number(ride[key])
+    );
+    let updated = await rideRepository.update(rideId, fields);
+    // Keep the stored road route in step with the endpoints: use the new one
+    // if sent, and drop a stale one when the start/end moved without it.
+    if (routePath !== undefined || endpointsChanged) {
+      await rideRepository.setRoutePath(rideId, routePath ?? null);
+      updated = await rideRepository.findById(rideId);
+    }
     await audit(null, { userId, action: "RIDE_UPDATED", entityType: "Ride", entityId: rideId });
     return updated;
+  },
+
+  /**
+   * Closes rides that were never started and whose departure is more than
+   * RIDE_EXPIRE_AFTER_MINUTES in the past: pending requests expire, any
+   * bookings are cancelled (paid ones refunded) and passengers are told.
+   * Runs periodically (see server.js) and before a rider creates a new trip.
+   */
+  async expireStaleRides() {
+    const expired = await withTransaction(async (tx) => {
+      const rides = await rideRepository.expireStale(env.rideExpiry.afterDepartureMinutes, env.timezoneOffsetMinutes, tx);
+      for (const ride of rides) {
+        ride.closedRequests = await rideRequestRepository.expirePendingForRide(ride.id, tx);
+        ride.cancelledBookings = await bookingRepository.cancelAllForRide(ride.id, "Ride expired - it was never started", tx);
+        for (const booking of ride.cancelledBookings) {
+          await rideRequestRepository.updateStatus(booking.rideRequestId, "CANCELLED", tx);
+        }
+      }
+      return rides;
+    });
+
+    for (const ride of expired) {
+      for (const booking of ride.cancelledBookings) {
+        if (booking.paymentStatus === "SUCCESS") await paymentService.refundPayment(booking.id);
+      }
+      await notificationService.notifyRideExpired(ride, [...ride.cancelledBookings, ...ride.closedRequests]);
+      await audit(null, { action: "RIDE_EXPIRED", entityType: "Ride", entityId: ride.id });
+    }
+    return expired.length;
   },
 
   async publish(userId, rideId) {
@@ -95,25 +169,62 @@ export const rideService = {
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "CANCELLED");
 
-    const updated = await withTransaction(async (tx) => {
+    const { updated, cancelledBookings, closedRequests } = await withTransaction(async (tx) => {
       const cancelled = await rideRepository.updateFlat(rideId, { status: "CANCELLED", cancelledAt: new Date() }, tx);
-      await bookingRepository.cancelAllForRide(rideId, "Ride cancelled by rider", tx);
-      return cancelled;
+      const bookings = await bookingRepository.cancelAllForRide(rideId, "Ride cancelled by rider", tx);
+      for (const booking of bookings) {
+        await rideRequestRepository.updateStatus(booking.rideRequestId, "CANCELLED", tx);
+      }
+      const requests = await rideRequestRepository.expirePendingForRide(rideId, tx);
+      return { updated: cancelled, cancelledBookings: bookings, closedRequests: requests };
     });
 
+    // Passengers who already paid get their money back.
+    for (const booking of cancelledBookings) {
+      if (booking.paymentStatus === "SUCCESS") await paymentService.refundPayment(booking.id);
+    }
+
     await audit(null, { userId, action: "RIDE_CANCELLED", entityType: "Ride", entityId: rideId, metadata: { reason } });
-    await notificationService.notifyRideCancelled(rideId);
+    await notificationService.notifyRideCancelled(ride, [...cancelledBookings, ...closedRequests]);
     return updated;
   },
 
+  /**
+   * Only the rider can start their ride, and only when it makes sense:
+   * - no earlier than RIDE_EARLY_START_MINUTES before the scheduled departure
+   * - with at least one confirmed (accepted, and paid if WITH_TIP) passenger
+   * Starting closes the ride to new passengers: unanswered requests expire
+   * and accepted-but-unpaid bookings are cancelled.
+   */
   async start(userId, rideId) {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "STARTED");
-    const updated = await rideRepository.update(rideId, { status: "STARTED", startedAt: new Date() });
+
+    const earliestStart = departureInstant(ride.departureDate, ride.departureTime).getTime()
+      - env.rideStart.earlyStartMinutes * 60 * 1000;
+    if (Date.now() < earliestStart) {
+      throw ApiError.conflict(
+        `You can start this ride from ${env.rideStart.earlyStartMinutes} minutes before departure (${ride.departureTime}).`
+      );
+    }
+
+    const confirmedCount = await bookingRepository.countConfirmedForRide(rideId);
+    if (confirmedCount === 0) {
+      throw ApiError.conflict("You need at least one confirmed passenger before starting. Accept a request first, or cancel the ride.");
+    }
+
+    const { updated, expiredRequests, cancelledBookings } = await withTransaction(async (tx) => {
+      const expired = await rideRequestRepository.expirePendingForRide(rideId, tx);
+      const cancelled = await bookingRepository.cancelUnpaidForRide(rideId, "Payment not completed before the ride started", tx);
+      const started = await rideRepository.updateFlat(rideId, { status: "STARTED", startedAt: new Date() }, tx);
+      return { updated: started, expiredRequests: expired, cancelledBookings: cancelled };
+    });
+
     await audit(null, { userId, action: "RIDE_STARTED", entityType: "Ride", entityId: rideId });
     await notificationService.notifyRideStarted(rideId);
-    return updated;
+    await notificationService.notifyLeftBehind(ride, expiredRequests, cancelledBookings);
+    return rideRepository.findById(updated.id);
   },
 
   async complete(userId, rideId) {
@@ -126,7 +237,7 @@ export const rideService = {
     return updated;
   },
 
-  async search(search) {
+  async search(search, viewerId) {
     const pickupRadiusKm = search.radius || env.matching.pickupRadiusKm;
     const destinationRadiusKm = search.radius || env.matching.destinationRadiusKm;
 
@@ -172,6 +283,7 @@ export const rideService = {
     });
 
     results.sort((a, b) => b.matchScore - a.matchScore);
-    return results;
+    const statuses = await rideRequestRepository.activeStatusByRideIds(viewerId, results.map((r) => r.id));
+    return results.map((ride) => personalize(ride, viewerId, statuses.get(ride.id)));
   },
 };

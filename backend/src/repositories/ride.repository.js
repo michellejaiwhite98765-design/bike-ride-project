@@ -7,6 +7,7 @@ const RIDE_JOIN_SELECT = `
   r."destination_name", r."destination_latitude", r."destination_longitude", r."pickup_preference", r."departure_date", r."departure_time",
   r."available_seats", r."total_seats", r."ride_type", r."tip_amount", r."notes", r."status",
   r."started_at", r."completed_at", r."cancelled_at", r."created_at", r."updated_at",
+  ROUND((ST_Length(r."route_geog") / 1000)::numeric, 1)::float8 AS "route_distance_km",
   v."id" AS "vehicle__id", v."owner_id" AS "vehicle__owner_id", v."vehicle_type" AS "vehicle__vehicle_type",
   v."brand" AS "vehicle__brand", v."model" AS "vehicle__model", v."registration_number" AS "vehicle__registration_number",
   v."color" AS "vehicle__color", v."manufacturing_year" AS "vehicle__manufacturing_year",
@@ -17,6 +18,12 @@ const RIDE_JOIN_SELECT = `
   u."profile_image" AS "rider__profile_image", u."phone" AS "rider__phone", u."is_verified" AS "rider__is_verified"
 `;
 const RIDE_JOIN_FROM = `FROM "rides" r JOIN "vehicles" v ON v."id" = r."vehicle_id" JOIN "users" u ON u."id" = r."rider_id"`;
+
+// The ride's road route when known, else the straight line between its
+// endpoints. Expects the rides table aliased as `r`.
+export const ROUTE_GEOG = `COALESCE(r.route_geog, ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography)`;
+// Route length in km, for the detour limit (utils/pickupZone.js).
+export const ROUTE_KM = `(ST_Length(${ROUTE_GEOG}) / 1000)`;
 
 function hydrateRide(row) {
   if (!row) return null;
@@ -48,6 +55,7 @@ export const rideRepository = {
       updatedAt: now,
     });
     const { rows } = await pool.query(text, values);
+    if (data.routePath) await this.setRoutePath(rows[0].id, data.routePath);
     return this.findById(rows[0].id);
   },
 
@@ -97,6 +105,72 @@ export const rideRepository = {
    * still a draft, published or started (i.e. not yet completed, cancelled
    * or expired) counts as open.
    */
+  /** Saves the ride's road route ([lat, lng] points); null clears it. */
+  async setRoutePath(rideId, routePath) {
+    const wkt = routePath && routePath.length >= 2
+      ? `SRID=4326;LINESTRING(${routePath.map(([lat, lng]) => `${Number(lng)} ${Number(lat)}`).join(", ")})`
+      : null;
+    await pool.query(
+      `UPDATE "rides" SET "route_geog" = CASE WHEN $1::text IS NULL THEN NULL ELSE ST_GeogFromText($1::text) END WHERE "id" = $2`,
+      [wkt, rideId]
+    );
+  },
+
+  async hasRoutePath(rideId) {
+    const { rows } = await pool.query('SELECT "route_geog" IS NOT NULL AS "has" FROM "rides" WHERE "id" = $1', [rideId]);
+    return Boolean(rows[0]?.has);
+  },
+
+  /** Open rides whose road route isn't saved yet. */
+  async findOpenWithoutRoute(limit) {
+    const { rows } = await pool.query(
+      `SELECT "id", "source_latitude" AS "sourceLatitude", "source_longitude" AS "sourceLongitude",
+              "destination_latitude" AS "destinationLatitude", "destination_longitude" AS "destinationLongitude"
+       FROM "rides" WHERE "route_geog" IS NULL AND "status" IN ('DRAFT', 'PUBLISHED', 'STARTED')
+       ORDER BY "departure_date", "departure_time" LIMIT $1`,
+      [limit]
+    );
+    return rows;
+  },
+
+  /**
+   * Inputs for utils/pickupZone.js#classifyPickup: the route's length, the
+   * ride's fare, how far the pickup (and optional drop) are from the route,
+   * and whether the drop comes after the pickup along the route.
+   */
+  async pickupGeometry(rideId, pickup, drop) {
+    const { rows } = await pool.query(
+      `WITH ride AS (
+              SELECT ${ROUTE_GEOG} AS route,
+                     CASE WHEN r."ride_type" = 'WITH_TIP' THEN r."tip_amount" ELSE 0 END AS base_fare
+              FROM "rides" r WHERE r."id" = $1
+            ),
+            pts AS (
+              SELECT ST_SetSRID(ST_MakePoint($2::float8, $3::float8), 4326)::geography AS pickup,
+                     CASE WHEN $4::float8 IS NULL THEN NULL
+                          ELSE ST_SetSRID(ST_MakePoint($4::float8, $5::float8), 4326)::geography END AS drop
+            )
+       SELECT ST_Length(ride.route) / 1000 AS route_km, ride.base_fare,
+              ST_Distance(ride.route, pts.pickup) / 1000 AS pickup_km,
+              ST_LineLocatePoint(ride.route::geometry, pts.pickup::geometry) AS pickup_frac,
+              CASE WHEN pts.drop IS NULL THEN NULL ELSE ST_Distance(ride.route, pts.drop) / 1000 END AS drop_km,
+              CASE WHEN pts.drop IS NULL THEN NULL ELSE ST_LineLocatePoint(ride.route::geometry, pts.drop::geometry) END AS drop_frac
+       FROM ride, pts`,
+      [rideId, pickup.longitude, pickup.latitude, drop?.longitude ?? null, drop?.latitude ?? null]
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      routeKm: Number(r.route_km),
+      baseFare: Number(r.base_fare) || 0,
+      pickupKm: Number(r.pickup_km),
+      dropKm: r.drop_km == null ? null : Number(r.drop_km),
+      // Small slack so a pickup and drop that are both near the start aren't
+      // treated as going backwards.
+      goesForward: r.drop_frac == null || Number(r.pickup_frac) <= Number(r.drop_frac) + 0.02,
+    };
+  },
+
   async findOpenByRider(riderId) {
     const { rows } = await pool.query(
       `SELECT "id", "status", "source_name" AS "sourceName", "destination_name" AS "destinationName"
@@ -115,7 +189,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, timeWindowMinutes = 30, includeFull = false }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, time, seats, rideType, pickupRadiusM, destinationRadiusM, zones = null, timeWindowMinutes = 30, includeFull = false }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -139,17 +213,30 @@ export const rideRepository = {
       timeClause = `AND LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam}`;
     }
 
-    // We only store a ride's two endpoints, not its actual road geometry, so
-    // the straight line between them stands in as an approximation of the
-    // route. Matching against the line (not just the two endpoints) lets a
-    // pickup/drop-off that's genuinely along the way - e.g. a town the ride
-    // passes through - match even though it's nowhere near either endpoint.
-    const routeLine = `ST_MakeLine(r.source_geog::geometry, r.destination_geog::geometry)::geography`;
+    // Match against the ride's road route (straight start-end line when the
+    // road route isn't known yet), not just its two endpoints, so a pickup or
+    // drop-off genuinely along the way - a town the ride passes through -
+    // matches even though it's nowhere near either endpoint.
+    const routeLine = ROUTE_GEOG;
 
-    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${p(pickupRadiusM)})`;
-    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${p(destinationRadiusM)})`;
-    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${p(pickupRadiusM)})`;
-    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${p(destinationRadiusM)})`;
+    // With `zones`, each ride is matched within its own detour limit (the
+    // same rule a join request uses, see utils/pickupZone.js), so a route
+    // search lists exactly the rides the passenger can join - on route or
+    // with a paid detour. Without it (explicit radius, e.g. the home page's
+    // "rides near me"), it's a plain radius browse.
+    const radius = (fixedM) => {
+      if (!zones) return p(fixedM);
+      const km = ROUTE_KM;
+      // Same as detourLimitKm: route % of the trip, at least the on-route
+      // radius, at most the max detour.
+      return `(LEAST(${p(zones.detourMaxKm)}::float8,
+        GREATEST(${p(zones.onRouteKm)}::float8, ${km} * ${p(zones.detourPercent)}::float8 / 100)) * 1000)`;
+    };
+
+    const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${radius(pickupRadiusM)})`;
+    const destinationDWithin = `ST_DWithin(r.destination_geog, ${destinationPoint()}, ${radius(destinationRadiusM)})`;
+    const sourceOnRoute = `ST_DWithin(${routeLine}, ${sourcePoint()}, ${radius(pickupRadiusM)})`;
+    const destinationOnRoute = `ST_DWithin(${routeLine}, ${destinationPoint()}, ${radius(destinationRadiusM)})`;
 
     // Guard against matching a ride "backwards": require the pickup point to
     // fall no later along the route line than the drop-off point (with a

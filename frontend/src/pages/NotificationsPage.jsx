@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Skeleton } from "antd";
 import {
   BellOutlined,
   CheckCircleFilled,
@@ -17,6 +16,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import styled from "styled-components";
 import { notificationService } from "../services/notificationService.js";
 import colors from "../theme/colors.js";
+import BrandLoader from "../components/ui/BrandLoader.jsx";
 
 dayjs.extend(relativeTime);
 
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
     return order.filter((label) => map.get(label).length).map((label) => ({ label, items: map.get(label) }));
   }, [notifications]);
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading notifications…" />;
 
   return (
     <PageContainer>

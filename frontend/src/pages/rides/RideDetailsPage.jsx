@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Card, Avatar, Button, Skeleton, Modal, Form, App, Row, Col, Popconfirm, Alert, InputNumber, Input, Space, Divider } from "antd";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Card, Avatar, Button, Modal, Form, App, Row, Col, Popconfirm, Alert, InputNumber, Input, Space, Divider } from "antd";
 import { UserOutlined, StarFilled, EnvironmentOutlined, ClockCircleOutlined, CarOutlined, FlagOutlined, CheckCircleOutlined, PhoneOutlined, MessageOutlined, CompassOutlined, TeamOutlined, WalletOutlined, CalendarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -12,7 +12,7 @@ import StatusTag from "../../components/StatusTag.jsx";
 import LocationPickerModal from "../../components/LocationPickerModal.jsx";
 import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
 // import RouteOverviewMap from "../../components/ride/RouteOverviewMap.jsx";
-import { VerifiedBadge, Badge } from "../../components/ui/index.js";
+import { VerifiedBadge, Badge, BrandLoader } from "../../components/ui/index.js";
 import RouteOverviewMap from "../../components/ride/RouteOverviewMap.jsx";
 // import RouteOverviewMap from "../../components/ride/RouteOverviewMap.jsx";
 import { haversineKm } from "../../utils/geo.js";
@@ -385,6 +385,33 @@ export default function RideDetailsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [myRequest, setMyRequest] = useState(null);
   const [withdrawing, setWithdrawing] = useState(false);
+  // Pickup zone for the chosen pickup/drop: ON_ROUTE, DETOUR (+fare) or TOO_FAR.
+  const [joinZone, setJoinZone] = useState(null);
+  const [checkingZone, setCheckingZone] = useState(false);
+  const openRequestOnLoad = useLocation().state?.openRequest;
+  const pickupLat = Form.useWatch("pickupLatitude", requestForm);
+  const pickupLng = Form.useWatch("pickupLongitude", requestForm);
+  const dropLat = Form.useWatch("dropLatitude", requestForm);
+  const dropLng = Form.useWatch("dropLongitude", requestForm);
+
+  useEffect(() => {
+    if (!requestModalOpen || !pickupLat || !pickupLng) {
+      setJoinZone(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setCheckingZone(true);
+    const params = { pickupLatitude: Number(pickupLat), pickupLongitude: Number(pickupLng) };
+    if (dropLat && dropLng) Object.assign(params, { dropLatitude: Number(dropLat), dropLongitude: Number(dropLng) });
+    rideService
+      .joinCheck(id, params)
+      .then((zone) => !cancelled && setJoinZone(zone))
+      .catch(() => !cancelled && setJoinZone(null))
+      .finally(() => !cancelled && setCheckingZone(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, requestModalOpen, pickupLat, pickupLng, dropLat, dropLng]);
 
   async function load() {
     setLoading(true);
@@ -393,7 +420,14 @@ export default function RideDetailsPage() {
       setRide(loadedRide);
       // Only passengers have an "own request" to track - skip the extra call for the ride's owner.
       if (loadedRide.riderId !== user.id) {
-        rideService.getMyRequest(id).then(setMyRequest).catch(() => setMyRequest(null));
+        rideService
+          .getMyRequest(id)
+          .then((mine) => {
+            setMyRequest(mine);
+            // Came from a ride card's "Request to join": open the form straight away.
+            if (!mine && openRequestOnLoad && loadedRide.status === "PUBLISHED") setRequestModalOpen(true);
+          })
+          .catch(() => setMyRequest(null));
       } else {
         setMyRequest(null);
       }
@@ -425,17 +459,7 @@ export default function RideDetailsPage() {
     return (
       <Stage>
         <PageContainer>
-          <div className="skeleton-dark">
-            <Skeleton active avatar paragraph={{ rows: 5 }} />
-          </div>
-          <style>{`
-            .skeleton-dark .ant-skeleton-title,
-            .skeleton-dark .ant-skeleton-paragraph > li,
-            .skeleton-dark .ant-skeleton-avatar {
-              background: linear-gradient(90deg, var(--chrome-tint) 25%, var(--chrome-tint-strong) 37%, var(--chrome-tint) 63%) !important;
-              background-size: 400% 100% !important;
-            }
-          `}</style>
+          <BrandLoader label="Loading ride…" />
         </PageContainer>
       </Stage>
     );
@@ -461,8 +485,14 @@ export default function RideDetailsPage() {
         message.error("Please select a drop location");
         return;
       }
+      if (joinZone?.zone === "TOO_FAR") {
+        message.error(joinZone.message);
+        return;
+      }
       setActionLoading(true);
-      await rideService.createRequest(ride.id, values);
+      const created = await rideService.createRequest(ride.id, values);
+      // Flip the button to "Requested" right away, then refresh in the background.
+      setMyRequest(created);
       message.success("Request sent to the rider");
       setRequestModalOpen(false);
       requestForm.resetFields();
@@ -739,11 +769,27 @@ export default function RideDetailsPage() {
             )}
 
             {!isOwner && myRequest?.status === "REQUESTED" && (
-              <Popconfirm title="Withdraw your request to join this ride?" onConfirm={withdrawRequest}>
-                <Button size="large" danger loading={withdrawing} style={{ flex: 1 }}>
-                  Withdraw Request (Pending)
+              <>
+                <Button
+                  size="large"
+                  icon={<CheckCircleOutlined />}
+                  style={{
+                    flex: 1,
+                    background: "rgba(45, 212, 191, 0.12)",
+                    border: "1px solid rgba(45, 212, 191, 0.45)",
+                    color: dark.teal,
+                    fontWeight: 700,
+                    cursor: "default",
+                  }}
+                >
+                  Requested · waiting for the rider
                 </Button>
-              </Popconfirm>
+                <Popconfirm title="Withdraw your request to join this ride?" onConfirm={withdrawRequest}>
+                  <Button size="large" danger type="text" loading={withdrawing}>
+                    Withdraw
+                  </Button>
+                </Popconfirm>
+              </>
             )}
 
             {!isOwner && myRequest?.status === "ACCEPTED" && (
@@ -822,9 +868,28 @@ export default function RideDetailsPage() {
         }}
         onOk={handleRequestSubmit}
         confirmLoading={actionLoading}
-        okText="Send Request"
-        okButtonProps={{ style: { background: "linear-gradient(135deg, #2DD4BF, #8B5CF6)", border: "none" } }}
+        okText={joinZone?.zone === "DETOUR" ? `Send Request (+₹${joinZone.extraTip})` : "Send Request"}
+        okButtonProps={{
+          disabled: joinZone?.zone === "TOO_FAR",
+          style: { background: "linear-gradient(135deg, #2DD4BF, #8B5CF6)", border: "none" },
+        }}
       >
+        {checkingZone && <Alert style={{ marginBottom: 12 }} type="info" showIcon message="Checking your pickup against the rider's route…" />}
+        {!checkingZone && joinZone?.zone === "ON_ROUTE" && (
+          <Alert style={{ marginBottom: 12 }} type="success" showIcon message={`On the rider's route (within ${joinZone.onRouteKm} km) - normal fare.`} />
+        )}
+        {!checkingZone && joinZone?.zone === "DETOUR" && (
+          <Alert
+            style={{ marginBottom: 12 }}
+            type="warning"
+            showIcon
+            message={`Detour pickup · +₹${joinZone.extraTip}`}
+            description={`${joinZone.message} Max detour for this ${joinZone.routeKm} km trip: ${joinZone.limitKm} km.`}
+          />
+        )}
+        {!checkingZone && joinZone?.zone === "TOO_FAR" && (
+          <Alert style={{ marginBottom: 12 }} type="error" showIcon message="Too far for this ride" description={joinZone.message} />
+        )}
         <Form form={requestForm} layout="vertical" initialValues={{ seatsRequested: 1 }}>
           <Form.Item label="Pickup Location" required>
             <Space direction="vertical" style={{ width: "100%" }}>

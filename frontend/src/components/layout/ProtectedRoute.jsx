@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { Spin } from "antd";
+import BrandLoader from "../ui/BrandLoader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ProtectedRoute() {
@@ -7,11 +7,7 @@ export default function ProtectedRoute() {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
-        <Spin size="large" />
-      </div>
-    );
+    return <BrandLoader variant="fullscreen" label="Checking your session…" />;
   }
 
   if (!isAuthenticated) {

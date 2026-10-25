@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Form, Input, InputNumber, Select, AutoComplete, Upload, App, Skeleton, Row, Col, Button as AntButton, Modal } from "antd";
+import { Form, Input, InputNumber, Select, AutoComplete, Upload, App, Row, Col, Button as AntButton, Modal } from "antd";
 import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined, CarOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
 import { VEHICLE_TYPES, VEHICLE_COLORS, brandsForType, modelsForBrand } from "../../constants/vehicleCatalog.js";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const { Dragger } = Upload;
 
@@ -538,7 +539,7 @@ export default function VehicleFormPage() {
     }
   }
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading vehicle…" />;
 
   const record = verifyResult?.providerResult;
 

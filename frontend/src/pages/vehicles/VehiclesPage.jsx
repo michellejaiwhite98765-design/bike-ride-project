@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Card, Button, List, Empty, Skeleton, App, Popconfirm } from "antd";
+import { Card, Button, List, Empty, App, Popconfirm } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const PageHeader = styled.div`
   display: flex;
@@ -173,7 +174,7 @@ export default function VehiclesPage() {
       </PageHeader>
 
       {loading ? (
-        <Skeleton active />
+        <BrandLoader variant="inline" label="Loading your vehicles…" />
       ) : vehicles.length === 0 ? (
         <Empty description="No vehicles yet. Add one to start creating rides." style={{ marginTop: 40 }} />
       ) : (

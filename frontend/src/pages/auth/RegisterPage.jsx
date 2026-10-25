@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Form, Input, Button, Card, App, Row, Col } from "antd";
 import { MailOutlined, LockOutlined, UserOutlined, PhoneOutlined } from "@ant-design/icons";
@@ -8,13 +9,17 @@ export default function RegisterPage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   async function onFinish(values) {
+    setSubmitting(true);
     try {
       await register(values);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       message.error(err.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -58,7 +63,7 @@ export default function RegisterPage() {
           <Form.Item name="profileImage" hidden>
             <Input />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block size="large" style={{ background: "#0f766e", marginTop: 8 }}>
+          <Button type="primary" htmlType="submit" block size="large" loading={submitting} style={{ background: "#0f766e", marginTop: 8 }}>
             Sign up
           </Button>
         </Form>

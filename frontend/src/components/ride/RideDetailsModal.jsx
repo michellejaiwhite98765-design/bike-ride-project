@@ -7,6 +7,7 @@ import RouteOverviewMap from "./RouteOverviewMap.jsx";
 import StatusTag from "../StatusTag.jsx";
 import { VerifiedBadge } from "../ui/index.js";
 import { haversineKm } from "../../utils/geo.js";
+import JoinRideButton from "./JoinRideButton.jsx";
 
 const dark = {
   panel: "var(--chrome-tint)",
@@ -120,11 +121,14 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         </div>
       </div>
 
-      <Link to={`/rides/${ride.id}`}>
-        <Button type="primary" block icon={<ArrowRightOutlined />} className="rdm-full-btn">
-          View full details
-        </Button>
-      </Link>
+      <div className="rdm-actions">
+        {!isOwner && <JoinRideButton ride={ride} size="large" block />}
+        <Link to={`/rides/${ride.id}`} style={{ flex: 1 }}>
+          <Button type="primary" block icon={<ArrowRightOutlined />} className="rdm-full-btn">
+            View full details
+          </Button>
+        </Link>
+      </div>
 
       <style>{`
         .ride-details-modal .ant-modal-mask{background:rgba(2,4,10,.72)!important;backdrop-filter:blur(6px)}
@@ -151,6 +155,8 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
         .rdm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         .rdm-cell span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:${dark.textTertiary};margin-bottom:3px}
         .rdm-cell strong{display:block;font-size:13px;font-weight:700;color:${dark.textPrimary}}
+        .rdm-actions{display:flex;gap:10px}
+        .rdm-actions .jrb{flex:1;height:44px}
         .rdm-full-btn{height:44px;border-radius:10px;background:linear-gradient(135deg,#2DD4BF,#8B5CF6)!important;border:none!important;font-weight:700}
         @media (max-width:520px){.rdm-grid{grid-template-columns:1fr}.rdm-rider{flex-wrap:wrap}.rdm-rider-call{width:100%;justify-content:center}}
       `}</style>

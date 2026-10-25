@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { List, Card, Empty, Skeleton } from "antd";
+import { List, Card, Empty } from "antd";
 import { ArrowRightOutlined, CalendarOutlined, DollarCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
 import { bookingService } from "../../services/bookingService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import colors from "../../theme/colors.js";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const PageHeader = styled.div`
   margin-bottom: 32px;
@@ -97,7 +98,7 @@ export default function BookingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading your bookings…" />;
 
   return (
     <div>

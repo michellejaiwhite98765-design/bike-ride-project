@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Card, Avatar, Button, List, Empty, Skeleton, App, Space } from "antd";
+import { Card, Avatar, Button, List, Empty, App, Space } from "antd";
 import { UserOutlined, EnvironmentOutlined, ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { rideService } from "../../services/rideService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import colors from "../../theme/colors.js";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const PageContainer = styled.div`
   max-width: 700px;
@@ -184,7 +185,7 @@ export default function RideRequestsPage() {
     }
   }
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading requests…" />;
 
   return (
     <PageContainer>
@@ -218,6 +219,11 @@ export default function RideRequestsPage() {
                     </div>
                     <div className="meta">
                       {req.seatsRequested} seat{req.seatsRequested !== 1 ? "s" : ""} requested
+                      {req.pickupZone === "DETOUR" && (
+                        <span style={{ marginLeft: 8, color: "#f59e0b", fontWeight: 700 }}>
+                          · Detour {Number(req.pickupDistanceKm)} km off route · +₹{Number(req.extraTip)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="status">

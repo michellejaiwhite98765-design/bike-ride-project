@@ -41,6 +41,26 @@ export const env = {
     destinationRadiusKm: Number(process.env.DEFAULT_DESTINATION_RADIUS_KM || 2),
     timeWindowMinutes: Number(process.env.DEFAULT_TIME_WINDOW_MINUTES || 30),
   },
+  // Two-zone pickup (see utils/pickupZone.js). Distances are from the
+  // rider's road route, in km.
+  pickupZone: {
+    // Zone 1: within this distance of the route - a normal pickup, no extra fare.
+    onRouteKm: Number(process.env.PICKUP_ON_ROUTE_KM || 2.5),
+    // Zone 2 (detour): the rider can leave the route by up to this % of the
+    // route length (e.g. 20% of a 100 km trip = 20 km)...
+    detourPercent: Number(process.env.DETOUR_MAX_PERCENT || 20),
+    // ...but never more than this many km, however long the trip.
+    detourMaxKm: Number(process.env.DETOUR_MAX_KM || 30),
+    // Extra fare per km the rider travels off the route (there and back).
+    // Paid rides use their own per-km rate when it's higher.
+    tipRatePerKm: Number(process.env.TIP_RATE_PER_KM || 5),
+  },
+  // Road routing (OSRM) to save a ride's real road route.
+  routing: {
+    enabled: (process.env.ROUTING_ENABLED ?? "true") !== "false",
+    baseUrl: process.env.ROUTING_URL || "https://router.project-osrm.org",
+    timeoutMs: Number(process.env.ROUTING_TIMEOUT_MS || 8000),
+  },
   platformFeeFlat: Number(process.env.PLATFORM_FEE_FLAT || 5),
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",

@@ -5,6 +5,7 @@ import { toCamelRow, updateRow, insertRow, nestPrefixed } from "../utils/sqlRows
 const RR_COLUMNS = `
   rr."id", rr."ride_id", rr."passenger_id", rr."pickup_name", rr."pickup_latitude", rr."pickup_longitude",
   rr."drop_name", rr."drop_latitude", rr."drop_longitude", rr."seats_requested", rr."status", rr."message",
+  rr."pickup_zone", rr."pickup_distance_km", rr."extra_tip",
   rr."created_at", rr."updated_at"
 `;
 const PASSENGER_COLUMNS = `
@@ -78,6 +79,17 @@ export const rideRequestRepository = {
       [rideId, passengerId, ["REQUESTED", "ACCEPTED"]]
     );
     return toCamelRow(rows[0]) || null;
+  },
+
+  /** The passenger's active (REQUESTED/ACCEPTED) requests on any of these rides. */
+  async findActiveByPassengerForRides(passengerId, rideIds) {
+    if (rideIds.length === 0) return [];
+    const { rows } = await pool.query(
+      `SELECT "id", "ride_id", "status" FROM "ride_requests"
+       WHERE "passenger_id" = $1 AND "ride_id" = ANY($2::text[]) AND "status" = ANY($3::"RideRequestStatus"[])`,
+      [passengerId, rideIds, ["REQUESTED", "ACCEPTED"]]
+    );
+    return rows.map(toCamelRow);
   },
 
   async updateStatus(id, status, tx) {

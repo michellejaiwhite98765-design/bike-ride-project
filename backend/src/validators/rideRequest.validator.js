@@ -13,3 +13,10 @@ export const createRideRequestSchema = z.object({
   seatsRequested: z.coerce.number().int().min(1).max(6).default(1),
   message: z.string().trim().max(300).optional(),
 });
+
+export const joinCheckQuerySchema = z.object({
+  pickupLatitude: latitude,
+  pickupLongitude: longitude,
+  dropLatitude: latitude.optional(),
+  dropLongitude: longitude.optional(),
+});

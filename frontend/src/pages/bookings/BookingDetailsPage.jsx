@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Card, Descriptions, Button, App, Skeleton, Divider, Popconfirm, Modal, Form, Rate, Input } from "antd";
+import { Card, Descriptions, Button, App, Divider, Popconfirm, Modal, Form, Rate, Input } from "antd";
 import dayjs from "dayjs";
 import { bookingService } from "../../services/bookingService.js";
 import { paymentService } from "../../services/paymentService.js";
 import { ratingService } from "../../services/ratingService.js";
 import StatusTag from "../../components/StatusTag.jsx";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
@@ -32,7 +33,7 @@ export default function BookingDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (loading || !booking) return <Skeleton active />;
+  if (loading || !booking) return <BrandLoader label="Loading booking…" />;
 
   const isFree = booking.ride.rideType === "WITHOUT_TIP";
 

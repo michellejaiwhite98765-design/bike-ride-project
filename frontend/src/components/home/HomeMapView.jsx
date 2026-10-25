@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import JoinRideButton from "../ride/JoinRideButton.jsx";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import { AimOutlined, ArrowRightOutlined, TeamOutlined } from "@ant-design/icons";
@@ -124,7 +125,7 @@ function RecenterOnSignal({ target, signal }) {
  * a message card when there are no rides (used by the search page; the home
  * page shows nothing).
  */
-export default function HomeMapView({ userLocation, nearbyRides, loading, emptyState }) {
+export default function HomeMapView({ userLocation, nearbyRides, loading, emptyState, pickup, drop }) {
   const { mode } = useTheme();
   const isDark = mode === "dark";
   const [recenterSignal, setRecenterSignal] = useState(0);
@@ -242,6 +243,10 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
                     <TeamOutlined /> {ride.availableSeats} left
                   </span>
                 </div>
+                {ride.pickupZone?.zone === "DETOUR" && (
+                  <span className="hmv-popup-zone">Detour pickup · +₹{ride.pickupZone.extraTip}</span>
+                )}
+                <JoinRideButton ride={ride} pickup={pickup} drop={drop} size="small" block />
                 <Link to={`/rides/${ride.id}`}>View ride</Link>
               </div>
             </Popup>
@@ -300,6 +305,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         .hmv-popup{min-width:160px;display:flex;flex-direction:column;gap:4px}
         .hmv-popup strong{font-size:13px;color:#0f172a}
         .hmv-popup-meta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#475569}
+        .hmv-popup-zone{font-size:11px;font-weight:700;color:#b45309}
+        .hmv-popup .jrb{margin-top:4px}
         .hmv-popup a{font-size:12px;font-weight:700;color:#0f766e;margin-top:2px}
 
         .hmv-top-shade{position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(var(--map-top-shade),transparent);pointer-events:none;z-index:400}

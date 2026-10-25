@@ -47,7 +47,7 @@ export const rideController = {
   },
 
   async search(req, res) {
-    const results = await rideService.search(req.validatedQuery);
+    const results = await rideService.search(req.validatedQuery, req.user.id);
     ok(res, results);
   },
 

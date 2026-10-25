@@ -5,7 +5,6 @@ import {
   Button,
   Empty,
   Progress,
-  Skeleton,
   Tag,
   Tooltip,
 } from "antd";
@@ -30,6 +29,7 @@ import RideDetailsModal from "../../components/ride/RideDetailsModal.jsx";
 import CloneRideModal, { getCloneBlockReason } from "../../components/ride/CloneRideModal.jsx";
 import StatusTag from "../../components/StatusTag.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const HOME = {
   primary: "#2DD4BF",
@@ -386,7 +386,7 @@ export default function MyRidesPage() {
         )}
 
         {loading ? (
-          <div className="my-rides-loading"><Skeleton active paragraph={{ rows: 8 }} /><Skeleton active paragraph={{ rows: 8 }} /></div>
+          <BrandLoader variant="inline" label="Loading your rides…" />
         ) : rides.length === 0 ? (
           <div className="my-rides-empty">
             <Empty description="You haven't created any rides yet" />

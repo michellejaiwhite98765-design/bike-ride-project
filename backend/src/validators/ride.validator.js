@@ -42,6 +42,8 @@ export const createRideSchema = z
     rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]),
     tipAmount: z.coerce.number().min(0).max(10000).default(0),
     notes: z.string().trim().max(500).optional(),
+    // The road route shown on the create-ride map: [lat, lng] points, start to end.
+    routePath: z.array(z.tuple([latitude, longitude])).min(2).max(2000).optional(),
   })
   .refine((data) => data.rideType !== "WITHOUT_TIP" || data.tipAmount === 0, {
     message: "tipAmount must be 0 when rideType is WITHOUT_TIP",
@@ -70,6 +72,8 @@ export const updateRideSchema = z
     rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]).optional(),
     tipAmount: z.coerce.number().min(0).max(10000).optional(),
     notes: z.string().trim().max(500).optional(),
+    // The road route shown on the create-ride map: [lat, lng] points, start to end.
+    routePath: z.array(z.tuple([latitude, longitude])).min(2).max(2000).optional(),
   })
   .refine(
     (data) => !(data.rideType === "WITHOUT_TIP" && data.tipAmount && data.tipAmount > 0),

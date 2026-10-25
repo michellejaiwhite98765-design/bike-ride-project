@@ -34,6 +34,11 @@ export const rideService = {
   listRequests(rideId) {
     return api.get(`/rides/${rideId}/requests`).then((res) => res.data);
   },
+  // Which pickup zone a pickup/drop falls in for this ride (ON_ROUTE, DETOUR
+  // with the extra fare, or TOO_FAR) - shown before a request is sent.
+  joinCheck(rideId, params) {
+    return api.get(`/rides/${rideId}/requests/join-check`, { params }).then((res) => res.data);
+  },
   getMyRequest(rideId) {
     return api.get(`/rides/${rideId}/requests/mine`).then((res) => res.data);
   },

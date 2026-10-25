@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { List, Card, Avatar, Rate, Empty, Skeleton } from "antd";
+import { List, Card, Avatar, Rate, Empty } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../context/AuthContext.jsx";
 import { userService } from "../services/userService.js";
+import BrandLoader from "../components/ui/BrandLoader.jsx";
 
 export default function RatingsPage() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function RatingsPage() {
       .finally(() => setLoading(false));
   }, [user.id]);
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading ratings…" />;
 
   const average = ratings.length ? (ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1) : null;
 

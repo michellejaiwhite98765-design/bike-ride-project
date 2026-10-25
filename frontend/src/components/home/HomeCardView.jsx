@@ -1,12 +1,19 @@
 import { ArrowRightOutlined } from "@ant-design/icons";
-import { Button, Empty, Skeleton } from "antd";
+import { Button, Empty } from "antd";
 import RideCard from "../ride/RideCard.jsx";
+import BrandLoader from "../ui/BrandLoader.jsx";
+import MyTripCard from "./MyTripCard.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function HomeCardView({ nearbyRides, loading, onSearchAll }) {
+export default function HomeCardView({ nearbyRides: allRides, loading, onSearchAll }) {
+  const { user } = useAuth();
+  // The user's own open trip is shown in MyTripCard, not again in the grid.
+  const nearbyRides = allRides.filter((ride) => ride.riderId !== user?.id);
   return (
     <div className="hcv-wrap">
+      <MyTripCard />
       {loading ? (
-        <Skeleton active paragraph={{ rows: 3 }} />
+        <BrandLoader variant="inline" label="Finding rides near you…" />
       ) : nearbyRides.length === 0 ? (
         <Empty description="No nearby rides found right now.">
           <Button type="primary" onClick={onSearchAll}>

@@ -6,9 +6,10 @@ import dayjs from "dayjs";
 import StatusTag from "../StatusTag.jsx";
 import RideMiniMap from "./RideMiniMap.jsx";
 import RideDetailsModal from "./RideDetailsModal.jsx";
+import JoinRideButton from "./JoinRideButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function RideCard({ ride, showMatch = false }) {
+export default function RideCard({ ride, showMatch = false, pickup, drop }) {
   const { user } = useAuth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const isFree = ride.rideType === "WITHOUT_TIP";
@@ -44,6 +45,13 @@ export default function RideCard({ ride, showMatch = false }) {
           <StatusTag status={ride.status} />
         </div>
 
+        {ride.pickupZone?.zone === "DETOUR" && (
+          <div className="rc-zone" title={ride.pickupZone.message}>
+            Detour pickup · {ride.pickupZone.pickupDistanceKm} km off route · <strong>+₹{ride.pickupZone.extraTip}</strong>
+          </div>
+        )}
+        {ride.pickupZone?.zone === "ON_ROUTE" && <div className="rc-zone rc-zone-on">On the rider&apos;s route</div>}
+
         <div className="rc-route">
           <EnvironmentOutlined />
           <span className="rc-route-text">
@@ -78,9 +86,12 @@ export default function RideCard({ ride, showMatch = false }) {
           <div className="rc-price">
             {isFree ? <StatusTag status="NOT_REQUIRED" /> : <span>Tip ₹{ride.tipAmount}</span>}
           </div>
-          <Link to={`/rides/${ride.id}`} className="rc-view-link" onClick={stopPropagation}>
-            View full details <ArrowRightOutlined />
-          </Link>
+          <div className="rc-actions">
+            <JoinRideButton ride={ride} pickup={pickup} drop={drop} size="small" />
+            <Link to={`/rides/${ride.id}`} className="rc-view-link" onClick={stopPropagation}>
+              {isOwner ? "Your ride" : "Details"} <ArrowRightOutlined />
+            </Link>
+          </div>
         </div>
       </article>
 
@@ -115,6 +126,10 @@ export default function RideCard({ ride, showMatch = false }) {
 
         .rc-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px;border-top:1px solid var(--border-light)}
         .rc-price span{font-weight:700;color:#2DD4BF;font-size:13.5px}
+        .rc-zone{align-self:flex-start;font-size:11.5px;font-weight:650;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b}
+        .rc-zone strong{color:#fbbf24}
+        .rc-zone-on{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.3);color:#2DD4BF}
+        .rc-actions{display:flex;align-items:center;gap:10px}
         .rc-view-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:#2DD4BF;white-space:nowrap}
         .rc-view-link:hover{color:#5EEAD4;text-decoration:underline}
 
@@ -124,6 +139,8 @@ export default function RideCard({ ride, showMatch = false }) {
           .rc-route{font-size:13px}
           .rc-meta{font-size:11.5px}
           .rc-footer{flex-direction:column;align-items:stretch;gap:8px}
+          .rc-actions{justify-content:space-between}
+          .rc-actions .jrb{flex:1}
           .rc-view-link{justify-content:center;padding:8px 0;border-radius:9px;background:rgba(45,212,191,.1)}
         }
       `}</style>

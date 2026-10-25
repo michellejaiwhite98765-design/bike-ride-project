@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Tabs, List, Card, Empty, Skeleton } from "antd";
+import { Tabs, List, Card, Empty } from "antd";
 import { ArrowRightOutlined, CalendarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -8,6 +8,7 @@ import { rideService } from "../services/rideService.js";
 import { bookingService } from "../services/bookingService.js";
 import StatusTag from "../components/StatusTag.jsx";
 import colors from "../theme/colors.js";
+import BrandLoader from "../components/ui/BrandLoader.jsx";
 
 const PageHeader = styled.div`
   margin-bottom: 32px;
@@ -105,7 +106,7 @@ export default function HistoryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading your history…" />;
 
   return (
     <div>

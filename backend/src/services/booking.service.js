@@ -35,8 +35,12 @@ export const bookingService = {
       await rideRepository.decrementSeats(tx, rideRequest.rideId, rideRequest.seatsRequested);
 
       const ride = rideRequest.ride;
-      const isPaid = ride.rideType === "WITH_TIP";
-      const tipAmount = isPaid ? Number(ride.tipAmount) * rideRequest.seatsRequested : 0;
+      // A detour pickup (utils/pickupZone.js) adds an extra tip for the
+      // rider's trip off the route - this makes even a free ride paid.
+      const extraTip = Number(rideRequest.extraTip) || 0;
+      const rideTip = ride.rideType === "WITH_TIP" ? Number(ride.tipAmount) * rideRequest.seatsRequested : 0;
+      const tipAmount = rideTip + extraTip;
+      const isPaid = tipAmount > 0;
       const platformFee = isPaid ? env.platformFeeFlat : 0;
 
       const newBooking = await bookingRepository.create(tx, {

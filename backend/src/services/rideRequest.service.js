@@ -3,6 +3,13 @@ import { rideRepository } from "../repositories/ride.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { audit } from "../utils/audit.js";
 import { notificationService } from "./notification.service.js";
+import { classifyPickup } from "../utils/pickupZone.js";
+
+async function classifyForRide(rideId, pickup, drop) {
+  const geometry = await rideRepository.pickupGeometry(rideId, pickup, drop);
+  if (!geometry) throw ApiError.notFound("Ride not found");
+  return classifyPickup(geometry);
+}
 
 export const rideRequestService = {
   async create(passengerId, rideId, data) {
@@ -17,10 +24,33 @@ export const rideRequestService = {
     const duplicate = await rideRequestRepository.findActiveByRideAndPassenger(rideId, passengerId);
     if (duplicate) throw ApiError.conflict("You already have an active request for this ride");
 
-    const rideRequest = await rideRequestRepository.create(rideId, passengerId, data);
-    await audit(null, { userId: passengerId, action: "RIDE_REQUEST_CREATED", entityType: "RideRequest", entityId: rideRequest.id });
+    // Two-zone pickup (utils/pickupZone.js): on the rider's route, a detour
+    // the passenger pays an extra tip for, or too far to join.
+    const zone = await classifyForRide(
+      rideId,
+      { latitude: data.pickupLatitude, longitude: data.pickupLongitude },
+      { latitude: data.dropLatitude, longitude: data.dropLongitude }
+    );
+    if (zone.zone === "TOO_FAR") throw ApiError.badRequest(zone.message, zone);
+
+    const rideRequest = await rideRequestRepository.create(rideId, passengerId, {
+      ...data,
+      pickupZone: zone.zone,
+      pickupDistanceKm: zone.pickupDistanceKm,
+      extraTip: zone.extraTip,
+    });
+    await audit(null, { userId: passengerId, action: "RIDE_REQUEST_CREATED", entityType: "RideRequest", entityId: rideRequest.id, metadata: { pickupZone: zone.zone, extraTip: zone.extraTip } });
     await notificationService.notifyRequestCreated(rideRequest);
     return rideRequest;
+  },
+
+  /**
+   * Pre-check for the app before a request is sent: which zone a pickup (and
+   * optional drop) falls in, and the extra tip if it's a detour.
+   */
+  async joinCheck(rideId, { pickupLatitude, pickupLongitude, dropLatitude, dropLongitude }) {
+    const drop = dropLatitude != null && dropLongitude != null ? { latitude: dropLatitude, longitude: dropLongitude } : null;
+    return classifyForRide(rideId, { latitude: pickupLatitude, longitude: pickupLongitude }, drop);
   },
 
   async listForRide(userId, rideId) {

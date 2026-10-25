@@ -21,7 +21,8 @@ export const paymentService = {
     const booking = await bookingRepository.findById(bookingId);
     if (!booking) throw ApiError.notFound("Booking not found");
     if (booking.passengerId !== userId) throw ApiError.forbidden("You do not own this booking");
-    if (booking.ride.rideType !== "WITH_TIP") throw ApiError.badRequest("This ride does not require payment");
+    // Paid when the ride has a tip or the passenger's pickup was a paid detour.
+    if (!(Number(booking.totalAmount) > 0)) throw ApiError.badRequest("This ride does not require payment");
     if (booking.paymentStatus === "SUCCESS") throw ApiError.conflict("This booking has already been paid for");
 
     const idempotencyKey = `booking:${bookingId}`;

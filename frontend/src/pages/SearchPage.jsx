@@ -40,6 +40,11 @@ export default function SearchPage() {
   const hasSource = Boolean(sourceLatitude && sourceLongitude);
   const hasDestination = Boolean(destinationLatitude && destinationLongitude);
   const hasBoth = hasSource && hasDestination;
+  const sourceName = Form.useWatch("sourceName", form);
+  const destinationName = Form.useWatch("destinationName", form);
+  // The searched start/end double as the pickup/drop for "Request to join".
+  const pickup = hasBoth ? { name: sourceName, latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) } : undefined;
+  const drop = hasBoth ? { name: destinationName, latitude: Number(destinationLatitude), longitude: Number(destinationLongitude) } : undefined;
 
   // No filter UI: every search is always "today", any seat count, any ride
   // type (with tip and without), including rides with no seats left - the
@@ -103,6 +108,8 @@ export default function SearchPage() {
           }
           nearbyRides={results}
           loading={loading}
+          pickup={pickup}
+          drop={drop}
           emptyState={
             <div className="sp-empty-card">
               {!hasSource && !hasDestination
@@ -142,6 +149,7 @@ export default function SearchPage() {
         </Form>
         <div className="sp-hint">
           Rides along your route show up on the map as you fill in the start and end.
+          Within 2.5 km of a rider&apos;s route is a normal pickup; farther away the rider can make a short detour for a higher fare.
         </div>
       </Drawer>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Row, Col, Card, Statistic, Button, Skeleton, Empty } from "antd";
+import { Row, Col, Card, Statistic, Button, Empty } from "antd";
 import {
   SearchOutlined,
   PlusCircleOutlined,
@@ -18,6 +18,7 @@ import { bookingService } from "../services/bookingService.js";
 import { userService } from "../services/userService.js";
 import StatusTag from "../components/StatusTag.jsx";
 import colors from "../theme/colors.js";
+import BrandLoader from "../components/ui/BrandLoader.jsx";
 
 const WelcomeSection = styled.div`
   margin-bottom: 40px;
@@ -151,7 +152,7 @@ export default function DashboardPage() {
     };
   }, [user.id]);
 
-  if (loading) return <Skeleton active />;
+  if (loading) return <BrandLoader label="Loading your dashboard…" />;
 
   const upcomingRide = rides.find((r) => r.status === "PUBLISHED" || r.status === "STARTED");
   const activeBooking = bookings.find((b) => ["PAYMENT_PENDING", "CONFIRMED"].includes(b.bookingStatus));
@@ -164,7 +165,7 @@ export default function DashboardPage() {
   return (
     <div>
       {loading ? (
-        <Skeleton active />
+        <BrandLoader variant="inline" />
       ) : (
         <>
           {/* Welcome Section */}

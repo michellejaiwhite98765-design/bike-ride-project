@@ -1,6 +1,7 @@
 import { withTransaction } from "../config/db.js";
 import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
+import { rideRequestRepository } from "../repositories/rideRequest.repository.js";
 import { ratingRepository } from "../repositories/rating.repository.js";
 import { vehicleRepository } from "../repositories/vehicle.repository.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -9,6 +10,8 @@ import { audit } from "../utils/audit.js";
 import { env } from "../config/env.js";
 import { scoreRide } from "./matching.service.js";
 import { notificationService } from "./notification.service.js";
+import { fetchRoadRoute } from "./routing.service.js";
+import { classifyPickup } from "../utils/pickupZone.js";
 
 const OPEN_TRIP_MESSAGE = "Please complete or cancel your current trip before creating a new one";
 
@@ -42,6 +45,9 @@ export const rideService = {
     }
 
     const ride = await rideRepository.create(riderId, data);
+    // No road route sent by the app: look it up in the background so
+    // passengers along the real road can find this ride.
+    if (!data.routePath) void this.ensureRoadRoute(ride);
     await audit(null, { userId: riderId, action: "RIDE_CREATED", entityType: "Ride", entityId: ride.id });
     return ride;
   },
@@ -71,7 +77,17 @@ export const rideService = {
       throw ApiError.conflict("Ride can only be edited while it is a draft or published");
     }
 
-    const updated = await rideRepository.update(rideId, data);
+    const { routePath, ...fields } = data;
+    const endpointsMoved = ["sourceLatitude", "sourceLongitude", "destinationLatitude", "destinationLongitude"].some(
+      (key) => fields[key] !== undefined && Number(fields[key]) !== Number(ride[key])
+    );
+    let updated = await rideRepository.update(rideId, fields);
+    // Keep the saved road route in step with the start/end.
+    if (routePath || endpointsMoved) {
+      await rideRepository.setRoutePath(rideId, routePath ?? null);
+      if (!routePath) void this.ensureRoadRoute(updated);
+      updated = await rideRepository.findById(rideId);
+    }
     await audit(null, { userId, action: "RIDE_UPDATED", entityType: "Ride", entityId: rideId });
     return updated;
   },
@@ -126,7 +142,7 @@ export const rideService = {
     return updated;
   },
 
-  async search(search) {
+  async search(search, userId = null) {
     const pickupRadiusKm = search.radius || env.matching.pickupRadiusKm;
     const destinationRadiusKm = search.radius || env.matching.destinationRadiusKm;
 
@@ -138,6 +154,9 @@ export const rideService = {
       timeWindowMinutes: env.matching.timeWindowMinutes,
       pickupRadiusM: pickupRadiusKm * 1000,
       destinationRadiusM: destinationRadiusKm * 1000,
+      // A route search (no explicit radius) uses each ride's pickup zones;
+      // an explicit radius (home page "near me") is a plain browse.
+      zones: search.radius ? null : env.pickupZone,
     });
     if (candidates.length === 0) return [];
 
@@ -171,7 +190,55 @@ export const rideService = {
       };
     });
 
+    // Route search: tell the passenger, per ride, whether their pickup is on
+    // the rider's route or needs a paid detour (and how much extra tip).
+    if (!search.radius) {
+      const pickup = { latitude: search.sourceLatitude, longitude: search.sourceLongitude };
+      const drop = { latitude: search.destinationLatitude, longitude: search.destinationLongitude };
+      for (const result of results) {
+        const geometry = await rideRepository.pickupGeometry(result.id, pickup, drop);
+        if (geometry) result.pickupZone = classifyPickup(geometry);
+      }
+    }
+
+    // So the app can show "Requested" on rides the passenger already asked to join.
+    if (userId) {
+      const mine = await rideRequestRepository.findActiveByPassengerForRides(userId, results.map((r) => r.id));
+      const byRide = new Map(mine.map((rr) => [rr.rideId, { id: rr.id, status: rr.status }]));
+      for (const result of results) result.myRequest = byRide.get(result.id) ?? null;
+    }
+
     results.sort((a, b) => b.matchScore - a.matchScore);
     return results;
+  },
+
+  /** Saves the ride's road route from the routing service if it has none. Never throws. */
+  async ensureRoadRoute(ride) {
+    try {
+      if (await rideRepository.hasRoutePath(ride.id)) return false;
+      const path = await fetchRoadRoute(
+        { latitude: ride.sourceLatitude, longitude: ride.sourceLongitude },
+        { latitude: ride.destinationLatitude, longitude: ride.destinationLongitude }
+      );
+      if (!path) return false;
+      await rideRepository.setRoutePath(ride.id, path);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Saves road routes for open rides that don't have one (created before
+   * routes were saved, or routing was down). Runs periodically from
+   * server.js, one lookup at a time to stay polite to the routing server.
+   */
+  async backfillRoadRoutes(limit = 20) {
+    let filled = 0;
+    for (const ride of await rideRepository.findOpenWithoutRoute(limit)) {
+      if (await this.ensureRoadRoute(ride)) filled += 1;
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    }
+    return filled;
   },
 };

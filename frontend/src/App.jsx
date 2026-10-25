@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout.jsx";
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
+import BrandLoader from "./components/ui/BrandLoader.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
 
 import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/auth/LoginPage.jsx";
@@ -27,6 +29,12 @@ import AdminPage from "./pages/admin/AdminPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 export default function App() {
+  // Hold every page (login, home, ...) until the saved session is checked, so
+  // the app opens straight on the right screen instead of flashing the guest
+  // view first.
+  const { loading } = useAuth();
+  if (loading) return <BrandLoader variant="fullscreen" label="Getting your rides ready…" />;
+
   return (
     <Routes>
         <Route path="/login" element={<LoginPage />} />

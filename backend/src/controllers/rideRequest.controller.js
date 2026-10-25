@@ -13,6 +13,10 @@ export const rideRequestController = {
     ok(res, requests);
   },
 
+  async joinCheck(req, res) {
+    ok(res, await rideRequestService.joinCheck(req.params.rideId, req.validatedQuery));
+  },
+
   async getMine(req, res) {
     const rideRequest = await rideRequestService.getMine(req.user.id, req.params.rideId);
     ok(res, rideRequest);

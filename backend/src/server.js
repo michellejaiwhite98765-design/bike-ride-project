@@ -4,9 +4,24 @@ import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { pool } from "./config/db.js";
 import { initSocket } from "./realtime/socket.js";
+import { rideService } from "./services/ride.service.js";
 
 const httpServer = http.createServer(app);
 initSocket(httpServer);
+
+// Open rides created without a road route (older app versions, or routing
+// was down) are matched against the straight start-end line until their
+// route is saved - fill those in now and every 5 minutes.
+async function backfillRoadRoutes() {
+  try {
+    const filled = await rideService.backfillRoadRoutes();
+    if (filled > 0) logger.info(`Saved road routes for ${filled} ride(s)`);
+  } catch (err) {
+    logger.warn(`Road route backfill failed: ${err.message}`);
+  }
+}
+backfillRoadRoutes();
+setInterval(backfillRoadRoutes, 5 * 60 * 1000).unref();
 
 const server = httpServer.listen(env.port, () => {
   logger.info(`BikeRide API listening on port ${env.port} [${env.nodeEnv}]`);

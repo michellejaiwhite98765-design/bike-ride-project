@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Skeleton, Alert, Checkbox, Modal } from "antd";
+import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Alert, Checkbox, Modal } from "antd";
 import {
   EnvironmentOutlined,
   CarOutlined,
@@ -23,6 +23,7 @@ import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
+import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
 const SectionHeader = styled.div`
   display: flex;
@@ -305,7 +306,7 @@ export default function CreateRidePage() {
     );
   }
 
-  if (loading) return <div style={{ padding: "100px 24px 24px", height: "100%", overflow: "auto", boxSizing: "border-box" }}><Skeleton active /></div>;
+  if (loading) return <BrandLoader label="Loading your trip…" />;
 
   if (verifiedVehicles.length === 0) {
     const hasPendingVehicles = vehicles.length > 0;

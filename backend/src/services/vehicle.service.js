@@ -14,16 +14,53 @@ async function assertOwner(vehicleId, userId) {
   return vehicle;
 }
 
+const TAKEN_MESSAGE =
+  "This vehicle is already verified on another account. If it is yours, please contact support.";
+
+/**
+ * A registration number belongs to whoever proved it with a matching RC.
+ * Another account's vehicle with this plate only blocks it when that
+ * vehicle is active and VERIFIED. An unproven claim (saved at the details
+ * step but never verified, e.g. the RC couldn't be read) or a removed
+ * vehicle is released, so the plate can be added here.
+ * Returns this user's own row for the plate, if any.
+ */
+async function claimRegistrationNumber(userId, registrationNumber) {
+  const existing = await vehicleRepository.findAnyByRegistrationNumber(registrationNumber);
+  if (!existing || existing.ownerId === userId) return existing;
+
+  if (existing.isActive && existing.verificationStatus === "VERIFIED") throw ApiError.conflict(TAKEN_MESSAGE);
+  const released = await vehicleRepository.releaseRegistrationNumber(
+    existing.id,
+    "Registration number was verified by another account"
+  );
+  // Verified by its owner in the meantime.
+  if (!released) throw ApiError.conflict(TAKEN_MESSAGE);
+  await audit(null, { userId, action: "VEHICLE_PLATE_RELEASED", entityType: "Vehicle", entityId: existing.id, metadata: { previousOwnerId: existing.ownerId } });
+  return null;
+}
+
 export const vehicleService = {
   async create(userId, data) {
-    const existing = await vehicleRepository.findAnyByRegistrationNumber(data.registrationNumber);
+    const existing = await claimRegistrationNumber(userId, data.registrationNumber);
 
     if (existing) {
-      if (existing.ownerId !== userId) {
-        throw ApiError.conflict("This registration number is already registered to another account");
+      if (existing.isActive && existing.verificationStatus === "VERIFIED") {
+        throw ApiError.conflict("You have already added this vehicle");
       }
       if (existing.isActive) {
-        throw ApiError.conflict("You have already added this vehicle");
+        // Added before but never verified (e.g. the RC upload failed): carry
+        // on with the same vehicle instead of refusing.
+        const resumed = await vehicleRepository.update(existing.id, {
+          vehicleType: data.vehicleType,
+          color: data.color,
+          brand: data.brand,
+          model: data.model,
+          manufacturingYear: data.manufacturingYear,
+          ...(data.seatCapacity !== undefined ? { seatCapacity: data.seatCapacity } : {}),
+        });
+        await audit(null, { userId, action: "VEHICLE_UPDATED", entityType: "Vehicle", entityId: resumed.id });
+        return resumed;
       }
 
       // Same owner, previously removed vehicle with this plate: reactivate
@@ -76,6 +113,14 @@ export const vehicleService = {
     const changedVerificationInput = verificationRelevantFields.some(
       (field) => data[field] !== undefined && String(data[field]) !== String(existing[field])
     );
+
+    if (
+      data.registrationNumber !== undefined &&
+      normalizeRegistrationNumber(data.registrationNumber) !== normalizeRegistrationNumber(existing.registrationNumber)
+    ) {
+      const own = await claimRegistrationNumber(userId, data.registrationNumber);
+      if (own && own.id !== vehicleId) throw ApiError.conflict("You have already added a vehicle with this registration number");
+    }
 
     if (changedVerificationInput) {
       const activeRideCount = await vehicleRepository.countActiveRides(vehicleId);

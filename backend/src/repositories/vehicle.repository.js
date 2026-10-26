@@ -76,6 +76,27 @@ export const vehicleRepository = {
     return rows.length ? toCamelRow(rows[0]) : null;
   },
 
+  /**
+   * Frees an unproven claim on a registration number: the row is deactivated
+   * and its plate replaced with a unique placeholder, so the real plate can
+   * be added by whoever proves it with the RC. The row itself stays, so any
+   * past rides that point at it keep working.
+   */
+  async releaseRegistrationNumber(id, reason) {
+    const { rows } = await pool.query(
+      `UPDATE "vehicles"
+       SET "registration_number" = 'RELEASED-' || "id",
+           "is_active" = false,
+           "verification_status" = 'REJECTED',
+           "verification_failure_reason" = $2,
+           "updated_at" = now()
+       WHERE "id" = $1 AND ("verification_status" <> 'VERIFIED' OR "is_active" = false)
+       RETURNING *`,
+      [id, reason]
+    );
+    return toCamelRow(rows[0]) || null;
+  },
+
   async findById(id) {
     const { rows } = await pool.query('SELECT * FROM "vehicles" WHERE "id" = $1 LIMIT 1', [id]);
     return toCamelRow(rows[0]);

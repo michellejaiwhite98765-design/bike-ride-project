@@ -1,5 +1,6 @@
 import { rideRequestRepository } from "../repositories/rideRequest.repository.js";
 import { rideRepository } from "../repositories/ride.repository.js";
+import { bookingRepository } from "../repositories/booking.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { audit } from "../utils/audit.js";
 import { notificationService } from "./notification.service.js";
@@ -62,6 +63,20 @@ export const rideRequestService = {
 
   /** The current user's own active (REQUESTED/ACCEPTED) request for this ride, or null. Lets the passenger's own UI show/withdraw a pending request without exposing the owner-only full request list. */
   async getMine(passengerId, rideId) {
-    return rideRequestRepository.findActiveByRideAndPassenger(rideId, passengerId);
+    const request = await rideRequestRepository.findActiveByRideAndPassenger(rideId, passengerId);
+    // Once accepted, include the booking so the ride page can offer "Pay"
+    // or show that the seat is paid.
+    if (request?.status === "ACCEPTED") {
+      const booking = await bookingRepository.findByRideRequestId(request.id);
+      if (booking) {
+        request.booking = {
+          id: booking.id,
+          bookingStatus: booking.bookingStatus,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        };
+      }
+    }
+    return request;
   },
 };

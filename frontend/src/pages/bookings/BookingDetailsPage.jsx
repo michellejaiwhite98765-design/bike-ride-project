@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { Card, Descriptions, Button, App, Divider, Popconfirm, Modal, Form, Rate, Input } from "antd";
 import dayjs from "dayjs";
 import { bookingService } from "../../services/bookingService.js";
-import { paymentService } from "../../services/paymentService.js";
 import { ratingService } from "../../services/ratingService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
+import PaymentModal, { fareBreakdown } from "../../components/booking/PaymentModal.jsx";
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
   const { message } = App.useApp();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
+  // Opened straight away when arriving from the ride page's "Pay" button.
+  const [payOpen, setPayOpen] = useState(Boolean(useLocation().state?.pay));
   const [cancelling, setCancelling] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [rateForm] = Form.useForm();
   const [rating, setRating] = useState(false);
 
   async function load() {
-    setLoading(true);
+    // Full-page loader only the first time; later refreshes (after paying
+    // or cancelling) update in place so open dialogs stay put.
+    if (!booking) setLoading(true);
     try {
       setBooking(await bookingService.getById(id));
     } finally {
@@ -35,26 +38,10 @@ export default function BookingDetailsPage() {
 
   if (loading || !booking) return <BrandLoader label="Loading booking…" />;
 
-  const isFree = booking.ride.rideType === "WITHOUT_TIP";
-
-  async function payAndConfirm() {
-    setPaying(true);
-    try {
-      const order = await paymentService.createOrder(booking.id);
-      await paymentService.verify({
-        bookingId: booking.id,
-        providerOrderId: order.orderId,
-        providerPaymentId: order.providerPaymentId,
-        signature: order.mockSignature,
-      });
-      message.success("Payment successful. Booking confirmed!");
-      load();
-    } catch (err) {
-      message.error(err.message);
-    } finally {
-      setPaying(false);
-    }
-  }
+  // Free unless there's something to pay - a tipped ride, or a detour
+  // pickup's extra fare on an otherwise free ride.
+  const fare = fareBreakdown(booking);
+  const isFree = fare.total === 0;
 
   async function cancelBooking() {
     setCancelling(true);
@@ -85,7 +72,8 @@ export default function BookingDetailsPage() {
         `${booking.ride.vehicle?.brand ?? ""} ${booking.ride.vehicle?.model ?? ""} (${booking.ride.vehicle?.registrationNumber ?? ""})`,
       ],
       ["Seats", booking.seats],
-      ["Tip", isFree ? "₹0" : `₹${booking.tipAmount}`],
+      ...(fare.rideFare > 0 ? [["Ride fare", `₹${fare.rideFare}`]] : []),
+      ...(fare.detourExtra > 0 ? [["Detour pickup extra", `₹${fare.detourExtra}`]] : []),
       ...(isFree ? [] : [["Platform Fee", `₹${booking.platformFee}`]]),
       ["Total Paid", `₹${booking.totalAmount}`],
       ["Payment Status", booking.paymentStatus],
@@ -167,7 +155,9 @@ export default function BookingDetailsPage() {
         <Divider />
 
         <Descriptions column={1} size="small">
-          <Descriptions.Item label="Tip">{isFree ? "₹0" : `₹${booking.tipAmount}`}</Descriptions.Item>
+          {isFree && <Descriptions.Item label="Fare">Free ride</Descriptions.Item>}
+          {fare.rideFare > 0 && <Descriptions.Item label="Ride fare">₹{fare.rideFare}</Descriptions.Item>}
+          {fare.detourExtra > 0 && <Descriptions.Item label="Detour pickup extra">₹{fare.detourExtra}</Descriptions.Item>}
           {!isFree && <Descriptions.Item label="Platform Fee">₹{booking.platformFee}</Descriptions.Item>}
           <Descriptions.Item label={<strong>Total</strong>}>
             <strong>₹{booking.totalAmount}</strong>
@@ -177,10 +167,17 @@ export default function BookingDetailsPage() {
           </Descriptions.Item>
         </Descriptions>
 
+        {booking.paymentStatus === "SUCCESS" && (
+          <div className="bd-paid">✓ Paid ₹{booking.totalAmount} - your seat is confirmed</div>
+        )}
+        {booking.bookingStatus === "PAYMENT_PENDING" && (
+          <div className="bd-due">Pay within 30 minutes of being accepted, or the seat is released.</div>
+        )}
+
         <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
           {booking.bookingStatus === "PAYMENT_PENDING" && (
-            <Button type="primary" size="large" style={{ background: "#0f766e" }} loading={paying} onClick={payAndConfirm}>
-              Pay &amp; Confirm
+            <Button type="primary" size="large" style={{ background: "linear-gradient(135deg,#2DD4BF,#8B5CF6)", border: "none", fontWeight: 700 }} onClick={() => setPayOpen(true)}>
+              Pay ₹{booking.totalAmount}
             </Button>
           )}
           {["PAYMENT_PENDING", "CONFIRMED"].includes(booking.bookingStatus) && !["STARTED", "COMPLETED"].includes(booking.ride.status) && (
@@ -202,6 +199,22 @@ export default function BookingDetailsPage() {
           )}
         </div>
       </Card>
+
+      <PaymentModal
+        booking={booking}
+        open={payOpen && booking.bookingStatus === "PAYMENT_PENDING" || payOpen === "done"}
+        onClose={() => setPayOpen(false)}
+        onPaid={() => {
+          setPayOpen("done");
+          load();
+        }}
+        onViewReceipt={downloadReceipt}
+      />
+
+      <style>{`
+        .bd-paid{margin-top:16px;padding:10px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#16a34a;font-weight:700}
+        .bd-due{margin-top:16px;padding:10px 14px;border-radius:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#d97706;font-size:13px;font-weight:600}
+      `}</style>
 
       <Modal title="Rate your ride" open={rateOpen} onCancel={() => setRateOpen(false)} onOk={submitRating} confirmLoading={rating} okText="Submit">
         <Form form={rateForm} layout="vertical">

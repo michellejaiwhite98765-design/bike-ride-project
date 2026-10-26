@@ -394,6 +394,16 @@ export default function RideDetailsPage() {
   const dropLat = Form.useWatch("dropLatitude", requestForm);
   const dropLng = Form.useWatch("dropLongitude", requestForm);
 
+  // Most passengers ride to where the rider is going: start the drop there.
+  useEffect(() => {
+    if (!requestModalOpen || !ride || requestForm.getFieldValue("dropLatitude")) return;
+    requestForm.setFieldsValue({
+      dropName: ride.destinationName,
+      dropLatitude: Number(ride.destinationLatitude),
+      dropLongitude: Number(ride.destinationLongitude),
+    });
+  }, [requestModalOpen, ride, requestForm]);
+
   useEffect(() => {
     if (!requestModalOpen || !pickupLat || !pickupLng) {
       setJoinZone(null);
@@ -793,11 +803,30 @@ export default function RideDetailsPage() {
             )}
 
             {!isOwner && myRequest?.status === "ACCEPTED" && (
-              <Link to="/bookings" style={{ flex: 1 }}>
-                <Button size="large" block>
-                  Request Accepted — View Booking
-                </Button>
-              </Link>
+              myRequest.booking?.bookingStatus === "PAYMENT_PENDING" ? (
+                // Accepted, payment due: go straight to the payment screen.
+                <Link to={`/bookings/${myRequest.booking.id}`} state={{ pay: true }} style={{ flex: 1 }}>
+                  <Button
+                    size="large"
+                    block
+                    type="primary"
+                    style={{ background: "linear-gradient(135deg, #2DD4BF, #8B5CF6)", border: "none", fontWeight: 700 }}
+                  >
+                    Accepted — Pay ₹{myRequest.booking.totalAmount}
+                  </Button>
+                </Link>
+              ) : (
+                <Link to={myRequest.booking ? `/bookings/${myRequest.booking.id}` : "/bookings"} style={{ flex: 1 }}>
+                  <Button
+                    size="large"
+                    block
+                    icon={<CheckCircleOutlined />}
+                    style={{ background: "rgba(34,197,94,.12)", border: "1px solid rgba(34,197,94,.45)", color: "#22c55e", fontWeight: 700 }}
+                  >
+                    {myRequest.booking?.paymentStatus === "SUCCESS" ? "Paid · Seat confirmed" : "Seat confirmed"} — View Booking
+                  </Button>
+                </Link>
+              )
             )}
 
             {isOwner && (
@@ -974,9 +1003,10 @@ export default function RideDetailsPage() {
         onConfirm={handlePickupConfirm}
         initialPosition={
           requestForm.getFieldValue("pickupLatitude")
-            ? { latitude: requestForm.getFieldValue("pickupLatitude"), longitude: requestForm.getFieldValue("pickupLongitude") }
+            ? { latitude: Number(requestForm.getFieldValue("pickupLatitude")), longitude: Number(requestForm.getFieldValue("pickupLongitude")), name: requestForm.getFieldValue("pickupName") }
             : null
         }
+        fallbackCenter={{ latitude: ride.sourceLatitude, longitude: ride.sourceLongitude }}
       />
 
       <LocationPickerModal
@@ -986,9 +1016,10 @@ export default function RideDetailsPage() {
         onConfirm={handleDropConfirm}
         initialPosition={
           requestForm.getFieldValue("dropLatitude")
-            ? { latitude: requestForm.getFieldValue("dropLatitude"), longitude: requestForm.getFieldValue("dropLongitude") }
+            ? { latitude: Number(requestForm.getFieldValue("dropLatitude")), longitude: Number(requestForm.getFieldValue("dropLongitude")), name: requestForm.getFieldValue("dropName") }
             : null
         }
+        fallbackCenter={{ latitude: ride.destinationLatitude, longitude: ride.destinationLongitude }}
       />
 
       <style>{`

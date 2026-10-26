@@ -67,9 +67,20 @@ export const notificationService = {
       userId: booking.passengerId,
       type: "PAYMENT_SUCCESS",
       title: "Payment successful",
-      message: "Your payment was successful and your booking is confirmed",
+      message: `Your payment of ₹${booking.totalAmount} was successful and your booking is confirmed`,
       data: { bookingId: booking.id },
     });
+    // Tell the rider the seat is now paid for and confirmed.
+    const ride = booking.ride?.riderId ? booking.ride : await rideRepository.findById(booking.rideId);
+    if (ride?.riderId) {
+      await dispatch({
+        userId: ride.riderId,
+        type: "PAYMENT_SUCCESS",
+        title: "Passenger paid",
+        message: `A passenger paid ₹${booking.totalAmount} for your ride to ${ride.destinationName}. Their seat is confirmed`,
+        data: { rideId: ride.id, bookingId: booking.id },
+      });
+    }
   },
 
   async notifyRideStarted(rideId) {

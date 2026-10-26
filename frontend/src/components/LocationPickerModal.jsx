@@ -15,8 +15,17 @@ function pinIcon(color) {
   });
 }
 
-function MapController({ position, onMapClick }) {
+function MapController({ position, onMapClick, open }) {
   const map = useMap();
+
+  // The map is created inside a modal that animates open (and stays mounted
+  // between opens), so Leaflet measures it at the wrong size and draws
+  // nothing/grey tiles. Re-measure once the modal has finished opening.
+  useEffect(() => {
+    if (!open) return undefined;
+    const timers = [80, 300].map((ms) => setTimeout(() => map.invalidateSize(), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [open, map]);
 
   useEffect(() => {
     if (position) {
@@ -38,14 +47,26 @@ function MapController({ position, onMapClick }) {
   return null;
 }
 
+// Southern Tamil Nadu, where BikeRide runs, when there's nothing better to centre on.
+const DEFAULT_CENTER = [8.3, 77.4];
+
 export default function LocationPickerModal({
   open,
   onCancel,
   onConfirm,
   initialPosition,
+  // Where to centre the map when nothing is picked yet (e.g. the ride's
+  // start for a pickup, its end for a drop).
+  fallbackCenter,
   title = "Select Location",
 }) {
   const [position, setPosition] = useState(initialPosition || null);
+
+  // Show the latest saved choice each time the modal opens.
+  useEffect(() => {
+    if (open) setPosition(initialPosition || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -61,7 +82,7 @@ export default function LocationPickerModal({
     setSearching(true);
     try {
       const response = await fetch(
-        `${NOMINATIM_API}/search?q=${encodeURIComponent(query)}&format=json&limit=10`
+        `${NOMINATIM_API}/search?q=${encodeURIComponent(query)}&format=json&limit=10&countrycodes=in`
       );
       const data = await response.json();
       setSearchResults(data);
@@ -140,7 +161,9 @@ export default function LocationPickerModal({
 
   const center = position
     ? [position.latitude, position.longitude]
-    : [28.6139, 77.209]; // Default to Delhi
+    : fallbackCenter
+      ? [Number(fallbackCenter.latitude), Number(fallbackCenter.longitude)]
+      : DEFAULT_CENTER;
 
   return (
     <Modal
@@ -148,7 +171,7 @@ export default function LocationPickerModal({
       open={open}
       onCancel={onCancel}
       width={900}
-      bodyStyle={{ padding: 16, maxHeight: "70vh", display: "flex", flexDirection: "column" }}
+      styles={{ body: { padding: 16 } }}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           Cancel
@@ -166,7 +189,8 @@ export default function LocationPickerModal({
       ]}
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
-        <div style={{ position: "relative" }}>
+        {/* Above the map's own controls (Leaflet uses z-index up to 1000). */}
+        <div style={{ position: "relative", zIndex: 1100 }}>
           <Input
             placeholder="Search for a location..."
             prefix={<SearchOutlined />}
@@ -225,29 +249,31 @@ export default function LocationPickerModal({
           )}
         </div>
 
-        <div style={{ flex: 1, borderRadius: 8, overflow: "hidden", minHeight: 400 }}>
-          <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }}>
+        {/* Explicit height: a percentage height inside this auto-height
+            layout resolved to 0 px, which is why the map didn't show. */}
+        <div style={{ borderRadius: 8, overflow: "hidden", height: "min(420px, 50vh)" }}>
+          <MapContainer center={center} zoom={12} style={{ height: "100%", width: "100%" }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MapController position={position} onMapClick={handleMapClick} />
+            <MapController position={position} onMapClick={handleMapClick} open={open} />
             {position && <Marker position={[position.latitude, position.longitude]} icon={pinIcon("#0f766e")} />}
           </MapContainer>
         </div>
 
         {position && (
-          <div style={{ padding: 12, background: "#f6f8fa", borderRadius: 4, fontSize: 13 }}>
+          <div style={{ padding: 12, background: "var(--chrome-tint, #f6f8fa)", border: "1px solid var(--border-light, #e5e7eb)", borderRadius: 8, fontSize: 13, color: "var(--text-primary)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <EnvironmentOutlined style={{ color: "#0f766e" }} />
               <span>
                 <strong>{position.name || "Selected Location"}</strong>
               </span>
             </div>
-            <div style={{ color: "#8c8c8c", marginTop: 4 }}>
+            <div style={{ color: "var(--text-tertiary, #8c8c8c)", marginTop: 4 }}>
               {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
             </div>
-            <div style={{ color: "#666", marginTop: 6, fontSize: 12 }}>
+            <div style={{ color: "var(--text-secondary, #666)", marginTop: 6, fontSize: 12 }}>
               Click on the map to adjust the marker or search above to find a different location.
             </div>
           </div>

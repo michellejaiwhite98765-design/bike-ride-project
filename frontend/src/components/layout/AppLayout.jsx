@@ -306,7 +306,12 @@ const ContentWrap = styled(Content)`
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  min-height: calc(100vh - 76px - 70px);
+  box-sizing: border-box;
+  /* Fill whatever the header and footer leave (the Layout is a flex column
+     with min-height 100vh). A hard-coded calc() guess at their heights was
+     off by ~27px, so even near-empty pages could be scrolled a little - and
+     that tiny scroll range made the header flip size back and forth. */
+  flex: 1 0 auto;
   background: ${colors.bgSecondary};
 
   @media (max-width: 768px) {
@@ -348,7 +353,15 @@ export default function AppLayout() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    // Shrinking the header makes the page ~14px shorter. With a single
+    // threshold that feeds back on short pages: shrink -> max scroll drops
+    // below the threshold -> header grows -> page grows -> shrink again, which
+    // is the visible "shaking". Two thresholds (a dead band wider than the
+    // size change) break the loop.
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled((prev) => (y > 48 ? true : y < 6 ? false : prev));
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);

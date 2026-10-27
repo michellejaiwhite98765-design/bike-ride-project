@@ -1,7 +1,7 @@
 import { Form, Input, AutoComplete, Spin, message } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { useEffect, useState, useRef } from "react";
-import { countryMismatch, reverseGeocode, geocodePlaceName } from "../utils/geo.js";
+import { countryMismatch, reverseGeocode, geocodePlaceName, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../utils/geo.js";
 import { isGoogleLocationLink, resolveSharedLocationLink } from "../utils/parseSharedLocation.js";
 import { locationService } from "../services/locationService.js";
 
@@ -13,7 +13,15 @@ export default function LocationFields({ prefix, label, placeholder }) {
   const form = Form.useFormInstance();
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [notFound, setNotFound] = useState(null); // inline error under the field
   const timerRef = useRef(null);
+  const requestRef = useRef(0); // drops responses to out-of-date queries
+  const nameValue = Form.useWatch(`${prefix}Name`, form);
+
+  // Form reset / programmatic fill: nothing left to complain about.
+  useEffect(() => {
+    if (!nameValue) setNotFound(null);
+  }, [nameValue]);
 
   // A pasted Google Maps / WhatsApp shared-location link isn't a search
   // term - resolve and apply it directly instead of sending it to Nominatim
@@ -38,8 +46,10 @@ export default function LocationFields({ prefix, label, placeholder }) {
         [`${prefix}Longitude`]: point.longitude,
         [`${prefix}Country`]: country,
       });
-    } catch {
-      message.error("Couldn't resolve that link. Please try again.");
+    } catch (err) {
+      message.error(
+        err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't resolve that link. Please try again."
+      );
     } finally {
       setLoading(false);
       setOptions([]);
@@ -48,6 +58,19 @@ export default function LocationFields({ prefix, label, placeholder }) {
 
   const handleSearch = (value) => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    requestRef.current += 1;
+    const requestId = requestRef.current;
+    setNotFound(null);
+
+    // Editing the text invalidates a previously picked place - otherwise the
+    // old coordinates would silently stay attached to different text.
+    if (form.getFieldValue(`${prefix}Latitude`) != null) {
+      form.setFieldsValue({
+        [`${prefix}Latitude`]: undefined,
+        [`${prefix}Longitude`]: undefined,
+        [`${prefix}Country`]: undefined,
+      });
+    }
 
     if (isGoogleLocationLink(value)) {
       setOptions([]);
@@ -66,13 +89,24 @@ export default function LocationFields({ prefix, label, placeholder }) {
         const q = encodeURIComponent(value);
         const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6`;
         const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+        if (!res.ok) throw new Error("search failed");
         const data = await res.json();
+        if (requestId !== requestRef.current) return;
         const opts = data.map((d) => ({ value: d.display_name, raw: d }));
         setOptions(opts);
+        if (opts.length === 0) {
+          const text = `Unknown location "${value.trim()}". Please search for a known place.`;
+          setNotFound(text);
+          message.error({ content: text, key: `location-${prefix}` });
+        }
       } catch (e) {
+        if (requestId !== requestRef.current) return;
         setOptions([]);
+        const text = "Couldn't search locations. Check your connection and try again.";
+        setNotFound(text);
+        message.error({ content: text, key: `location-${prefix}` });
       } finally {
-        setLoading(false);
+        if (requestId === requestRef.current) setLoading(false);
       }
     }, 300);
   };
@@ -90,6 +124,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
     const lat = Number(d.lat);
     const lon = Number(d.lon);
     const country = d.address?.country || null;
+    setNotFound(null);
 
     const mismatchError = countryMismatch(form, prefix, country);
     if (mismatchError) {
@@ -114,9 +149,20 @@ export default function LocationFields({ prefix, label, placeholder }) {
       <Form.Item
         name={`${prefix}Name`}
         label={label}
+        validateStatus={notFound ? "error" : undefined}
+        help={notFound || undefined}
+        validateTrigger={["onBlur"]}
         rules={[
           { required: true, message: `${label} is required` },
           { type: "string", max: 150, message: `${label} must be 150 characters or fewer` },
+          {
+            // Text alone isn't a location - it has to have been picked from
+            // the suggestions (or resolved from a link) to carry coordinates.
+            validator: () =>
+              form.getFieldValue(`${prefix}Latitude`) != null && form.getFieldValue(`${prefix}Longitude`) != null
+                ? Promise.resolve()
+                : Promise.reject(new Error("Please pick a location from the suggestions")),
+          },
         ]}
       >
         <AutoComplete

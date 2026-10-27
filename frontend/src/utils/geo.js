@@ -11,20 +11,52 @@ export function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// A fallback to an area-level result farther than this from the clicked point
+// is treated as "no place here" (see reverseGeocode).
+const AREA_FALLBACK_MAX_KM = 3;
+
+export class UnknownLocationError extends Error {
+  constructor() {
+    super("Unknown location");
+    this.name = "UnknownLocationError";
+  }
+}
+
+export const UNKNOWN_LOCATION_MESSAGE = "Unknown location - this looks like the sea or an empty area. Please pick a place on land.";
+
 /**
  * Reverse-geocodes a point via Nominatim, returning both a display name and
  * the resolved country (used to block cross-country routes).
  */
 export async function reverseGeocode(latitude, longitude) {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=18`;
   const response = await fetch(url, {
     headers: { "Accept-Language": "en" },
   });
 
-  if (!response.ok) throw new Error("Unable to find this place");
+  if (!response.ok) throw new Error("Unable to look up this place");
   const data = await response.json();
+  // Nominatim answers 200 with { error: "Unable to geocode" } for points with
+  // no known place (open water, empty wilderness...) - treat that as unknown.
+  if (data.error || !data.display_name) throw new UnknownLocationError();
+  // Near the coast Nominatim doesn't fail for the sea - it falls back to the
+  // nearest administrative area (a county, city, state...) whose own point can
+  // be tens of km away. A real address (road, building, landuse...) always
+  // sits right at the clicked spot, so a distant area-level hit means there's
+  // nothing here.
+  if (data.class === "place" || data.class === "boundary") {
+    const resultLat = Number(data.lat);
+    const resultLon = Number(data.lon);
+    if (
+      Number.isFinite(resultLat) &&
+      Number.isFinite(resultLon) &&
+      haversineKm(Number(latitude), Number(longitude), resultLat, resultLon) > AREA_FALLBACK_MAX_KM
+    ) {
+      throw new UnknownLocationError();
+    }
+  }
   return {
-    name: data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+    name: data.display_name,
     country: data.address?.country || null,
   };
 }

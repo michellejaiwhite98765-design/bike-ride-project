@@ -21,7 +21,7 @@ import colors from "../../theme/colors.js";
 import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
-import { haversineKm, reverseGeocode, countryMismatch } from "../../utils/geo.js";
+import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../../utils/geo.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 
@@ -173,8 +173,8 @@ export default function CreateRidePage() {
         [`${prefix}Country`]: country,
       });
       return true;
-    } catch {
-      message.error("Could not resolve this location");
+    } catch (err) {
+      message.error(err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Could not resolve this location");
       return false;
     }
   }

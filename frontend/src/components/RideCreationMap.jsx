@@ -3,7 +3,7 @@ import { MapContainer, Marker, Polyline, Tooltip, TileLayer, ZoomControl, useMap
 import L from "leaflet";
 import { Button, Segmented, Spin, message } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
-import { reverseGeocode, countryMismatch } from "../utils/geo.js";
+import { reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../utils/geo.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 
@@ -207,14 +207,11 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
       });
 
       setMode(selectedMode === "source" ? "destination" : "source");
-    } catch {
-      // Keep the map usable even if reverse geocoding fails - country can't
-      // be checked here, so this point is accepted as-is.
-      form.setFieldsValue({
-        [`${prefix}Name`]: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-        [`${prefix}Latitude`]: lat,
-        [`${prefix}Longitude`]: lng,
-      });
+    } catch (err) {
+      // Don't accept a point we couldn't identify - tell the user instead.
+      message.error(
+        err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't look up that location. Check your connection and try again."
+      );
     } finally {
       setMapLoading(false);
     }

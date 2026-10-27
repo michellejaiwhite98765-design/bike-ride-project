@@ -134,11 +134,6 @@ export default function SearchPage() {
         rootClassName="sp-drawer"
       >
         <Form form={form} layout="vertical" requiredMark={false}>
-          {["sourceLatitude", "sourceLongitude", "sourceCountry", "destinationLatitude", "destinationLongitude", "destinationCountry"].map((name) => (
-            <Form.Item key={name} name={name} hidden>
-              <Input />
-            </Form.Item>
-          ))}
           <LocationFields prefix="source" label="Start Location" placeholder="Where do you want to be picked up?" />
           <div style={{ display: "flex", justifyContent: "center", margin: "-8px 0 8px" }}>
             <Button shape="round" icon={<SwapOutlined />} onClick={swapLocations}>

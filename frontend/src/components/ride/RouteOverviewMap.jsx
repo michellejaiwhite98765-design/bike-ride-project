@@ -5,6 +5,7 @@ import { Spin, Tag } from "antd";
 import { ClockCircleOutlined, EnvironmentOutlined, LoadingOutlined, RiseOutlined } from "@ant-design/icons";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { bikeIcon, endIcon } from "./mapIcons.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -12,16 +13,6 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function pinIcon(type) {
-  const isStart = type === "start";
-  return L.divIcon({
-    className: "ro-pin-wrapper",
-    html: `<div class="ro-pin ${isStart ? "ro-pin-start" : "ro-pin-end"}"><span class="ro-pin-core"></span></div>`,
-    iconSize: [38, 46],
-    iconAnchor: [19, 43],
-  });
 }
 
 function FitRoute({ source, destination }) {
@@ -32,7 +23,8 @@ function FitRoute({ source, destination }) {
       [source.latitude, source.longitude],
       [destination.latitude, destination.longitude],
     ]);
-    map.flyToBounds(bounds, { padding: [46, 46], maxZoom: 14, duration: 0.85 });
+    // Extra room at the top so the distance/time chips never sit on the end flag.
+    map.flyToBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 64], maxZoom: 14, duration: 0.85 });
   }, [source, destination, map]);
   return null;
 }
@@ -119,8 +111,8 @@ export default function RouteOverviewMap({ ride, compact = false }) {
           <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
           <FitRoute source={source} destination={destination} />
 
-          <Marker position={[source.latitude, source.longitude]} icon={pinIcon("start")} />
-          <Marker position={[destination.latitude, destination.longitude]} icon={pinIcon("end")} />
+          <Marker position={[source.latitude, source.longitude]} icon={bikeIcon()} />
+          <Marker position={[destination.latitude, destination.longitude]} icon={endIcon()} />
 
           {route.points.length > 1 && (
             <>
@@ -151,8 +143,8 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         )}
 
         <div className="ro-legend">
-          <span><i className="ro-dot ro-dot-start" /> Start</span>
-          <span><i className="ro-dot ro-dot-end" /> End</span>
+          <span><i className="ro-dot ro-dot-start" /> Bike · Start</span>
+          <span><i className="ro-dot ro-dot-end" /> Flag · End</span>
         </div>
 
         <div className="ro-chips">
@@ -195,19 +187,14 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         .ro-map .leaflet-control-attribution a{color:var(--text-secondary)!important}
         .ro-compact .leaflet-control-zoom{display:none!important}
 
-        .ro-pin-wrapper{background:transparent!important;border:0!important}
-        .ro-pin{width:36px;height:36px;position:relative;display:grid;place-items:center;border-radius:13px 13px 13px 3px;transform:rotate(-45deg);border:3px solid rgba(5,7,13,.85);box-shadow:0 8px 20px rgba(0,0,0,.55)}
-        .ro-pin-start{background:linear-gradient(135deg,#60a5fa,#a78bfa)}
-        .ro-pin-end{background:linear-gradient(135deg,#2dd4bf,#14b8a6)}
-        .ro-pin-core{width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.2)}
 
         .ro-loading{position:absolute;left:50%;top:50%;z-index:600;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:var(--surface-glass);border:1px solid var(--chrome-border);box-shadow:var(--shadow-lg);color:var(--text-primary);font-size:12px;font-weight:600;pointer-events:none;backdrop-filter:blur(10px)}
 
         .ro-legend{position:absolute;left:12px;bottom:12px;z-index:500;display:flex;gap:10px;padding:7px 11px;border-radius:10px;background:var(--surface-glass);border:1px solid var(--chrome-border);box-shadow:var(--shadow-md);font-size:11px;backdrop-filter:blur(10px)}
         .ro-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--text-primary);font-weight:600}
         .ro-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-        .ro-dot-start{background:#60a5fa}
-        .ro-dot-end{background:#2dd4bf}
+        .ro-dot-start{background:#2DD4BF}
+        .ro-dot-end{background:#7C3AED}
 
         .ro-chips{position:absolute;right:12px;top:12px;z-index:500;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
         .ro-chip.ant-tag{margin:0;border:1px solid var(--chrome-border)!important;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--text-primary)!important;background:var(--surface-glass)!important;box-shadow:var(--shadow-md);backdrop-filter:blur(10px)}

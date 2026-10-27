@@ -23,6 +23,7 @@ import { locationService } from "../../services/locationService.js";
 import { notificationService } from "../../services/notificationService.js";
 import { connectSocket, disconnectSocket } from "../../services/socket.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import LiftshareMark from "../ui/LiftshareMark.jsx";
 import colors from "../../theme/colors.js";
 
 const { Header, Content, Footer } = Layout;
@@ -66,9 +67,6 @@ const Capsule = styled.div`
   padding: ${(p) => (p.$scrolled ? "8px 10px 8px 20px" : "12px 12px 12px 24px")};
   box-shadow: ${(p) => (p.$scrolled ? colors.shadowMd : "none")};
   transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-.wordmark{
-  font-size:21px;
-}
   @media (max-width: 1024px) {
     gap: 12px;
     padding: ${(p) => (p.$scrolled ? "8px 10px 8px 16px" : "10px 12px 10px 18px")};
@@ -102,6 +100,15 @@ const BrandContainer = styled.div`
   color: ${colors.textPrimary};
   white-space: nowrap;
   text-decoration: none;
+
+  svg.brand-logo {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  span.wordmark {
+    font-size: 21px;
+  }
 
   @media (max-width: 480px) {
     span.wordmark {
@@ -324,6 +331,7 @@ const ContentWrap = styled(Content)`
       padding: 0;
       max-width: none;
       min-height: 0;
+      flex: 0 0 auto; /* fixed height below - don't let the flex fill stretch it under the bottom tab bar */
       height: 100vh;
       overflow: hidden;
 
@@ -475,7 +483,7 @@ export default function AppLayout() {
               >
                 <Link to="/" style={{ textDecoration: "none" }}>
                   <BrandContainer>
-                    {/* <BrandMark>B</BrandMark> */}
+                    <LiftshareMark className="brand-logo" size={36} />
                     <span className="wordmark">Liftshare</span>
                   </BrandContainer>
                 </Link>

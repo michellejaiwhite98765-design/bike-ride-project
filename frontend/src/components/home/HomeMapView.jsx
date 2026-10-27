@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import JoinRideButton from "../ride/JoinRideButton.jsx";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, ZoomControl, useMap } from "react-leaflet";
@@ -11,8 +11,9 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 const DEFAULT_CENTER = [9.9252, 78.1198]; // Madurai fallback, same as the rest of the app.
 const ZOOM = 14;
 
-// Cycled by ride index so every trip drawn on the map (route + its two pins)
-// gets its own consistent, easily-told-apart color.
+// The palette for trips drawn on the map (route + its two pins): at most 10
+// colors, handed out in a random order each time the map loads, then reused
+// if there are more than 10 trips.
 const TRIP_COLORS = [
   "#2563eb",
   "#f97316",
@@ -23,11 +24,16 @@ const TRIP_COLORS = [
   "#0891b2",
   "#dc2626",
   "#65a30d",
-  "#7c3aed",
+  "#92400e",
 ];
 
-function tripColor(index) {
-  return TRIP_COLORS[index % TRIP_COLORS.length];
+function shuffled(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 async function getRoute(source, destination) {
@@ -131,6 +137,16 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [routesById, setRoutesById] = useState({});
 
+  // Random color order, fixed for this map's lifetime; each ride keeps the
+  // color it was first given even when the list re-sorts or filters.
+  const palette = useMemo(() => shuffled(TRIP_COLORS), []);
+  const colorByRide = useRef(new Map());
+  const tripColor = (rideId) => {
+    const assigned = colorByRide.current;
+    if (!assigned.has(rideId)) assigned.set(rideId, palette[assigned.size % palette.length]);
+    return assigned.get(rideId);
+  };
+
   const ridePoints = useMemo(
     () =>
       nearbyRides
@@ -206,8 +222,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
           </Marker>
         )}
 
-        {ridePoints.map(({ ride, source, destination }, index) => {
-          const color = tripColor(index);
+        {ridePoints.map(({ ride, source, destination }) => {
+          const color = tripColor(ride.id);
           const routePoints = routesById[ride.id];
           const linePoints =
             routePoints || [
@@ -230,8 +246,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
           );
         })}
 
-        {ridePoints.map(({ ride, source }, index) => (
-          <Marker key={ride.id} position={[source.latitude, source.longitude]} icon={priceIcon(ride, tripColor(index))}>
+        {ridePoints.map(({ ride, source }) => (
+          <Marker key={ride.id} position={[source.latitude, source.longitude]} icon={priceIcon(ride, tripColor(ride.id))}>
             <Popup>
               <div className="hmv-popup">
                 <strong>
@@ -253,11 +269,11 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
           </Marker>
         ))}
 
-        {ridePoints.map(({ ride, destination }, index) => (
+        {ridePoints.map(({ ride, destination }) => (
           <Marker
             key={`end-${ride.id}`}
             position={[destination.latitude, destination.longitude]}
-            icon={endPinIcon(tripColor(index))}
+            icon={endPinIcon(tripColor(ride.id))}
           >
             <Popup>
               <div className="hmv-popup">

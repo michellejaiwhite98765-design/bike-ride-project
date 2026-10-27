@@ -7,6 +7,7 @@ import { connectSocket, getSocket } from "../../services/socket.js";
 import { rideService } from "../../services/rideService.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { bikeIcon, startIcon, endIcon } from "./mapIcons.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -18,9 +19,6 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 
 function markerIcon(type) {
   const config = {
-    start: { color: "#2563eb", symbol: "S" },
-    end: { color: "#7c3aed", symbol: "E" },
-    rider: { color: "#16a34a", symbol: "➤" },
     passenger: { color: "#f59e0b", symbol: "•" },
   }[type];
 
@@ -30,6 +28,34 @@ function markerIcon(type) {
     iconSize: [42, 42],
     iconAnchor: [21, 21],
   });
+}
+
+// Real driving route (OSRM) from the ride's start to its end, as [lat, lng] points.
+async function getRoute(source, destination) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Unable to load route");
+  const data = await response.json();
+  const coordinates = data?.routes?.[0]?.geometry?.coordinates || [];
+  return coordinates.map(([longitude, latitude]) => [latitude, longitude]);
+}
+
+// Splits the route at the point closest to the bike: what's behind it and what's ahead.
+function splitRoute(points, position) {
+  if (!points.length) return { traveled: [], ahead: [] };
+  if (!position) return { traveled: [], ahead: points };
+  const lat = Number(position.latitude);
+  const lng = Number(position.longitude);
+  let nearest = 0;
+  let best = Infinity;
+  points.forEach(([pLat, pLng], index) => {
+    const d = (pLat - lat) ** 2 + (pLng - lng) ** 2;
+    if (d < best) {
+      best = d;
+      nearest = index;
+    }
+  });
+  return { traveled: points.slice(0, nearest + 1), ahead: points.slice(nearest) };
 }
 
 function RecenterOnMove({ position }) {
@@ -52,7 +78,8 @@ function FitRoute({ source, destination }) {
       [source.latitude, source.longitude],
       [destination.latitude, destination.longitude],
     ]);
-    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14, animate: true, duration: 0.8 });
+    // Bottom padding keeps the markers clear of the stats strip over the map.
+    map.fitBounds(bounds, { paddingTopLeft: [40, 60], paddingBottomRight: [40, 100], maxZoom: 14, animate: true, duration: 0.8 });
   }, [source, destination, map]);
   return null;
 }
@@ -132,8 +159,25 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
     setSharing(false);
   }
 
+  const [routePoints, setRoutePoints] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    getRoute(source, destination)
+      .then((points) => {
+        if (!cancelled) setRoutePoints(points);
+      })
+      .catch(() => {
+        // No road route available - the map falls back to a straight dashed line.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source.latitude, source.longitude, destination.latitude, destination.longitude]);
+
   const riderPosition = Object.values(livePositions).find((p) => p.userType === "rider") || (isOwner ? myPosition : null);
   const passengerPositions = Object.values(livePositions).filter((p) => p.userType === "passenger");
+  const { traveled, ahead } = useMemo(() => splitRoute(routePoints, riderPosition), [routePoints, riderPosition]);
 
   const totalKm = useMemo(
     () => haversineKm(source.latitude, source.longitude, destination.latitude, destination.longitude),
@@ -185,14 +229,30 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
           <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
           <FitRoute source={source} destination={destination} />
           {riderPosition && <RecenterOnMove position={riderPosition} />}
-          <Marker position={[source.latitude, source.longitude]} icon={markerIcon("start")} />
-          <Marker position={[destination.latitude, destination.longitude]} icon={markerIcon("end")} />
+          {routePoints.length > 1 ? (
+            <>
+              {traveled.length > 1 && (
+                <Polyline positions={traveled} pathOptions={{ color: "#94A3B8", weight: 6, opacity: 0.6, lineCap: "round", lineJoin: "round" }} />
+              )}
+              <Polyline positions={ahead} pathOptions={{ color: "#2DD4BF", weight: 6, opacity: 0.95, lineCap: "round", lineJoin: "round" }} />
+            </>
+          ) : (
+            <Polyline
+              positions={[[source.latitude, source.longitude], [destination.latitude, destination.longitude]]}
+              pathOptions={{ color: "#2DD4BF", weight: 5, opacity: 0.7, dashArray: "8 10", lineCap: "round" }}
+            />
+          )}
+          <Marker position={[source.latitude, source.longitude]} icon={startIcon()} />
+          <Marker position={[destination.latitude, destination.longitude]} icon={endIcon()} />
+          {/* The bike always shows: at its latest reported position while the
+              ride is under way, otherwise waiting at the start. */}
+          {!riderPosition && <Marker position={[source.latitude, source.longitude]} icon={bikeIcon()} zIndexOffset={500} />}
           {riderPosition && (
             <>
-              <Marker position={[Number(riderPosition.latitude), Number(riderPosition.longitude)]} icon={markerIcon("rider")} />
-              <Polyline
-                positions={[[Number(riderPosition.latitude), Number(riderPosition.longitude)], [destination.latitude, destination.longitude]]}
-                pathOptions={{ color: "#2DD4BF", weight: 5, opacity: 0.85, dashArray: "8 10", lineCap: "round" }}
+              <Marker
+                position={[Number(riderPosition.latitude), Number(riderPosition.longitude)]}
+                icon={bikeIcon({ live: true })}
+                zIndexOffset={1000}
               />
             </>
           )}

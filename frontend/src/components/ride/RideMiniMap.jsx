@@ -4,16 +4,7 @@ import L from "leaflet";
 import { ClockCircleOutlined, RiseOutlined } from "@ant-design/icons";
 import { haversineKm } from "../../utils/geo.js";
 import { COLOR_TILE_URL } from "../../constants/mapTiles.js";
-
-function pinIcon(type) {
-  const isStart = type === "start";
-  return L.divIcon({
-    className: "rmm-pin-wrapper",
-    html: `<span class="rmm-pin ${isStart ? "rmm-pin-start" : "rmm-pin-end"}"></span>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-  });
-}
+import { bikeIcon, endIcon } from "./mapIcons.js";
 
 async function getRoute(source, destination) {
   const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=simplified&geometries=geojson`;
@@ -142,8 +133,8 @@ export default function RideMiniMap({ ride, showChips = true }) {
 
         <FitBounds points={boundsPoints} />
 
-        <Marker position={[source.latitude, source.longitude]} icon={pinIcon("start")} />
-        <Marker position={[destination.latitude, destination.longitude]} icon={pinIcon("end")} />
+        <Marker position={[source.latitude, source.longitude]} icon={bikeIcon({ size: 30 })} />
+        <Marker position={[destination.latitude, destination.longitude]} icon={endIcon({ size: 22 })} />
 
         {route.points.length > 1 && (
           <Polyline

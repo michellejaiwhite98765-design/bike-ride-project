@@ -2,7 +2,7 @@
 // caches the app shell so the SPA still boots (with cached UI) when offline.
 // Deliberately does NOT cache API responses - all live ride/booking data
 // must always come from the network, never a stale cache.
-const CACHE_NAME = "bikeride-shell-v1";
+const CACHE_NAME = "bikeride-shell-v2";
 const SHELL_URLS = ["/", "/manifest.json", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {

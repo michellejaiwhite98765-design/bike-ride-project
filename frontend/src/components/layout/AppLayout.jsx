@@ -71,7 +71,11 @@ const Capsule = styled.div`
 }
   @media (max-width: 1024px) {
     gap: 12px;
-    padding: ${(p) => (p.$scrolled ? "8px 10px" : "10px 16px")};
+    padding: ${(p) => (p.$scrolled ? "8px 10px 8px 16px" : "10px 12px 10px 18px")};
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 8px 6px 14px;
   }
 `;
 
@@ -99,9 +103,15 @@ const BrandContainer = styled.div`
   white-space: nowrap;
   text-decoration: none;
 
-  @media (max-width: 768px) {
+  @media (max-width: 480px) {
     span.wordmark {
-      display: none;
+      font-size: 18px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    span.wordmark {
+      font-size: 16px;
     }
   }
 `;
@@ -166,15 +176,39 @@ const UserSection = styled.div`
   align-items: center;
   gap: 14px;
   flex-shrink: 0;
+  margin-left: auto; /* actions sit at the right edge; the logo stays on the left */
 
   @media (max-width: 768px) {
-    gap: 10px;
+    gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    gap: 6px;
+
+    .guest-actions .ant-btn {
+      height: 34px;
+      padding: 0 14px;
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    gap: 4px;
+
+    .guest-actions .ant-btn {
+      padding: 0 10px;
+      font-size: 12.5px;
+    }
+    .ant-btn-icon-only {
+      width: 32px;
+    }
   }
 `;
 
 const NotificationIcon = styled.div`
   cursor: pointer;
   font-size: 18px;
+  margin-right: 8px; /* room for the unread badge so it doesn't sit on the avatar */
   color: ${colors.textSecondary};
   transition: color 0.2s ease;
   display: flex;
@@ -257,6 +291,13 @@ const BottomNavItem = styled(Link)`
 
   svg {
     font-size: 20px;
+  }
+
+  /* The badge wrapper is inline-block, which pushed the "Alerts" label lower
+     than the other tabs - make it behave like the plain icons. */
+  .ant-badge {
+    display: flex;
+    line-height: 1;
   }
 `;
 
@@ -471,12 +512,12 @@ export default function AppLayout() {
 
                   {!isAuthenticated && (
                     <>
-                      <Link to="/login">
+                      <Link to="/login" className="guest-actions">
                         <Button type="default" size="middle" style={{ borderRadius: 999 }}>
                           Login
                         </Button>
                       </Link>
-                      <Link to="/register">
+                      <Link to="/register" className="guest-actions">
                         <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
                           Sign up
                         </Button>

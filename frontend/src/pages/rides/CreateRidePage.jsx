@@ -394,7 +394,7 @@ export default function CreateRidePage() {
 
           <Form.Item
             name="pickupPreference"
-            label="Passenger Pickup Preference"
+            label="Passenger Pickup and Drop Preference"
             rules={[{ required: true, message: "Please choose how you want to pick up passengers" }]}
             extra="Choose whether you will pick passengers along your route or go to their location."
           >

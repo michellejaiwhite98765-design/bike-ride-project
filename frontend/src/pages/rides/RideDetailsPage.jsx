@@ -350,21 +350,12 @@ const ActionButtons = styled.div`
     color: #fecaca !important;
   }
 
+  /* On phones the buttons stack full-width at the end of the page. They used
+     to be pinned to the bottom edge, which put them underneath the app's own
+     fixed bottom tab bar (and its labels) so the two overlapped. */
   @media (max-width: 600px) {
     flex-direction: column;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     gap: 8px;
-    padding: 16px;
-    background: var(--surface-glass);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid ${dark.divider};
-    margin: 0;
-    border-radius: 0;
-    max-width: none;
-    z-index: 200;
   }
 `;
 

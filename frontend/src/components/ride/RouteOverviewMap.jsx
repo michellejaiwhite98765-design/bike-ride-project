@@ -216,14 +216,16 @@ export default function RouteOverviewMap({ ride, compact = false }) {
         .ro-endpoint{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
         .ro-endpoint-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
         .ro-endpoint-label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary)}
-        .ro-endpoint-value{font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ro-endpoint>div{min-width:0}
+        .ro-endpoint-value{font-size:13px;font-weight:700;color:var(--text-primary);line-height:1.3;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
         .ro-endpoint-divider{width:28px;height:2px;flex-shrink:0;background:repeating-linear-gradient(90deg,var(--chrome-border) 0 5px,transparent 5px 9px);border-radius:2px}
 
         @media (max-width:600px){
           .ro-map{height:280px}
           .ro-compact .ro-map{height:190px}
-          .ro-endpoints{padding:12px 14px;gap:10px}
+          .ro-endpoints{flex-direction:column;align-items:stretch;padding:12px 14px;gap:8px}
           .ro-endpoint-value{font-size:12px}
+          .ro-endpoint-divider{width:2px;height:14px;margin-left:3.5px;background:repeating-linear-gradient(180deg,var(--chrome-border) 0 4px,transparent 4px 7px)}
         }
       `}</style>
     </div>

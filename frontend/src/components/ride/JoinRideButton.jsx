@@ -18,7 +18,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 export default function JoinRideButton({ ride, pickup, drop, size = "middle", block = false, onRequested }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { message, modal } = App.useApp();
+  const { notification, modal } = App.useApp();
   const [request, setRequest] = useState(ride.myRequest ?? null);
   const [sending, setSending] = useState(false);
 
@@ -62,10 +62,10 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
         seatsRequested: 1,
       });
       setRequest({ id: created.id, status: created.status || "REQUESTED" });
-      message.success("Request sent to the rider");
+      notification.success({ title: "Success", description: "Request sent to the rider" });
       onRequested?.(created);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSending(false);
     }
@@ -88,12 +88,12 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
       });
     } catch (err) {
       setSending(false);
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
       return;
     }
     setSending(false);
     if (zone.zone === "TOO_FAR") {
-      message.error(zone.message);
+      notification.error({ title: "Error", description: zone.message });
       return;
     }
     if (zone.zone === "DETOUR") {

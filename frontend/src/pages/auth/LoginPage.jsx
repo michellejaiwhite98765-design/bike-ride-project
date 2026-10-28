@@ -508,7 +508,7 @@ const Foot = styled.div`
 /* ---------------------------------------------------------------------- */
 export default function LoginPage() {
   const { login } = useAuth();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
@@ -521,7 +521,7 @@ export default function LoginPage() {
       const redirectTo = location.state?.from?.pathname || "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmitting(false);
     }

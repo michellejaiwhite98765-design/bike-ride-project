@@ -2,7 +2,7 @@ import { Router } from "express";
 import { rideController } from "../controllers/ride.controller.js";
 import { authenticate } from "../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.js";
-import { createRideSchema, updateRideSchema, searchRideSchema } from "../validators/ride.validator.js";
+import { createRideSchema, updateRideSchema, searchRideSchema, exploreRideSchema } from "../validators/ride.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
 import { rideRequestRoutes } from "./rideRequest.routes.js";
 
@@ -44,6 +44,7 @@ rideRoutes.use(authenticate);
  *       200: { description: Ranked list of matching rides }
  */
 rideRoutes.get("/search", validateQuery(searchRideSchema), rideController.search);
+rideRoutes.get("/explore", validateQuery(exploreRideSchema), rideController.explore);
 rideRoutes.get("/mine", rideController.listMine);
 
 /**

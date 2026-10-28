@@ -355,7 +355,7 @@ export default function AppLayout() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { message } = AntdApp.useApp();
+  const { notification } = AntdApp.useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -406,16 +406,16 @@ export default function AppLayout() {
     if (!isAuthenticated) return undefined;
     const socket = connectSocket();
 
-    const onNotification = (notification) => {
+    const onNotification = (incoming) => {
       setUnreadCount((count) => count + 1);
-      message.info(notification?.title || "You have a new notification");
+      notification.info({ title: "Info", description: incoming?.title || "You have a new notification" });
     };
     socket.on("notification:new", onNotification);
 
     return () => {
       socket.off("notification:new", onNotification);
     };
-  }, [isAuthenticated, message]);
+  }, [isAuthenticated, notification]);
 
   async function requestLocationPermission() {
     try {

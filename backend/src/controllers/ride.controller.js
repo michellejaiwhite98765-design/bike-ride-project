@@ -46,6 +46,11 @@ export const rideController = {
     ok(res, ride, "Ride completed");
   },
 
+  async explore(req, res) {
+    const results = await rideService.explore(req.validatedQuery, req.user.id);
+    ok(res, results);
+  },
+
   async search(req, res) {
     const results = await rideService.search(req.validatedQuery, req.user.id);
     ok(res, results);

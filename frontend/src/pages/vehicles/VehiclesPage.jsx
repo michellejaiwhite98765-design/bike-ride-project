@@ -135,7 +135,7 @@ const verificationConfig = {
 };
 
 export default function VehiclesPage() {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -155,10 +155,10 @@ export default function VehiclesPage() {
   async function handleDelete(id) {
     try {
       await vehicleService.remove(id);
-      message.success("Vehicle removed");
+      notification.success({ title: "Success", description: "Vehicle removed" });
       load();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     }
   }
 

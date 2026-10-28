@@ -33,7 +33,7 @@ const OPEN = ["STARTED", "PUBLISHED", "DRAFT"];
  * nothing when the user has no open trip.
  */
 export default function MyTripCard({ onChanged }) {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [ride, setRide] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,11 +67,11 @@ export default function MyTripCard({ onChanged }) {
     setBusy(key);
     try {
       await fn();
-      message.success(successMsg);
+      notification.success({ title: "Success", description: successMsg });
       await load();
       onChanged?.();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setBusy(null);
     }
@@ -189,7 +189,7 @@ export default function MyTripCard({ onChanged }) {
             onConfirm={() =>
               act("trip", async () => {
                 const started = await rideService.start(ride.id);
-                if (started?.releasedUnpaid) message.warning(`${started.releasedUnpaid} unpaid passenger(s) were released from the ride`);
+                if (started?.releasedUnpaid) notification.warning({ title: "Warning", description: `${started.releasedUnpaid} unpaid passenger(s) were released from the ride` });
               }, "Ride started - have a safe trip!")
             }
           >

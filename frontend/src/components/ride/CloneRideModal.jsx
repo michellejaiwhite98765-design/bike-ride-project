@@ -35,7 +35,7 @@ function combine(date, time) {
  * backend enforces the same rule).
  */
 export default function CloneRideModal({ ride, rides = [], open, onClose, onCloned }) {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(null); // "draft" | "publish" | null
   const [error, setError] = useState(null);
@@ -92,7 +92,7 @@ export default function CloneRideModal({ ride, rides = [], open, onClose, onClon
       if (publish && created.status === "DRAFT") {
         created = await rideService.publish(created.id);
       }
-      message.success(publish ? "Ride cloned and published" : "Ride cloned as draft");
+      notification.success({ title: "Success", description: publish ? "Ride cloned and published" : "Ride cloned as draft" });
       onCloned?.(created);
       onClose();
     } catch (err) {

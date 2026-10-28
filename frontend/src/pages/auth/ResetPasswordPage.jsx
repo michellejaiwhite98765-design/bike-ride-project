@@ -5,7 +5,7 @@ import { LockOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService.js";
 
 export default function ResetPasswordPage() {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token") || "";
@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
       await authService.resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setLoading(false);
     }

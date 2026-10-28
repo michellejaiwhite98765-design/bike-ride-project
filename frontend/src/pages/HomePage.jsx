@@ -34,14 +34,14 @@ function HomePage() {
       setUserLocation({ latitude: lat, longitude: lng });
       setLoadingNearby(true);
       rideService
-        .search({
-          sourceLatitude: lat,
-          sourceLongitude: lng,
-          destinationLatitude: lat,
-          destinationLongitude: lng,
-          date: dayjs().format("YYYY-MM-DD"),
-          seats: 1,
-          radius: 50,
+        // Every upcoming published trip (next 7 days), nearest first - not just
+        // trips whose start AND end are both within 50 km of the viewer, which
+        // hid other users' trips whenever they were farther away.
+        .explore({
+          from: dayjs().format("YYYY-MM-DD"),
+          days: 7,
+          latitude: lat,
+          longitude: lng,
         })
         .then((data) => {
           if (!cancelled) setNearbyRides(Array.isArray(data) ? data : []);

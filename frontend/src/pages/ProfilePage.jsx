@@ -78,16 +78,16 @@ const FormGroup = styled.div`
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
 
   async function onFinish(values) {
     try {
       const updated = await userService.updateProfile(values);
       setUser(updated);
-      message.success("Profile updated successfully");
+      notification.success({ title: "Success", description: "Profile updated successfully" });
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     }
   }
 

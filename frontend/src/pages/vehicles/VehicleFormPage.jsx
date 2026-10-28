@@ -456,7 +456,7 @@ export default function VehicleFormPage() {
   const { id: routeId } = useParams();
   const isEdit = Boolean(routeId);
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
 
   const [loading, setLoading] = useState(isEdit);
@@ -502,7 +502,7 @@ export default function VehicleFormPage() {
       }
       setStepIndex(1);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -510,7 +510,7 @@ export default function VehicleFormPage() {
 
   async function handleUploadContinue() {
     if (!rcDocumentFile) {
-      message.error("Select your RC document to continue");
+      notification.error({ title: "Error", description: "Select your RC document to continue" });
       return;
     }
     setSubmitting(true);
@@ -520,7 +520,7 @@ export default function VehicleFormPage() {
       setStepIndex(1);
       setUploadSuccessOpen(true);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -533,7 +533,7 @@ export default function VehicleFormPage() {
       setVerifyResult(result);
       setVehicle(result.vehicle);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmitting(false);
     }

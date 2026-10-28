@@ -83,7 +83,8 @@ function FitToMarkers({ points }) {
       if (points.length === 1) {
         map.setView(points[0], ZOOM);
       } else {
-        map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 15 });
+        // Extra room on top: the floating header and Map/Card switch sit over the map.
+        map.fitBounds(L.latLngBounds(points), { paddingTopLeft: [48, 150], paddingBottomRight: [48, 60], maxZoom: 15 });
       }
     } catch {
       // Map may already be mid-teardown.

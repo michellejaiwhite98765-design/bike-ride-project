@@ -103,3 +103,12 @@ export const searchRideSchema = z.object({
   // ones.
   includeFull: z.coerce.boolean().optional().default(false),
 });
+
+// Home page "what's on": upcoming published rides, not tied to a route. An
+// optional point only sorts them nearest-first - it never filters any out.
+export const exploreRideSchema = z.object({
+  from: z.coerce.date(),
+  days: z.coerce.number().int().min(1).max(30).default(7),
+  latitude: latitude.optional(),
+  longitude: longitude.optional(),
+});

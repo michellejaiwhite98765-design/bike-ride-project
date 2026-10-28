@@ -24,7 +24,7 @@ function useIsMobile(breakpoint = 768) {
 
 export default function SearchPage() {
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   useAutoCurrentLocation(form, "source");
 
@@ -117,7 +117,7 @@ export default function SearchPage() {
           setHasSearched(true);
         }
       } catch (err) {
-        if (!cancelled) message.error(err.message);
+        if (!cancelled) notification.error({ title: "Error", description: err.message });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,7 +127,7 @@ export default function SearchPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [hasSource, hasDestination, hasBoth, sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, message]);
+  }, [hasSource, hasDestination, hasBoth, sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, notification]);
 
   const goHome = () => navigate("/", { state: { view: "map" } });
 

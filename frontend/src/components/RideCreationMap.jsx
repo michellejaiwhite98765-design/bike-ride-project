@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Polyline, Tooltip, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { Button, Segmented, Spin, message } from "antd";
+import { App, Button, Segmented, Spin } from "antd";
 import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
 import { reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../utils/geo.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
@@ -122,6 +122,7 @@ function formatDuration(minutes) {
 }
 
 export default function RideCreationMap({ source, destination, form, onRouteSelect, occludedLeft = 0 }) {
+  const { notification } = App.useApp();
   const { mode: themeMode } = useTheme();
   const isDark = themeMode === "dark";
   const [mode, setMode] = useState(source ? "destination" : "source");
@@ -195,7 +196,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
 
       const mismatchError = countryMismatch(form, prefix, country);
       if (mismatchError) {
-        message.error(mismatchError);
+        notification.error({ title: "Error", description: mismatchError });
         return;
       }
 
@@ -209,9 +210,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
       setMode(selectedMode === "source" ? "destination" : "source");
     } catch (err) {
       // Don't accept a point we couldn't identify - tell the user instead.
-      message.error(
-        err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't look up that location. Check your connection and try again."
-      );
+      notification.error({ title: "Error", description: err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't look up that location. Check your connection and try again." });
     } finally {
       setMapLoading(false);
     }

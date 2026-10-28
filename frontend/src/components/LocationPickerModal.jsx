@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Modal, Input, Button, Spin, Space, message, App } from "antd";
+import { Modal, Input, Button, Spin, Space, App } from "antd";
 import { SearchOutlined, EnvironmentOutlined } from "@ant-design/icons";
 
 const NOMINATIM_API = "https://nominatim.openstreetmap.org";
@@ -60,6 +60,7 @@ export default function LocationPickerModal({
   fallbackCenter,
   title = "Select Location",
 }) {
+  const { notification } = App.useApp();
   const [position, setPosition] = useState(initialPosition || null);
 
   // Show the latest saved choice each time the modal opens.
@@ -87,7 +88,7 @@ export default function LocationPickerModal({
       const data = await response.json();
       setSearchResults(data);
     } catch (err) {
-      message.error("Failed to search locations");
+      notification.error({ title: "Error", description: "Failed to search locations" });
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -129,7 +130,7 @@ export default function LocationPickerModal({
 
   async function handleConfirm() {
     if (!position) {
-      message.warning("Please select a location on the map");
+      notification.warning({ title: "Warning", description: "Please select a location on the map" });
       return;
     }
 

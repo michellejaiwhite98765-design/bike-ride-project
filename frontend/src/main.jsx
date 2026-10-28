@@ -13,7 +13,7 @@ function ThemedApp() {
   const { mode } = useTheme();
   return (
     <ConfigProvider theme={getAntdTheme(mode)}>
-      <AntdApp>
+      <AntdApp notification={{ placement: "topRight", top: 84, duration: 4, maxCount: 3 }}>
         <BrowserRouter>
           <AuthProvider>
             <App />

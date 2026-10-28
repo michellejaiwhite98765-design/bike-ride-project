@@ -362,7 +362,7 @@ const ActionButtons = styled.div`
 export default function RideDetailsPage() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const navigate = useNavigate();
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -442,10 +442,10 @@ export default function RideDetailsPage() {
     setWithdrawing(true);
     try {
       await rideService.cancelRequest(myRequest.id);
-      message.success("Request withdrawn");
+      notification.success({ title: "Success", description: "Request withdrawn" });
       setMyRequest(null);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setWithdrawing(false);
     }
@@ -479,28 +479,28 @@ export default function RideDetailsPage() {
     try {
       const values = await requestForm.validateFields();
       if (!values.pickupLatitude || !values.pickupLongitude) {
-        message.error("Please select a pickup location");
+        notification.error({ title: "Error", description: "Please select a pickup location" });
         return;
       }
       if (!values.dropLatitude || !values.dropLongitude) {
-        message.error("Please select a drop location");
+        notification.error({ title: "Error", description: "Please select a drop location" });
         return;
       }
       if (joinZone?.zone === "TOO_FAR") {
-        message.error(joinZone.message);
+        notification.error({ title: "Error", description: joinZone.message });
         return;
       }
       setActionLoading(true);
       const created = await rideService.createRequest(ride.id, values);
       // Flip the button to "Requested" right away, then refresh in the background.
       setMyRequest(created);
-      message.success("Request sent to the rider");
+      notification.success({ title: "Success", description: "Request sent to the rider" });
       setRequestModalOpen(false);
       requestForm.resetFields();
       load();
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setActionLoading(false);
     }
@@ -529,11 +529,11 @@ export default function RideDetailsPage() {
       const values = await reportForm.validateFields();
       setActionLoading(true);
       await safetyService.createReport({ reportedUserId: ride.riderId, rideId: ride.id, ...values });
-      message.success("Report submitted. Our team will review it.");
+      notification.success({ title: "Success", description: "Report submitted. Our team will review it." });
       setReportModalOpen(false);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setActionLoading(false);
     }
@@ -543,10 +543,10 @@ export default function RideDetailsPage() {
     setActionLoading(true);
     try {
       await fn();
-      message.success(successMsg);
+      notification.success({ title: "Success", description: successMsg });
       load();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setActionLoading(false);
     }

@@ -10,13 +10,10 @@ const guidelines = [
 ];
 
 export default function SafetyPage() {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
 
   function handleSOS() {
-    message.warning(
-      "This button does not contact emergency services or anyone at BikeRide. In a real emergency, call 112 (or your local emergency number) directly, right now.",
-      8
-    );
+    notification.warning({ title: "Warning", description: "This button does not contact emergency services or anyone at BikeRide. In a real emergency, call 112 (or your local emergency number) directly, right now.", duration: 8 });
   }
 
   return (

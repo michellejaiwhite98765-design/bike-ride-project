@@ -88,7 +88,7 @@ export default function CreateRidePage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const [vehicles, setVehicles] = useState([]);
   const [openTrip, setOpenTrip] = useState(null); // the rider's current un-closed ride, if any
@@ -163,7 +163,7 @@ export default function CreateRidePage() {
       const { name, country } = await reverseGeocode(latitude, longitude);
       const mismatchError = countryMismatch(form, prefix, country);
       if (mismatchError) {
-        message.error(mismatchError);
+        notification.error({ title: "Error", description: mismatchError });
         return false;
       }
       form.setFieldsValue({
@@ -174,14 +174,14 @@ export default function CreateRidePage() {
       });
       return true;
     } catch (err) {
-      message.error(err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Could not resolve this location");
+      notification.error({ title: "Error", description: err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Could not resolve this location" });
       return false;
     }
   }
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
-      message.error("Geolocation is not supported by your browser");
+      notification.error({ title: "Error", description: "Geolocation is not supported by your browser" });
       return;
     }
     setLocatingMe(true);
@@ -191,7 +191,7 @@ export default function CreateRidePage() {
         setLocatingMe(false);
       },
       () => {
-        message.error("Could not access your location. Please allow location permission.");
+        notification.error({ title: "Error", description: "Could not access your location. Please allow location permission." });
         setLocatingMe(false);
       }
     );
@@ -240,21 +240,21 @@ export default function CreateRidePage() {
 
   async function submit(publish) {
     if (!isOnline) {
-      message.error("No Internet Connection");
+      notification.error({ title: "Error", description: "No Internet Connection" });
       return;
     }
     try {
       const values = await form.validateFields();
       if (!values.sourceLatitude || !values.sourceLongitude) {
-        message.error("Please select a start location");
+        notification.error({ title: "Error", description: "Please select a start location" });
         return;
       }
       if (!values.destinationLatitude || !values.destinationLongitude) {
-        message.error("Please select an end location");
+        notification.error({ title: "Error", description: "Please select an end location" });
         return;
       }
       if (values.sourceCountry && values.destinationCountry && values.sourceCountry !== values.destinationCountry) {
-        message.error("Start and end locations must be in the same country");
+        notification.error({ title: "Error", description: "Start and end locations must be in the same country" });
         return;
       }
       setSubmittingAction(publish ? "publish" : "draft");
@@ -283,12 +283,12 @@ export default function CreateRidePage() {
         ride = await rideService.publish(ride.id);
       }
 
-      message.success(publish ? "Ride published" : "Ride saved as draft");
+      notification.success({ title: "Success", description: publish ? "Ride published" : "Ride saved as draft" });
 
       navigate(`/rides/${ride.id}`);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmittingAction(null);
     }

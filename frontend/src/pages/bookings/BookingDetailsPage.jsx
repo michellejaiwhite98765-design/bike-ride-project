@@ -10,7 +10,7 @@ import PaymentModal, { fareBreakdown } from "../../components/booking/PaymentMod
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   // Opened straight away when arriving from the ride page's "Pay" button.
@@ -47,10 +47,10 @@ export default function BookingDetailsPage() {
     setCancelling(true);
     try {
       await bookingService.cancel(booking.id, "Cancelled by passenger");
-      message.success("Booking cancelled");
+      notification.success({ title: "Success", description: "Booking cancelled" });
       load();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setCancelling(false);
     }
@@ -121,11 +121,11 @@ export default function BookingDetailsPage() {
       const values = await rateForm.validateFields();
       setRating(true);
       await ratingService.create({ bookingId: booking.id, revieweeId: booking.ride.riderId, ...values });
-      message.success("Thanks for rating your ride!");
+      notification.success({ title: "Success", description: "Thanks for rating your ride!" });
       setRateOpen(false);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setRating(false);
     }

@@ -1,4 +1,4 @@
-import { Form, Input, AutoComplete, Spin, message } from "antd";
+import { Form, Input, AutoComplete, Spin, App } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { useEffect, useState, useRef } from "react";
 import { countryMismatch, reverseGeocode, geocodePlaceName, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../utils/geo.js";
@@ -10,6 +10,7 @@ import { locationService } from "../services/locationService.js";
 // the component fills the corresponding latitude/longitude fields on the
 // surrounding form. No API key required for development.
 export default function LocationFields({ prefix, label, placeholder }) {
+  const { notification } = App.useApp();
   const form = Form.useFormInstance();
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,13 +32,13 @@ export default function LocationFields({ prefix, label, placeholder }) {
     try {
       const point = await resolveSharedLocationLink(value, locationService.resolveLink, geocodePlaceName);
       if (!point) {
-        message.error("Couldn't read a location from that link.");
+        notification.error({ title: "Error", description: "Couldn't read a location from that link." });
         return;
       }
       const { name, country } = await reverseGeocode(point.latitude, point.longitude);
       const mismatchError = countryMismatch(form, prefix, country);
       if (mismatchError) {
-        message.error(mismatchError);
+        notification.error({ title: "Error", description: mismatchError });
         return;
       }
       form.setFieldsValue({
@@ -47,9 +48,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
         [`${prefix}Country`]: country,
       });
     } catch (err) {
-      message.error(
-        err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't resolve that link. Please try again."
-      );
+      notification.error({ title: "Error", description: err instanceof UnknownLocationError ? UNKNOWN_LOCATION_MESSAGE : "Couldn't resolve that link. Please try again." });
     } finally {
       setLoading(false);
       setOptions([]);
@@ -97,14 +96,14 @@ export default function LocationFields({ prefix, label, placeholder }) {
         if (opts.length === 0) {
           const text = `Unknown location "${value.trim()}". Please search for a known place.`;
           setNotFound(text);
-          message.error({ content: text, key: `location-${prefix}` });
+          notification.error({ title: "Error", description: text, key: `location-${prefix}` });
         }
       } catch (e) {
         if (requestId !== requestRef.current) return;
         setOptions([]);
         const text = "Couldn't search locations. Check your connection and try again.";
         setNotFound(text);
-        message.error({ content: text, key: `location-${prefix}` });
+        notification.error({ title: "Error", description: text, key: `location-${prefix}` });
       } finally {
         if (requestId === requestRef.current) setLoading(false);
       }
@@ -128,7 +127,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
 
     const mismatchError = countryMismatch(form, prefix, country);
     if (mismatchError) {
-      message.error(mismatchError);
+      notification.error({ title: "Error", description: mismatchError });
       setOptions([]);
       return;
     }

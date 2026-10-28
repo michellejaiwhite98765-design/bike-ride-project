@@ -7,7 +7,7 @@ import StatusTag from "../../components/StatusTag.jsx";
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [users, setUsers] = useState([]);
   const [rides, setRides] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -47,30 +47,30 @@ export default function AdminPage() {
   async function toggleUserStatus(id, isActive) {
     try {
       await adminService.setUserStatus(id, isActive);
-      message.success("User status updated");
+      notification.success({ title: "Success", description: "User status updated" });
       loadAll();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     }
   }
 
   async function verifyVehicle(vehicleId, verificationStatus) {
     try {
       await adminService.verifyVehicle(vehicleId, verificationStatus);
-      message.success("Vehicle verification updated");
+      notification.success({ title: "Success", description: "Vehicle verification updated" });
       loadAll();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     }
   }
 
   async function updateReportStatus(id, status) {
     try {
       await adminService.updateReport(id, { status });
-      message.success("Report updated");
+      notification.success({ title: "Success", description: "Report updated" });
       loadAll();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     }
   }
 

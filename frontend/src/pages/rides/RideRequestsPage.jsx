@@ -137,7 +137,7 @@ const ActionButtons = styled.div`
 
 export default function RideRequestsPage() {
   const { id } = useParams();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [requests, setRequests] = useState([]);
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,10 +163,10 @@ export default function RideRequestsPage() {
     setActioningId(requestId);
     try {
       await rideService.acceptRequest(requestId);
-      message.success("Request accepted");
+      notification.success({ title: "Success", description: "Request accepted" });
       load();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setActioningId(null);
     }
@@ -176,10 +176,10 @@ export default function RideRequestsPage() {
     setActioningId(requestId);
     try {
       await rideService.rejectRequest(requestId);
-      message.success("Request rejected");
+      notification.success({ title: "Success", description: "Request rejected" });
       load();
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setActioningId(null);
     }

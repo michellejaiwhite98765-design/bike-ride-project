@@ -25,6 +25,9 @@ export const rideService = {
   listMine() {
     return api.get("/rides/mine").then((res) => res.data);
   },
+  explore(params) {
+    return api.get("/rides/explore", { params }).then((res) => res.data);
+  },
   search(params) {
     return api.get("/rides/search", { params }).then((res) => res.data);
   },

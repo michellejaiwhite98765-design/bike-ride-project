@@ -5,7 +5,7 @@ import { MailOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService.js";
 
 export default function ForgotPasswordPage() {
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +15,7 @@ export default function ForgotPasswordPage() {
       await authService.forgotPassword(email);
       setSent(true);
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setLoading(false);
     }

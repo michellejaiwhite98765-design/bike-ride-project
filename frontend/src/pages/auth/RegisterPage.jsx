@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const { message } = App.useApp();
+  const { notification } = App.useApp();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
@@ -17,7 +17,7 @@ export default function RegisterPage() {
       await register(values);
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      message.error(err.message);
+      notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmitting(false);
     }

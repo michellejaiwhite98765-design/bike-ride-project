@@ -289,6 +289,43 @@ export const rideRepository = {
     }));
   },
 
+  /**
+   * Upcoming bookable rides for the home page: published, verified vehicle,
+   * a free seat, departing within `days` days of `from`. Not filtered by
+   * location - when a point is given it only orders nearest-pickup first
+   * (within each departure time), so trips far from the viewer still show.
+   */
+  async exploreUpcoming({ from, days = 7, latitude = null, longitude = null, limit = 50 }) {
+    const params = [from, days, limit];
+    let distanceExpr = "NULL::float8";
+    let orderDistance = "";
+    if (latitude != null && longitude != null) {
+      params.push(longitude, latitude);
+      distanceExpr = "ST_Distance(r.source_geog, ST_SetSRID(ST_MakePoint($4::float8, $5::float8), 4326)::geography) / 1000";
+      orderDistance = ", source_distance_km ASC";
+    }
+    const { rows } = await pool.query(
+      `SELECT id, source_distance_km FROM (
+         SELECT r.id, r.departure_date, r.departure_time, ${distanceExpr} AS source_distance_km
+         FROM rides r
+         JOIN vehicles v ON v.id = r.vehicle_id
+         WHERE r.status = 'PUBLISHED'
+           AND v.verification_status = 'VERIFIED'
+           AND v.is_active = true
+           AND r.available_seats >= 1
+           AND r.departure_date >= $1::date
+           AND r.departure_date < ($1::date + $2::int)
+       ) upcoming
+       ORDER BY departure_date ASC${orderDistance}, departure_time ASC
+       LIMIT $3`,
+      params
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      sourceDistanceKm: r.source_distance_km == null ? null : Number(r.source_distance_km),
+    }));
+  },
+
   /** Row-level lock (SELECT ... FOR UPDATE) used inside a transaction to serialize seat reservation. */
   async lockForSeatUpdate(tx, rideId) {
     const { rows } = await tx.query(

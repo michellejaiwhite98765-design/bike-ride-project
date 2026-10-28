@@ -147,6 +147,27 @@ export const rideService = {
     return updated;
   },
 
+  /** Home page: upcoming published rides (see rideRepository.exploreUpcoming). */
+  async explore(params, userId = null) {
+    const candidates = await rideRepository.exploreUpcoming(params);
+    if (candidates.length === 0) return [];
+
+    const rides = await rideRepository.findManyByIds(candidates.map((c) => c.id));
+    const distanceById = new Map(candidates.map((c) => [c.id, c.sourceDistanceKm]));
+    const results = rides.map((ride) => {
+      const km = distanceById.get(ride.id);
+      return { ...ride, distances: { sourceDistanceKm: km == null ? null : Number(km.toFixed(2)) } };
+    });
+
+    // So the app can show "Requested" on rides the passenger already asked to join.
+    if (userId) {
+      const mine = await rideRequestRepository.findActiveByPassengerForRides(userId, results.map((r) => r.id));
+      const byRide = new Map(mine.map((rr) => [rr.rideId, { id: rr.id, status: rr.status }]));
+      for (const result of results) result.myRequest = byRide.get(result.id) ?? null;
+    }
+    return results;
+  },
+
   async search(search, userId = null) {
     const pickupRadiusKm = search.radius || env.matching.pickupRadiusKm;
     const destinationRadiusKm = search.radius || env.matching.destinationRadiusKm;

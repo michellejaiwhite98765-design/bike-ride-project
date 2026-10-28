@@ -3,6 +3,7 @@ import { ok, created } from "../utils/apiResponse.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { rideTrackingRepository } from "../repositories/rideTracking.repository.js";
 import { locationStore } from "../realtime/locationStore.js";
+import { visibleLocations } from "../realtime/visibility.js";
 import { ApiError } from "../utils/ApiError.js";
 
 export const rideController = {
@@ -60,10 +61,10 @@ export const rideController = {
     const ride = await rideService.getById(req.params.id);
     const isOwner = ride.riderId === req.user.id;
     if (!isOwner) {
-      const isPassenger = await bookingRepository.hasConfirmedForRide(ride.id, req.user.id);
+      const isPassenger = await bookingRepository.hasActiveForRide(ride.id, req.user.id);
       if (!isPassenger) throw ApiError.forbidden("Not authorized for this ride");
     }
-    const allLocations = locationStore.getAllForRide(ride.id);
+    const allLocations = visibleLocations(locationStore.getAllForRide(ride.id), { userId: req.user.id, isOwner });
     const userLocation = locationStore.get(ride.id, req.user.id);
     if (Object.keys(allLocations).length > 0) {
       return ok(res, { locations: allLocations, myLocation: userLocation });

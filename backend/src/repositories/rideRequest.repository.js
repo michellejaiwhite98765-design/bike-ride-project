@@ -63,12 +63,20 @@ export const rideRequestRepository = {
 
   async findByRide(rideId) {
     const { rows } = await pool.query(
-      `SELECT ${RR_COLUMNS}, ${PASSENGER_COLUMNS}
-       FROM "ride_requests" rr JOIN "users" u ON u."id" = rr."passenger_id"
+      `SELECT ${RR_COLUMNS}, ${PASSENGER_COLUMNS},
+              b."id" AS "booking__id", b."booking_status" AS "booking__booking_status",
+              b."payment_status" AS "booking__payment_status", b."boarding_status" AS "booking__boarding_status",
+              b."pickup_otp_sent_at" AS "booking__pickup_otp_sent_at",
+              b."pickup_otp_expires_at" AS "booking__pickup_otp_expires_at", b."boarded_at" AS "booking__boarded_at",
+              b."dropped_at" AS "booking__dropped_at", b."rider_payout_status" AS "booking__rider_payout_status",
+              b."rider_payout_amount" AS "booking__rider_payout_amount"
+       FROM "ride_requests" rr
+       JOIN "users" u ON u."id" = rr."passenger_id"
+       LEFT JOIN "bookings" b ON b."ride_request_id" = rr."id"
        WHERE rr."ride_id" = $1 ORDER BY rr."created_at" DESC`,
       [rideId]
     );
-    return rows.map((row) => nestPrefixed(row, { passenger: "passenger" }));
+    return rows.map((row) => nestPrefixed(row, { passenger: "passenger", booking: "booking" }));
   },
 
   async findActiveByRideAndPassenger(rideId, passengerId) {

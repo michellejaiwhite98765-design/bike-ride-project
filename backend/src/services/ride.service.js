@@ -141,6 +141,11 @@ export const rideService = {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "COMPLETED");
+    // Everyone who boarded must be dropped off (drop OTP confirmed) first, so
+    // passengers aren't left mid-ride and the rider's payout isn't left held.
+    if ((await bookingRepository.countOnBoard(rideId)) > 0) {
+      throw ApiError.conflict("Drop off every passenger (confirm their drop-off OTP) before completing the ride");
+    }
     const updated = await rideRepository.update(rideId, { status: "COMPLETED", completedAt: new Date() });
     await audit(null, { userId, action: "RIDE_COMPLETED", entityType: "Ride", entityId: rideId });
     await notificationService.notifyRideCompleted(rideId);

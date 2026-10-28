@@ -7,6 +7,8 @@ import { rideService } from "../../services/rideService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import colors from "../../theme/colors.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
+import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
+import { RiderBoardingControls } from "../../components/booking/BoardingPanels.jsx";
 
 const PageContainer = styled.div`
   max-width: 700px;
@@ -143,8 +145,8 @@ export default function RideRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState(null);
 
-  async function load() {
-    setLoading(true);
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const [rideData, requestData] = await Promise.all([rideService.getById(id), rideService.listRequests(id)]);
       setRide(rideData);
@@ -158,6 +160,15 @@ export default function RideRequestsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // While the ride is on, keep payment / OTP / payout states fresh.
+  const rideActive = ride && ["PUBLISHED", "STARTED"].includes(ride.status);
+  useEffect(() => {
+    if (!rideActive) return undefined;
+    const timer = setInterval(() => load({ silent: true }), 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rideActive, id]);
 
   async function accept(requestId) {
     setActioningId(requestId);
@@ -200,6 +211,13 @@ export default function RideRequestsPage() {
           {ride.availableSeats} seat{ride.availableSeats !== 1 ? "s" : ""} available
         </p>
       </Header>
+
+      {rideActive && requests.some((r) => r.status === "ACCEPTED" && r.booking?.bookingStatus !== "CANCELLED") && (
+        <div style={{ marginBottom: 16 }}>
+          {/* Accepted passengers: their live position and pickup points, plus yours. */}
+          <LiveTrackingMap ride={ride} isOwner autoShare />
+        </div>
+      )}
 
       {requests.length === 0 ? (
         <Empty description="No requests yet" style={{ marginTop: 40 }} />
@@ -247,6 +265,8 @@ export default function RideRequestsPage() {
                 </RequestDetails>
 
                 {req.message && <RequestMessage>&ldquo;{req.message}&rdquo;</RequestMessage>}
+
+                <RiderBoardingControls request={req} ride={ride} onChanged={() => load({ silent: true })} />
 
                 {req.status === "REQUESTED" && (
                   <ActionButtons>

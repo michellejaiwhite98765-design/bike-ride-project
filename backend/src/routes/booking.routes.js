@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { bookingController } from "../controllers/booking.controller.js";
 import { authenticate } from "../middleware/auth.js";
-import { validateParams } from "../middleware/validate.js";
+import { validateParams, validateBody } from "../middleware/validate.js";
+import { verifyPickupSchema } from "../validators/boarding.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
 
 export const bookingRoutes = Router();
@@ -45,4 +46,8 @@ bookingRoutes.get("/", bookingController.listMine);
  *       200: { description: Booking cancelled }
  */
 bookingRoutes.get("/:id", validateParams(idParamSchema), bookingController.getById);
+bookingRoutes.post("/:id/pickup-otp", validateParams(idParamSchema), bookingController.sendPickupOtp);
+bookingRoutes.post("/:id/verify-pickup", validateParams(idParamSchema), validateBody(verifyPickupSchema), bookingController.verifyPickup);
+bookingRoutes.post("/:id/drop-otp", validateParams(idParamSchema), bookingController.sendDropOtp);
+bookingRoutes.post("/:id/verify-drop", validateParams(idParamSchema), validateBody(verifyPickupSchema), bookingController.verifyDrop);
 bookingRoutes.post("/:id/cancel", validateParams(idParamSchema), bookingController.cancel);

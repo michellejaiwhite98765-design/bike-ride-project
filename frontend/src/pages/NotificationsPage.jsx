@@ -10,6 +10,10 @@ import {
   SafetyCertificateFilled,
   UserAddOutlined,
   StopFilled,
+  ClockCircleFilled,
+  KeyOutlined,
+  LoginOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -31,6 +35,14 @@ const TYPE_META = {
   RIDE_STARTED: { icon: <CarOutlined />, color: "#2DD4BF" },
   RIDE_COMPLETED: { icon: <FlagFilled />, color: "#8b5cf6" },
   RIDE_CANCELLED: { icon: <StopFilled />, color: "#ef4444" },
+  RIDE_REQUEST_CANCELLED: { icon: <CloseCircleFilled />, color: "#f59e0b" },
+  BOOKING_CANCELLED: { icon: <StopFilled />, color: "#ef4444" },
+  RIDE_EXPIRED: { icon: <ClockCircleFilled />, color: "#94a3b8" },
+  PICKUP_OTP: { icon: <KeyOutlined />, color: "#3b82f6" },
+  DROP_OTP: { icon: <KeyOutlined />, color: "#8b5cf6" },
+  PASSENGER_BOARDED: { icon: <LoginOutlined />, color: "#22c55e" },
+  PASSENGER_DROPPED: { icon: <LogoutOutlined />, color: "#8b5cf6" },
+  PAYOUT_RECEIVED: { icon: <DollarCircleFilled />, color: "#22c55e" },
   NEW_RATING: { icon: <StarFilled />, color: "#eab308" },
   SAFETY_REPORT_UPDATED: { icon: <SafetyCertificateFilled />, color: "#f97316" },
 };

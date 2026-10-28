@@ -5,6 +5,8 @@ import { toCamel, toCamelRows, insertRow, updateRow } from "../utils/sqlRows.js"
 const BOOKING_JOIN_SELECT = `
   b."id", b."ride_id", b."passenger_id", b."ride_request_id", b."seats", b."tip_amount", b."platform_fee",
   b."total_amount", b."booking_status", b."payment_status", b."cancelled_at", b."cancel_reason",
+  b."boarding_status", b."pickup_otp_sent_at", b."pickup_otp_expires_at", b."boarded_at", b."dropped_at",
+  b."rider_payout_status", b."rider_payout_amount", b."rider_payout_released_at",
   b."created_at", b."updated_at",
   ride."id" AS "ride__id", ride."rider_id" AS "ride__rider_id", ride."vehicle_id" AS "ride__vehicle_id",
   ride."source_name" AS "ride__source_name", ride."source_latitude" AS "ride__source_latitude",
@@ -118,6 +120,81 @@ export const bookingRepository = {
     const { text, values } = updateRow("bookings", id, { ...data, updatedAt: new Date() });
     await client.query(text, values);
     return selectById(client, id);
+  },
+
+  /** The stored OTP hash + counters. Kept out of the normal booking select so the hash never reaches an API response. */
+  async getPickupOtpState(id, tx) {
+    const { rows } = await (tx || pool).query(
+      `SELECT "pickup_otp_hash" AS "hash", "pickup_otp_expires_at" AS "expiresAt",
+              "pickup_otp_sent_at" AS "sentAt", "pickup_otp_attempts" AS "attempts"
+       FROM "bookings" WHERE "id" = $1`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  /** Stores a fresh OTP (hash only) and moves the booking to `status` (OTP_SENT for pickup, DROP_OTP_SENT for drop). */
+  async saveOtp(id, { hash, expiresAt, status }, tx) {
+    await (tx || pool).query(
+      `UPDATE "bookings"
+       SET "boarding_status" = $4, "pickup_otp_hash" = $2, "pickup_otp_sent_at" = now(),
+           "pickup_otp_expires_at" = $3, "pickup_otp_attempts" = 0, "updated_at" = now()
+       WHERE "id" = $1`,
+      [id, hash, expiresAt, status]
+    );
+  },
+
+  async bumpPickupOtpAttempts(id, tx) {
+    const { rows } = await (tx || pool).query(
+      'UPDATE "bookings" SET "pickup_otp_attempts" = "pickup_otp_attempts" + 1 WHERE "id" = $1 RETURNING "pickup_otp_attempts" AS "attempts"',
+      [id]
+    );
+    return rows[0].attempts;
+  },
+
+  async markBoarded(id, tx) {
+    await (tx || pool).query(
+      `UPDATE "bookings"
+       SET "boarding_status" = 'BOARDED', "boarded_at" = now(), "pickup_otp_hash" = NULL,
+           "pickup_otp_expires_at" = NULL, "pickup_otp_attempts" = 0, "updated_at" = now()
+       WHERE "id" = $1`,
+      [id]
+    );
+    return selectById(tx || pool, id);
+  },
+
+  /** Passenger confirmed the drop: board state DROPPED, and the rider's held share (if any) is released. */
+  async markDropped(id, tx) {
+    await (tx || pool).query(
+      `UPDATE "bookings"
+       SET "boarding_status" = 'DROPPED', "dropped_at" = now(), "pickup_otp_hash" = NULL,
+           "pickup_otp_expires_at" = NULL, "pickup_otp_attempts" = 0,
+           "rider_payout_released_at" = CASE WHEN "rider_payout_status" = 'HELD' THEN now() ELSE "rider_payout_released_at" END,
+           "rider_payout_status" = CASE WHEN "rider_payout_status" = 'HELD' THEN 'RELEASED' ELSE "rider_payout_status" END,
+           "updated_at" = now()
+       WHERE "id" = $1`,
+      [id]
+    );
+    return selectById(tx || pool, id);
+  },
+
+  /** Passengers still riding (boarded, drop not yet confirmed) - the ride can't be completed until they're dropped. */
+  async countOnBoard(rideId) {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS "count" FROM "bookings"
+       WHERE "ride_id" = $1 AND "booking_status" = 'CONFIRMED' AND "boarding_status" IN ('BOARDED', 'DROP_OTP_SENT')`,
+      [rideId]
+    );
+    return rows[0].count;
+  },
+
+  /** Active (pending payment or confirmed) booking for a user on a ride - used for who may see live locations. */
+  async hasActiveForRide(rideId, passengerId) {
+    const { rows } = await pool.query(
+      `SELECT "id" FROM "bookings" WHERE "ride_id" = $1 AND "passenger_id" = $2 AND "booking_status" IN ('PAYMENT_PENDING', 'CONFIRMED') LIMIT 1`,
+      [rideId, passengerId]
+    );
+    return rows.length > 0;
   },
 
   async hasConfirmedForRide(rideId, passengerId) {

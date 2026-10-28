@@ -552,12 +552,19 @@ export default function RideDetailsPage() {
     }
   }
 
+  const trackingOpen =
+    ride.status === "PUBLISHED" &&
+    (isOwner ? ride.totalSeats > ride.availableSeats : myRequest?.status === "ACCEPTED");
+
   return (
     <Stage>
       <PageContainer style={{ paddingBottom: "100px" }}>
           {/* Route / Live Tracking Map — always shown, live tracking kicks in once the ride starts */}
-          {ride.status === "STARTED" ? (
-            <LiveTrackingMap ride={ride} isOwner={isOwner} />
+          {ride.status === "STARTED" || trackingOpen ? (
+            // Live map: while the ride is under way, and - from the moment a
+            // join request is accepted - before it, so rider and passenger
+            // can see each other and meet. Location sharing starts on its own.
+            <LiveTrackingMap ride={ride} isOwner={isOwner} autoShare={trackingOpen || isOwner || myRequest?.status === "ACCEPTED"} />
           ) : (
             <MapSection>
               <div className="map-header">

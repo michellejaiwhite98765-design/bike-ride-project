@@ -500,3 +500,52 @@ body::-webkit-scrollbar,
 .ls-end-body { fill: #7C3AED; }
 .ls-end-flag { stroke: #7C3AED; }
 .ls-end-flag-fill { fill: #7C3AED; }
+
+/* Map credit: keep the required OpenStreetMap attribution, but make it quiet. */
+.leaflet-container .leaflet-control-attribution {
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 6px;
+  border-radius: 6px 0 0 0;
+  background: var(--surface-glass) !important;
+  color: var(--text-secondary) !important;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--text-secondary) !important;
+}
+
+.ls-passenger {
+  width: 38px;
+  height: 38px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: #f59e0b;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.ls-passenger-you { background: #2563eb; font-size: 11px; }
+.ls-pickup { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ls-pickup-dot {
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+.ls-pickup-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}

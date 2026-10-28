@@ -8,6 +8,7 @@ import { bookingRepository } from "../repositories/booking.repository.js";
 import { rideTrackingRepository } from "../repositories/rideTracking.repository.js";
 import { locationStore } from "./locationStore.js";
 import { setIo } from "./io.js";
+import { visibleLocations } from "./visibility.js";
 
 const lastSnapshotAtByRide = new Map();
 
@@ -37,7 +38,9 @@ async function assertRideAccess(rideId, userId) {
   const ride = await rideRepository.findStatusById(rideId);
   if (!ride) return { ok: false, reason: "Ride not found" };
   if (ride.riderId === userId) return { ok: true, ride, isOwner: true };
-  const isPassenger = await bookingRepository.hasConfirmedForRide(rideId, userId);
+  // Accepted passengers (payment pending or confirmed) can share and see
+  // locations from the moment the rider accepts them, so the two can meet.
+  const isPassenger = await bookingRepository.hasActiveForRide(rideId, userId);
   if (!isPassenger) return { ok: false, reason: "Not authorized for this ride" };
   return { ok: true, ride, isOwner: false };
 }
@@ -66,7 +69,7 @@ export function initSocket(httpServer) {
       socket.data.rideId = rideId;
       socket.data.isOwner = access.isOwner;
       const lastKnownLocation = locationStore.get(rideId, socket.data.userId);
-      const allLocations = locationStore.getAllForRide(rideId);
+      const allLocations = visibleLocations(locationStore.getAllForRide(rideId), { userId: socket.data.userId, isOwner: access.isOwner });
       callback?.({ success: true, lastKnownLocation, allLocations });
     });
 
@@ -83,10 +86,11 @@ export function initSocket(httpServer) {
       }
 
       const ride = await rideRepository.findStatusById(rideId);
-      if (ride?.status !== "STARTED") return;
+      // Sharing runs from acceptance (published) through the trip (started).
+      if (!ride || !["PUBLISHED", "STARTED"].includes(ride.status)) return;
 
       const isOwner = ride.riderId === userId;
-      const isPassenger = !isOwner && await bookingRepository.hasConfirmedForRide(rideId, userId);
+      const isPassenger = !isOwner && await bookingRepository.hasActiveForRide(rideId, userId);
       if (!isOwner && !isPassenger) return;
 
       const point = {
@@ -100,7 +104,10 @@ export function initSocket(httpServer) {
         updatedAt: new Date().toISOString(),
       };
       locationStore.set(rideId, userId, point);
-      io.to(roomFor(rideId)).emit("location:broadcast", point);
+      // The rider's position goes to the whole ride; a passenger's goes only
+      // to the rider (other passengers never see it).
+      if (isOwner) io.to(roomFor(rideId)).emit("location:broadcast", point);
+      else io.to(userRoomFor(ride.riderId)).emit("location:broadcast", point);
 
       const lastSnapshot = lastSnapshotAtByRide.get(rideId) || 0;
       if (Date.now() - lastSnapshot >= env.tracking.snapshotIntervalMs) {

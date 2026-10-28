@@ -74,6 +74,7 @@ export const rideRequestService = {
           bookingStatus: booking.bookingStatus,
           paymentStatus: booking.paymentStatus,
           totalAmount: booking.totalAmount,
+          boardingStatus: booking.boardingStatus,
         };
       }
     }

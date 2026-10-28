@@ -408,7 +408,14 @@ export default function AppLayout() {
 
     const onNotification = (incoming) => {
       setUnreadCount((count) => count + 1);
-      notification.info({ title: "Info", description: incoming?.title || "You have a new notification" });
+      // OTP notifications carry the code in their message, so show the whole
+      // thing and keep it on screen long enough to read.
+      const isOtp = ["PICKUP_OTP", "DROP_OTP"].includes(incoming?.type);
+      notification.info({
+        title: incoming?.title || "New notification",
+        description: incoming?.message || "You have a new notification",
+        duration: isOtp ? 15 : 4,
+      });
     };
     socket.on("notification:new", onNotification);
 

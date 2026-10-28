@@ -7,6 +7,8 @@ import { ratingService } from "../../services/ratingService.js";
 import StatusTag from "../../components/StatusTag.jsx";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 import PaymentModal, { fareBreakdown } from "../../components/booking/PaymentModal.jsx";
+import { PassengerBoardingPanel } from "../../components/booking/BoardingPanels.jsx";
+import LiveTrackingMap from "../../components/ride/LiveTrackingMap.jsx";
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
@@ -35,6 +37,16 @@ export default function BookingDetailsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // While the trip is on, keep the page current so an OTP the rider sends
+  // (or a rider-side change) shows up without a manual refresh.
+  const tripActive = booking && ["PUBLISHED", "STARTED"].includes(booking.ride?.status) && booking.bookingStatus !== "CANCELLED";
+  useEffect(() => {
+    if (!tripActive) return undefined;
+    const timer = setInterval(() => load(), 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripActive, id]);
 
   if (loading || !booking) return <BrandLoader label="Loading booking…" />;
 
@@ -198,7 +210,16 @@ export default function BookingDetailsPage() {
             </Button>
           )}
         </div>
+
+        <PassengerBoardingPanel booking={booking} onChanged={load} />
       </Card>
+
+      {tripActive && booking.boardingStatus !== "DROPPED" && (
+        <div style={{ marginTop: 16 }}>
+          {/* Live map from acceptance: the rider's position, your pickup point and you. */}
+          <LiveTrackingMap ride={booking.ride} isOwner={false} autoShare />
+        </div>
+      )}
 
       <PaymentModal
         booking={booking}

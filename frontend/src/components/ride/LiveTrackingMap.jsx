@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card, Button, Tag, Space } from "antd";
 import { ClockCircleOutlined, EnvironmentOutlined, ThunderboltFilled } from "@ant-design/icons";
@@ -7,7 +7,7 @@ import { connectSocket, getSocket } from "../../services/socket.js";
 import { rideService } from "../../services/rideService.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
-import { bikeIcon, startIcon, endIcon } from "./mapIcons.js";
+import { bikeIcon, startIcon, endIcon, passengerIcon, pickupPinIcon } from "./mapIcons.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -15,19 +15,6 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function markerIcon(type) {
-  const config = {
-    passenger: { color: "#f59e0b", symbol: "•" },
-  }[type];
-
-  return L.divIcon({
-    className: "br-live-marker-wrapper",
-    html: `<div class="br-live-marker br-live-marker-${type}" style="--marker:${config.color}"><span>${config.symbol}</span></div>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
 }
 
 // Real driving route (OSRM) from the ride's start to its end, as [lat, lng] points.
@@ -84,7 +71,11 @@ function FitRoute({ source, destination }) {
   return null;
 }
 
-export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
+// `autoShare` starts sharing this device's location as soon as the map opens
+// (used once a join request is accepted, so rider and passenger can find each
+// other). The rider sees every accepted passenger's live position and pickup
+// point; a passenger sees the rider live, and themselves.
+export default function LiveTrackingMap({ ride, isOwner, compact = false, autoShare = false }) {
   const { mode } = useTheme();
   const isDark = mode === "dark";
   const [livePositions, setLivePositions] = useState({});
@@ -94,6 +85,9 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
   const [unauthorized, setUnauthorized] = useState(false);
   const watchIdRef = useRef(null);
   const lastEmitRef = useRef(0);
+  // Accepted passengers (rider's view) / the viewer's own request (passenger's view):
+  // who they are and where they are to be picked up.
+  const [participants, setParticipants] = useState([]);
 
   const destination = { latitude: Number(ride.destinationLatitude), longitude: Number(ride.destinationLongitude) };
   const source = { latitude: Number(ride.sourceLatitude), longitude: Number(ride.sourceLongitude) };
@@ -130,6 +124,53 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
   }, [ride.id]);
 
   useEffect(() => () => stopSharing(), []);
+
+  // Start sharing automatically when asked to (and only once per mount).
+  useEffect(() => {
+    if (!autoShare || !["PUBLISHED", "STARTED"].includes(ride.status)) return undefined;
+    if (watchIdRef.current == null) startSharing();
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoShare, ride.id, ride.status]);
+
+  // Who to draw: the rider polls the accepted requests; a passenger reads their own.
+  useEffect(() => {
+    if (!["PUBLISHED", "STARTED"].includes(ride.status)) return undefined;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (isOwner) {
+          const requests = await rideService.listRequests(ride.id);
+          if (cancelled) return;
+          setParticipants(
+            requests
+              .filter((r) => r.status === "ACCEPTED" && r.booking?.bookingStatus !== "CANCELLED")
+              .map((r) => ({
+                userId: r.passengerId,
+                name: [r.passenger?.firstName, r.passenger?.lastName].filter(Boolean).join(" ") || "Passenger",
+                pickup: { latitude: Number(r.pickupLatitude), longitude: Number(r.pickupLongitude), name: r.pickupName },
+              }))
+          );
+        } else {
+          const mine = await rideService.getMyRequest(ride.id);
+          if (cancelled) return;
+          setParticipants(
+            mine && mine.status === "ACCEPTED"
+              ? [{ userId: "me", name: "You", pickup: { latitude: Number(mine.pickupLatitude), longitude: Number(mine.pickupLongitude), name: mine.pickupName } }]
+              : []
+          );
+        }
+      } catch {
+        if (!cancelled) setParticipants([]);
+      }
+    };
+    load();
+    const timer = setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [ride.id, ride.status, isOwner]);
 
   function startSharing() {
     if (!navigator.geolocation) return;
@@ -256,9 +297,33 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false }) {
               />
             </>
           )}
-          {passengerPositions.map((passenger) => (
-            <Marker key={passenger.userId} position={[Number(passenger.latitude), Number(passenger.longitude)]} icon={markerIcon("passenger")} />
-          ))}
+          {/* Pickup points of the accepted passengers */}
+          {participants
+            .filter((p) => Number.isFinite(p.pickup.latitude) && Number.isFinite(p.pickup.longitude))
+            .map((p) => (
+              <Marker key={`pickup-${p.userId}`} position={[p.pickup.latitude, p.pickup.longitude]} icon={pickupPinIcon()}>
+                <Popup>{isOwner ? `${p.name} · ${p.pickup.name || "pickup"}` : p.pickup.name || "Your pickup point"}</Popup>
+              </Marker>
+            ))}
+          {/* Live passengers (rider's view) */}
+          {isOwner &&
+            passengerPositions.map((passenger) => {
+              const person = participants.find((p) => p.userId === passenger.userId);
+              return (
+                <Marker
+                  key={passenger.userId}
+                  position={[Number(passenger.latitude), Number(passenger.longitude)]}
+                  icon={passengerIcon(person?.name || "P")}
+                  zIndexOffset={800}
+                >
+                  <Popup>{person?.name || "Passenger"}</Popup>
+                </Marker>
+              );
+            })}
+          {/* The passenger's own position (passenger's view) */}
+          {!isOwner && myPosition && (
+            <Marker position={[Number(myPosition.latitude), Number(myPosition.longitude)]} icon={passengerIcon("You", { you: true })} zIndexOffset={800} />
+          )}
         </MapContainer>
 
         <div className="live-map-overlay">

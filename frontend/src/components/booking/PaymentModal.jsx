@@ -200,7 +200,7 @@ export default function PaymentModal({ booking, open, onClose, onPaid, onViewRec
           <div className="pm-check"><CheckOutlined /></div>
           <div className="pm-title">Payment successful</div>
           <div className="pm-amount">₹{fare.total} paid</div>
-          <div className="pm-sub">Paid via {isUpiId ? upiId.trim() : selectedApp.name}. Your seat is confirmed and the rider has been notified.</div>
+          <div className="pm-sub">Paid via {isUpiId ? upiId.trim() : selectedApp.name}. Your seat is confirmed and the rider has been notified. You’ll receive your pickup OTP when your rider meets you.</div>
           <div className="pm-actions">
             {onViewReceipt && <Button size="large" onClick={onViewReceipt}>Receipt</Button>}
             <Button size="large" className="pm-pay" onClick={onClose}>Done</Button>

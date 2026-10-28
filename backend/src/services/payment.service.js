@@ -26,7 +26,13 @@ async function applySuccess(payment, bookingId, providerPaymentId) {
       return { booking: await bookingRepository.update(bookingId, { paymentStatus: "SUCCESS" }, tx), lateForCancelled: true };
     }
     return {
-      booking: await bookingRepository.update(bookingId, { bookingStatus: "CONFIRMED", paymentStatus: "SUCCESS" }, tx),
+      // The rider's share (everything but the platform fee) is held until the
+      // passenger confirms the drop-off with the drop OTP (boarding.service.js).
+      booking: await bookingRepository.update(
+        bookingId,
+        { bookingStatus: "CONFIRMED", paymentStatus: "SUCCESS", riderPayoutStatus: "HELD", riderPayoutAmount: current.tipAmount },
+        tx
+      ),
       lateForCancelled: false,
     };
   });
@@ -145,7 +151,12 @@ export const paymentService = {
         { status: "REFUNDED", refundedAmount: payment.amount },
         tx
       );
-      await bookingRepository.update(bookingId, { paymentStatus: "REFUNDED" }, tx);
+      const current = await bookingRepository.findById(bookingId, tx);
+      await bookingRepository.update(
+        bookingId,
+        { paymentStatus: "REFUNDED", ...(current?.riderPayoutStatus === "HELD" ? { riderPayoutStatus: "REFUNDED" } : {}) },
+        tx
+      );
       return updatedPayment;
     });
 

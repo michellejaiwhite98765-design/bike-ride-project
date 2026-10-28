@@ -36,3 +36,24 @@ export function endIcon({ size = 40 } = {}) {
     iconAnchor: [size / 2, height - 2],
   });
 }
+
+/** A passenger's live position: a person badge with their initial ("You" for the viewer's own marker). */
+export function passengerIcon(label = "P", { you = false } = {}) {
+  const text = you ? "You" : String(label).slice(0, 1).toUpperCase();
+  return L.divIcon({
+    className: "ls-marker-wrapper",
+    html: `<div class="ls-passenger${you ? " ls-passenger-you" : ""}">${text}</div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+  });
+}
+
+/** Where a passenger is to be picked up. */
+export function pickupPinIcon() {
+  return L.divIcon({
+    className: "ls-marker-wrapper",
+    html: `<div class="ls-pickup"><span class="ls-pickup-dot"></span><span class="ls-pickup-label">Pickup</span></div>`,
+    iconSize: [78, 24],
+    iconAnchor: [11, 12],
+  });
+}

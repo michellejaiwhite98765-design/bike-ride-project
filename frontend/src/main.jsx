@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { ConfigProvider, App as AntdApp } from "antd";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./index.css";
 import App from "./App.jsx";
@@ -23,6 +24,10 @@ function ThemedApp() {
     </ConfigProvider>
   );
 }
+
+// Replace Leaflet's own "Leaflet" flag credit on every map with the app name.
+// The OpenStreetMap credit next to it stays: the map data licence requires it.
+L.Control.Attribution.prototype.options.prefix = "Liftshare";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

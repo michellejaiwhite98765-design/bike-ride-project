@@ -9,14 +9,13 @@ import { useAuth } from "../context/AuthContext.jsx";
 function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  // Guests only get the map; once logged in the card view is the default,
-  // with a toggle to switch back to the map.
+  // The map is the default view; logged-in users get a toggle to the card view.
   // Callers can ask for a specific view via navigate("/", { state: { view } })
   // (e.g. closing the create-ride drawer lands on the map).
   const requestedView = useLocation().state?.view;
-  const [view, setView] = useState(requestedView || (isAuthenticated ? "card" : "map"));
+  const [view, setView] = useState(requestedView || "map");
   useEffect(() => {
-    setView(requestedView || (isAuthenticated ? "card" : "map"));
+    setView(requestedView || "map");
   }, [isAuthenticated, requestedView]);
 
   const findRide = () => navigate("/search");

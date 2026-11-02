@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { notifyTripChanged } from "./tripEvents.js";
 
 export const rideService = {
   create(payload) {
@@ -11,13 +12,13 @@ export const rideService = {
     return api.post(`/rides/${id}/publish`).then((res) => res.data);
   },
   cancel(id, reason) {
-    return api.post(`/rides/${id}/cancel`, { reason }).then((res) => res.data);
+    return api.post(`/rides/${id}/cancel`, { reason }).then((res) => notifyTripChanged(res.data));
   },
   start(id) {
-    return api.post(`/rides/${id}/start`).then((res) => res.data);
+    return api.post(`/rides/${id}/start`).then((res) => notifyTripChanged(res.data));
   },
   complete(id) {
-    return api.post(`/rides/${id}/complete`).then((res) => res.data);
+    return api.post(`/rides/${id}/complete`).then((res) => notifyTripChanged(res.data));
   },
   getById(id) {
     return api.get(`/rides/${id}`).then((res) => res.data);
@@ -52,7 +53,7 @@ export const rideService = {
     return api.put(`/ride-requests/${requestId}/reject`).then((res) => res.data);
   },
   cancelRequest(requestId) {
-    return api.put(`/ride-requests/${requestId}/cancel`).then((res) => res.data);
+    return api.put(`/ride-requests/${requestId}/cancel`).then((res) => notifyTripChanged(res.data));
   },
   getLiveLocation(rideId) {
     return api.get(`/rides/${rideId}/live-location`).then((res) => res.data);

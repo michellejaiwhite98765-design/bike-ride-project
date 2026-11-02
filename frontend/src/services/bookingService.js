@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { notifyTripChanged } from "./tripEvents.js";
 
 export const bookingService = {
   listMine() {
@@ -19,9 +20,9 @@ export const bookingService = {
     return api.post(`/bookings/${id}/drop-otp`).then((res) => res.data);
   },
   verifyDrop(id, otp) {
-    return api.post(`/bookings/${id}/verify-drop`, { otp }).then((res) => res.data);
+    return api.post(`/bookings/${id}/verify-drop`, { otp }).then((res) => notifyTripChanged(res.data));
   },
   cancel(id, reason) {
-    return api.post(`/bookings/${id}/cancel`, { reason }).then((res) => res.data);
+    return api.post(`/bookings/${id}/cancel`, { reason }).then((res) => notifyTripChanged(res.data));
   },
 };

@@ -38,11 +38,14 @@ export function endIcon({ size = 40 } = {}) {
 }
 
 /** A passenger's live position: a person badge with their initial ("You" for the viewer's own marker). */
-export function passengerIcon(label = "P", { you = false } = {}) {
+export function passengerIcon(label = "P", { you = false, showName = false } = {}) {
   const text = you ? "You" : String(label).slice(0, 1).toUpperCase();
+  // showName: a name tag under the dot, so a passenger's live position can't be
+  // mistaken for a pickup pin.
+  const name = showName && !you ? String(label).split(" ")[0].replace(/[<>&"]/g, "") : "";
   return L.divIcon({
     className: "ls-marker-wrapper",
-    html: `<div class="ls-passenger${you ? " ls-passenger-you" : ""}">${text}</div>`,
+    html: `<div class="ls-passenger${you ? " ls-passenger-you" : ""}">${text}${name ? `<span class="ls-passenger-name">${name}</span>` : ""}</div>`,
     iconSize: [38, 38],
     iconAnchor: [19, 19],
   });

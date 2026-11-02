@@ -529,6 +529,21 @@ body::-webkit-scrollbar,
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 .ls-passenger-you { background: #2563eb; font-size: 11px; }
+.ls-passenger { position: relative; }
+.ls-passenger-name {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
 .ls-pickup { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .ls-pickup-dot {
   width: 22px;

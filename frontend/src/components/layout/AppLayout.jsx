@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import CurrentRideTracker from "../ride/CurrentRideTracker.jsx";
 import { Layout, Dropdown, Drawer, Button, Badge as AntBadge, App as AntdApp } from "antd";
 import { css } from "styled-components";
 import {
@@ -652,6 +653,8 @@ export default function AppLayout() {
       <ContentWrap $fullBleed={isFullBleedPage}>
         <Outlet />
       </ContentWrap>
+
+      <CurrentRideTracker />
 
       {isAuthenticated && (
         <BottomNav>

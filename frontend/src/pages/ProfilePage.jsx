@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useAuth } from "../context/AuthContext.jsx";
 import { userService } from "../services/userService.js";
 import colors from "../theme/colors.js";
+import AccountMenu from "../components/layout/AccountMenu.jsx";
 
 const PageContainer = styled.div`
   max-width: 600px;
@@ -103,6 +104,8 @@ export default function ProfilePage() {
         </ProfileName>
         <ProfileEmail>{user.email}</ProfileEmail>
       </ProfileHeader>
+
+      <AccountMenu />
 
       {/* Edit Profile Form */}
       <FormCard>

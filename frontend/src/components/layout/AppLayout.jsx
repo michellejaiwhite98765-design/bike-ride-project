@@ -191,6 +191,34 @@ const UserSection = styled.div`
     gap: 8px;
   }
 
+  .desktop-only-icons {
+    display: contents;
+  }
+  .phone-create-trip {
+    display: none;
+  }
+  /* Phones (bottom bar visible): no bell / avatar / menu, just Create trip. */
+  @media (max-width: 768px) {
+    .desktop-only-icons,
+    .authed-menu {
+      display: none !important;
+    }
+    .phone-create-trip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: ${ACCENT};
+      color: #04211d;
+      font-weight: 800;
+      font-size: 14px;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(45, 212, 191, 0.35);
+    }
+  }
+
   @media (max-width: 480px) {
     gap: 6px;
 
@@ -555,8 +583,16 @@ export default function AppLayout() {
                     </ThemeToggleButton>
                   )}
 
+                  {/* Phones: the bottom bar already has Alerts and Profile (and Profile
+                      has the account menu), so the header just offers Create trip. */}
+                  {isAuthenticated && !isCreateRidePage && (
+                    <Link to="/rides/create" className="phone-create-trip">
+                      <PlusCircleOutlined /> Create trip
+                    </Link>
+                  )}
+
                   {isAuthenticated && (
-                    <>
+                    <span className="desktop-only-icons">
                       <Link to="/notifications">
                         <NotificationIcon>
                           <AntBadge count={unreadCount} color={ACCENT}>
@@ -567,7 +603,7 @@ export default function AppLayout() {
                       <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
                         <AvatarButton shape="circle" size="large" icon={<UserOutlined />} />
                       </Dropdown>
-                    </>
+                    </span>
                   )}
 
                   {!isAuthenticated && (
@@ -588,7 +624,7 @@ export default function AppLayout() {
                     </>
                   )}
 
-                  <MobileBar>
+                  <MobileBar className={isAuthenticated ? "authed-menu" : undefined}>
                     <Button
                       type="text"
                       icon={<MenuOutlined />}

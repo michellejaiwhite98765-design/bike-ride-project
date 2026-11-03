@@ -6,6 +6,7 @@ import {
   UpOutlined,
   CloseOutlined,
   SearchOutlined,
+  ArrowRightOutlined,
   CalendarOutlined,
   InfoCircleOutlined,
   CheckCircleFilled,
@@ -203,10 +204,15 @@ export default function SearchPage() {
       )}
 
       <button type="button" className="sp-search-btn" onClick={runSearch} disabled={loading}>
-        <span className={`sp-search-icon ${loading ? "spinning" : ""}`}>
-          <SearchOutlined />
-        </span>
-        {loading ? "Searching…" : "Search rides"}
+        {loading ? (
+          <>
+            <span className="sp-search-icon spinning"><SearchOutlined /></span> Searching…
+          </>
+        ) : (
+          <>
+            Find rides <ArrowRightOutlined className="sp-arrow" />
+          </>
+        )}
       </button>
 
       <div className="sp-hint">
@@ -309,11 +315,13 @@ export default function SearchPage() {
         .sp-chip{flex-shrink:0;border:1px solid var(--chrome-border);background:var(--chrome-tint);color:var(--text-primary);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
         .sp-chip:hover{border-color:#2DD4BF;color:#2DD4BF}
 
-        .sp-search-btn{margin-top:14px;width:100%;height:48px;border:0;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:800;letter-spacing:.01em;color:#fff;background:linear-gradient(135deg,#2DD4BF,#8B5CF6);box-shadow:0 10px 26px rgba(45,212,191,.28);transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
-        .sp-search-btn:hover{filter:brightness(1.07);box-shadow:0 12px 30px rgba(139,92,246,.32)}
+        .sp-search-btn{margin-top:14px;width:100%;height:44px;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:#2DD4BF;background:transparent;border:1.5px solid #2DD4BF;transition:background .15s ease,color .15s ease,transform .15s ease}
+        .sp-search-btn:hover{background:rgba(45,212,191,.12)}
         .sp-search-btn:active{transform:scale(.98)}
-        .sp-search-btn:disabled{cursor:progress;filter:saturate(.7)}
-        .sp-search-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.2)}
+        .sp-search-btn:disabled{cursor:progress;opacity:.7}
+        .sp-search-btn .sp-arrow{transition:transform .15s ease}
+        .sp-search-btn:hover .sp-arrow{transform:translateX(3px)}
+        .sp-search-icon{display:inline-grid;place-items:center}
         .sp-search-icon.spinning .anticon{animation:spSpin .8s linear infinite}
         @keyframes spSpin{to{transform:rotate(360deg)}}
 

@@ -112,8 +112,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: "40px auto", padding: "0 12px" }}>
-      <Card title="Create your account">
+    <div className="rp-wrap">
+      <Card title="Create your account" className="rp-card">
         <Steps
           size="small"
           current={step}
@@ -174,9 +174,9 @@ export default function RegisterPage() {
         {/* Step 2: OTP */}
         {step === 1 && details && (
           <div>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <SafetyCertificateOutlined style={{ fontSize: 40, color: "#2DD4BF" }} />
-              <h3 style={{ margin: "10px 0 4px" }}>Verify your mobile number</h3>
+            <div className="rp-otp-head">
+              <SafetyCertificateOutlined className="rp-otp-icon" />
+              <h3>Verify your mobile number</h3>
               <div style={{ color: "var(--text-secondary)" }}>
                 Enter the 6-digit code sent to <strong>+91 {masked(details.phone)}</strong>
               </div>
@@ -186,9 +186,8 @@ export default function RegisterPage() {
               <Alert
                 type="info"
                 showIcon
-                style={{ marginBottom: 16 }}
-                message={`Test mode: your code is ${devOtp}`}
-                description="SMS isn't set up on this server yet, so the code is shown here instead of being texted."
+                className="rp-dev-otp"
+                message={<>Test mode (no SMS yet) · your code is <strong>{devOtp}</strong></>}
               />
             )}
 
@@ -213,12 +212,13 @@ export default function RegisterPage() {
               onClick={onVerify}
               loading={submitting}
               disabled={otp.length !== 6}
-              style={{ marginTop: 16, background: otp.length === 6 ? "#0f766e" : undefined }}
+              className="rp-verify-btn"
+              style={{ background: otp.length === 6 ? "#0f766e" : undefined }}
             >
               Verify & create account
             </Button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+            <div className="rp-otp-links">
               <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setStep(0)} style={{ padding: 0 }}>
                 Change details
               </Button>
@@ -229,10 +229,40 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <div style={{ textAlign: "center", marginTop: 20 }}>
+        <div className="rp-foot">
           Already have an account? <Link to="/login">Login</Link>
         </div>
       </Card>
+      <style>{`
+        .rp-wrap{max-width:480px;margin:40px auto;padding:0 12px}
+        .rp-foot{text-align:center;margin-top:20px}
+        .rp-otp-head{text-align:center;margin-bottom:20px}
+        .rp-otp-icon{font-size:40px;color:#2DD4BF}
+        .rp-otp-head h3{margin:10px 0 4px}
+        .rp-dev-otp{margin-bottom:16px}
+        .rp-verify-btn{margin-top:16px}
+        .rp-otp-links{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+        /* Phones: everything on one screen, no scrolling. */
+        @media(max-width:768px){
+          .rp-wrap{margin:4px auto 0;padding:0}
+          .rp-card .ant-card-head{min-height:44px;padding:0 16px}
+          .rp-card .ant-card-head-title{padding:10px 0;font-size:16px}
+          .rp-card .ant-card-body{padding:12px 16px 14px}
+          .rp-card .ant-steps{margin-bottom:12px!important}
+          .rp-card .ant-form-item{margin-bottom:10px}
+          .rp-card .ant-form-item-label{padding-bottom:3px}
+          .rp-card .ant-form-item-label>label{height:auto;font-size:13px}
+          .rp-card .ant-form-item-extra{display:none}
+          .rp-card .ant-input-affix-wrapper-lg,.rp-card .ant-input-lg{padding-top:7px;padding-bottom:7px}
+          .rp-foot{margin-top:12px}
+          .rp-otp-head{margin-bottom:12px}
+          .rp-otp-icon{font-size:28px}
+          .rp-otp-head h3{margin:6px 0 2px}
+          .rp-dev-otp{margin-bottom:12px;padding:6px 10px}
+          .rp-verify-btn{margin-top:12px}
+          .rp-otp-links{margin-top:8px}
+        }
+      `}</style>
     </div>
   );
 }

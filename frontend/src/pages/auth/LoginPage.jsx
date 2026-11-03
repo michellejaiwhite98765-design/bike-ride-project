@@ -53,9 +53,16 @@ const Screen = styled.div`
   width: 100%;
   overflow-x: hidden;
 
+  /* Phones: one screen, no scrolling - the animated map fills the screen
+     and the sign-in card floats over it as frosted glass. */
   @media (max-width: 920px) {
     grid-template-columns: 1fr;
-    grid-template-rows: 280px auto;
+    grid-template-rows: 1fr;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    background: ${MAP_BG};
   }
 `;
 
@@ -87,7 +94,9 @@ const MapSide = styled.div`
   }
 
   @media (max-width: 920px) {
-    padding: 24px;
+    grid-area: 1 / 1;
+    padding: 18px 20px;
+    justify-content: flex-start;
   }
 `;
 
@@ -207,6 +216,12 @@ const EtaChip = styled.div`
   top: 32%;
   left: 9%;
   animation: ${floaty} 4.5s ease-in-out infinite;
+
+  @media (max-width: 920px) {
+    top: 11%;
+    left: auto;
+    right: 8%;
+  }
 `;
 
 const StatChip = styled.div`
@@ -264,7 +279,11 @@ const FormSide = styled.div`
   overflow-y: auto;
 
   @media (max-width: 920px) {
-    padding: 32px 20px 48px;
+    grid-area: 1 / 1;
+    position: relative;
+    z-index: 10;
+    padding: 64px 16px 16px;
+    overflow: hidden;
   }
 `;
 
@@ -277,10 +296,23 @@ const TicketCard = styled.div`
   color: ${ON_DARK};
   box-shadow: 0 30px 60px -20px rgba(10, 13, 18, 0.35);
   overflow: hidden;
+
+  /* Frosted glass over the full-screen map on phones. */
+  @media (max-width: 920px) {
+    background: rgba(13, 17, 23, 0.52);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
 `;
 
 const TicketTop = styled.div`
   padding: 26px 28px 0;
+
+  @media (max-width: 920px) {
+    padding: 18px 20px 0;
+  }
 `;
 
 const Eyebrow = styled.span`
@@ -300,12 +332,21 @@ const TicketH2 = styled.h2`
   margin: 0 0 6px;
   letter-spacing: -0.01em;
   color: ${ON_DARK};
+
+  @media (max-width: 920px) {
+    font-size: 22px;
+    margin: 0 0 2px;
+  }
 `;
 
 const TicketSub = styled.p`
   margin: 0 0 20px;
   font-size: 13.5px;
   color: ${ON_DARK_MUTED};
+
+  @media (max-width: 920px) {
+    margin: 0 0 12px;
+  }
 `;
 
 const RouteRow = styled.div`
@@ -313,6 +354,10 @@ const RouteRow = styled.div`
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
+
+  @media (max-width: 920px) and (max-height: 760px) {
+    display: none;
+  }
 `;
 const Stop = styled.span`
   font-family: "Space Grotesk", sans-serif;
@@ -354,6 +399,10 @@ const MetaRow = styled.div`
   font-size: 10.5px;
   color: ${ON_DARK_MUTED};
   margin-bottom: 4px;
+
+  @media (max-width: 920px) and (max-height: 760px) {
+    display: none;
+  }
 `;
 
 const Perforation = styled.div`
@@ -361,6 +410,10 @@ const Perforation = styled.div`
   height: 0;
   border-top: 1.5px dashed rgba(255, 255, 255, 0.18);
   margin: 16px 0 0;
+
+  @media (max-width: 920px) {
+    margin: 4px 0 0;
+  }
 
   &::before,
   &::after {
@@ -378,10 +431,21 @@ const Perforation = styled.div`
   &::after {
     right: -30px;
   }
+
+  @media (max-width: 920px) {
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
 `;
 
 const TicketBottom = styled.div`
   padding: 22px 28px 30px;
+
+  @media (max-width: 920px) {
+    padding: 16px 20px 18px;
+  }
 `;
 
 const FieldLabel = styled.label`
@@ -440,6 +504,10 @@ const StyledPassword = styled(Input.Password)`
 const StyledFormItem = styled(Form.Item)`
   margin-bottom: 15px;
 
+  @media (max-width: 920px) {
+    margin-bottom: 10px;
+  }
+
   .ant-form-item-explain-error {
     font-size: 11px;
     margin-top: 5px;
@@ -454,6 +522,10 @@ const Row = styled.div`
   margin: 16px 0 20px;
   font-size: 12px;
   color: ${ON_DARK_MUTED};
+
+  @media (max-width: 920px) {
+    margin: 8px 0 14px;
+  }
 
   a {
     color: ${ON_DARK_MUTED};
@@ -493,6 +565,11 @@ const BoardButton = styled(Button)`
 const Foot = styled.div`
   text-align: center;
   margin-top: 18px;
+
+  @media (max-width: 920px) {
+    margin-top: 12px;
+  }
+
   font-size: 12.5px;
   color: ${ON_DARK_MUTED};
 

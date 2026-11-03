@@ -327,6 +327,15 @@ const ContentWrap = styled(Content)`
     padding: 8px 16px 96px;
   }
 
+  /* Sign-up / password pages on phones: no bottom-nav gap, so the form fits one screen. */
+  ${(p) =>
+    p.$authPage &&
+    css`
+      @media (max-width: 768px) {
+        padding: 4px 10px 10px;
+      }
+    `}
+
   ${(p) =>
     p.$fullBleed &&
     css`
@@ -351,6 +360,14 @@ const FooterBar = styled(Footer)`
   color: ${colors.textSecondary};
   padding: 24px 16px;
   font-size: 13px;
+
+  ${(p) =>
+    p.$hideOnPhone &&
+    css`
+      @media (max-width: 768px) {
+        display: none;
+      }
+    `}
 `;
 
 export default function AppLayout() {
@@ -458,6 +475,7 @@ export default function AppLayout() {
   const isEditRide = /^\/rides\/[^/]+\/edit$/.test(location.pathname);
   const isCreateRidePage = location.pathname === "/rides/create" || isEditRide;
   const isFullBleedPage = isHome || isSearchPage || isCreateRidePage;
+  const isAuthPage = ["/register", "/forgot-password", "/reset-password"].includes(location.pathname);
   // Create/Find ride keep the normal header but in its compact size (and without
   // the link to the page you are already on) so the map gets the room.
   const compactHeader = isCreateRidePage || isSearchPage;
@@ -559,11 +577,14 @@ export default function AppLayout() {
                           Login
                         </Button>
                       </Link>
-                      <Link to="/register" className="guest-actions">
-                        <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
-                          Sign up
-                        </Button>
-                      </Link>
+                      {/* Not on the sign-up page itself - it would link to where you already are. */}
+                      {location.pathname !== "/register" && (
+                        <Link to="/register" className="guest-actions">
+                          <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
+                            Sign up
+                          </Button>
+                        </Link>
+                      )}
                     </>
                   )}
 
@@ -655,16 +676,18 @@ export default function AppLayout() {
                 Login
               </Button>
             </Link>
-            <Link to="/register">
-              <Button block type="primary" style={{ background: ACCENT }}>
-                Sign up
-              </Button>
-            </Link>
+            {location.pathname !== "/register" && (
+              <Link to="/register">
+                <Button block type="primary" style={{ background: ACCENT }}>
+                  Sign up
+                </Button>
+              </Link>
+            )}
           </div>
         )}
       </Drawer>
 
-      <ContentWrap $fullBleed={isFullBleedPage}>
+      <ContentWrap $fullBleed={isFullBleedPage} $authPage={isAuthPage}>
         <Outlet />
       </ContentWrap>
 
@@ -697,7 +720,7 @@ export default function AppLayout() {
         </BottomNav>
       )}
 
-      {!isFullBleedPage && <FooterBar>BikeRide — Share your journey. Ride together.</FooterBar>}
+      {!isFullBleedPage && <FooterBar $hideOnPhone={isAuthPage}>BikeRide — Share your journey. Ride together.</FooterBar>}
     </Layout>
   );
 }

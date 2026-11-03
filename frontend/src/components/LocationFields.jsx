@@ -42,6 +42,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(null); // inline error under the field
   const timerRef = useRef(null);
+  const eraseRef = useRef(null); // clears text that isn't a known place
   const requestRef = useRef(0); // drops responses to out-of-date queries
   const nameValue = Form.useWatch(`${prefix}Name`, form);
 
@@ -81,7 +82,20 @@ export default function LocationFields({ prefix, label, placeholder }) {
     }
   }
 
+  // Text with no real place behind it is erased after a second, so a made-up
+  // or foreign place never lingers in the box.
+  const eraseSoon = () => {
+    clearTimeout(eraseRef.current);
+    eraseRef.current = setTimeout(() => {
+      if (form.getFieldValue(`${prefix}Latitude`) == null) {
+        form.setFieldsValue({ [`${prefix}Name`]: "" });
+        setOptions([]);
+      }
+    }, 1000);
+  };
+
   const handleSearch = (value) => {
+    clearTimeout(eraseRef.current);
     if (timerRef.current) clearTimeout(timerRef.current);
     requestRef.current += 1;
     const requestId = requestRef.current;
@@ -124,6 +138,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
           const text = `Unknown location "${value.trim()}". Please search for a known place.`;
           setNotFound(text);
           notification.error({ title: "Error", description: text, key: `location-${prefix}` });
+          eraseSoon();
         }
       } catch (e) {
         if (requestId !== requestRef.current) return;
@@ -140,6 +155,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimeout(eraseRef.current);
     };
   }, []);
 
@@ -195,6 +211,10 @@ export default function LocationFields({ prefix, label, placeholder }) {
           options={options}
           onSearch={handleSearch}
           onSelect={onSelect}
+          onBlur={() => {
+            // Left the box with text that was never picked from the suggestions.
+            if (form.getFieldValue(`${prefix}Name`) && form.getFieldValue(`${prefix}Latitude`) == null) eraseSoon();
+          }}
           notFoundContent={loading ? <Spin size="small" /> : null}
         >
           <Input prefix={<EnvironmentOutlined />} placeholder={placeholder} size="large" maxLength={150} />

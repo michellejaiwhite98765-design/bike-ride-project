@@ -1,6 +1,13 @@
 import { api, tokenStorage } from "./api.js";
 
 export const authService = {
+  // Sign-up phone verification: send a code, then verify it for a token that register() needs.
+  sendPhoneOtp(phone) {
+    return api.post("/auth/phone-otp", { phone }).then((res) => res.data);
+  },
+  verifyPhoneOtp(phone, otp) {
+    return api.post("/auth/phone-otp/verify", { phone, otp }).then((res) => res.data);
+  },
   async register(payload) {
     const res = await api.post("/auth/register", payload);
     tokenStorage.set(res.data.token);

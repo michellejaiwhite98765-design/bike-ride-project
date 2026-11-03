@@ -14,7 +14,7 @@ function unique() {
 // module registries, so a per-file counter restarts at 1 in each file and
 // collides across files against the shared dev DB - use a random 9-digit
 // suffix instead so uniqueness doesn't depend on any shared/reset state.
-function uniquePhone() {
+export function uniquePhone() {
   return `9${crypto.randomInt(100000000, 999999999)}`;
 }
 
@@ -30,14 +30,25 @@ function uniqueRegistrationNumber() {
   return `TN01${letter1}${letter2}${digits}`;
 }
 
+/** Sends + verifies a sign-up OTP (test mode returns the code) and returns the verification token. */
+export async function verifyPhone(phone) {
+  const sent = await request(app).post("/api/auth/phone-otp").send({ phone });
+  if (sent.status !== 200) throw new Error(`phone-otp failed: ${sent.status} ${JSON.stringify(sent.body)}`);
+  const verified = await request(app).post("/api/auth/phone-otp/verify").send({ phone, otp: sent.body.data.devOtp });
+  if (verified.status !== 200) throw new Error(`phone-otp/verify failed: ${verified.status} ${JSON.stringify(verified.body)}`);
+  return verified.body.data.verificationToken;
+}
+
 export async function registerUser(overrides = {}) {
   const id = unique();
+  const phone = overrides.phone || uniquePhone();
   const payload = {
     firstName: "Test",
     lastName: "User",
     email: `user${id}@example.test`,
-    phone: uniquePhone(),
+    phone,
     password: "password123",
+    phoneVerificationToken: await verifyPhone(phone),
     ...overrides,
   };
   const res = await request(app).post("/api/auth/register").send(payload);

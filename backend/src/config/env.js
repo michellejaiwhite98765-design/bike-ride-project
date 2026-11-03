@@ -72,6 +72,19 @@ export const env = {
     timeoutMs: Number(process.env.ROUTING_TIMEOUT_MS || 8000),
   },
   platformFeeFlat: Number(process.env.PLATFORM_FEE_FLAT || 5),
+  // Sign-up phone OTP (services/phoneOtp.service.js, services/sms.service.js).
+  sms: {
+    provider: (process.env.SMS_PROVIDER || "").trim().toLowerCase(),
+    // With no provider, show the code in the app instead of texting it.
+    // On by default for local/dev; must be turned on explicitly in production.
+    otpDevMode: (process.env.OTP_DEV_MODE ?? (process.env.NODE_ENV === "production" ? "false" : "true")) === "true",
+    twoFactor: {
+      apiKey: process.env.TWOFACTOR_API_KEY || "",
+      template: process.env.TWOFACTOR_TEMPLATE || "",
+      baseUrl: process.env.TWOFACTOR_URL || "https://2factor.in/API/V1",
+      timeoutMs: Number(process.env.TWOFACTOR_TIMEOUT_MS || 10000),
+    },
+  },
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",
     apiKey: process.env.WAY2API_API_KEY || "",

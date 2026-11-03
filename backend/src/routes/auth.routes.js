@@ -8,6 +8,8 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  sendPhoneOtpSchema,
+  verifyPhoneOtpSchema,
 } from "../validators/auth.validator.js";
 
 export const authRoutes = Router();
@@ -36,6 +38,11 @@ export const authRoutes = Router();
  *       201: { description: Registered successfully }
  *       409: { description: Duplicate email or phone }
  */
+// Sign-up phone verification: send a code, then verify it to get the
+// phoneVerificationToken that /register requires.
+authRoutes.post("/phone-otp", authLimiter, validateBody(sendPhoneOtpSchema), authController.sendPhoneOtp);
+authRoutes.post("/phone-otp/verify", authLimiter, validateBody(verifyPhoneOtpSchema), authController.verifyPhoneOtp);
+
 authRoutes.post("/register", authLimiter, validateBody(registerSchema), authController.register);
 
 /**

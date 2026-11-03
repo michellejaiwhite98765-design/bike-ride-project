@@ -7,6 +7,7 @@ import { logger } from "../config/logger.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { serializeUser } from "../utils/serializers.js";
+import { normalizePhone, phoneOtpService } from "./phoneOtp.service.js";
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -20,7 +21,10 @@ function hashToken(token) {
 }
 
 export const authService = {
-  async register({ firstName, lastName, email, phone, password }) {
+  async register({ firstName, lastName, email, phone: rawPhone, password, phoneVerificationToken }) {
+    // Phone is stored in one normalised form so "+91 98765 43210" and
+    // "9876543210" can't become two accounts.
+    const phone = normalizePhone(rawPhone);
     const [existingEmail, existingPhone] = await Promise.all([
       userRepository.findByEmail(email),
       userRepository.findByPhone(phone),
@@ -28,8 +32,14 @@ export const authService = {
     if (existingEmail) throw ApiError.conflict("Email is already registered");
     if (existingPhone) throw ApiError.conflict("Phone number is already registered");
 
+    // The number must have been confirmed by OTP (phoneOtp.service.js). This
+    // also uses the verification up, so it can't create a second account.
+    if (!(await phoneOtpService.consume(phone, phoneVerificationToken))) {
+      throw ApiError.badRequest("Please verify your mobile number with the OTP before signing up");
+    }
+
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const user = await userRepository.create({ firstName, lastName, email, phone, passwordHash });
+    const user = await userRepository.create({ firstName, lastName, email, phone, passwordHash, phoneVerifiedAt: new Date() });
 
     return { user: serializeUser(user), token: issueToken(user) };
   },

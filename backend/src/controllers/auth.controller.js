@@ -1,10 +1,21 @@
 import { authService } from "../services/auth.service.js";
+import { phoneOtpService } from "../services/phoneOtp.service.js";
 import { ok, created } from "../utils/apiResponse.js";
 
 export const authController = {
   async register(req, res) {
     const result = await authService.register(req.body);
     created(res, result, "Registration successful");
+  },
+
+  async sendPhoneOtp(req, res) {
+    const result = await phoneOtpService.send(req.body.phone);
+    ok(res, result, result.devOtp ? "Verification code generated (test mode - no SMS sent)" : "Verification code sent");
+  },
+
+  async verifyPhoneOtp(req, res) {
+    const result = await phoneOtpService.verify(req.body.phone, req.body.otp);
+    ok(res, result, "Phone number verified");
   },
 
   async login(req, res) {

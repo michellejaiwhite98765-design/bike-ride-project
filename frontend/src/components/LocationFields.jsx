@@ -9,6 +9,32 @@ import { locationService } from "../services/locationService.js";
 // OpenStreetMap's Nominatim search. When a suggestion is selected,
 // the component fills the corresponding latitude/longitude fields on the
 // surrounding form. No API key required for development.
+// Only real, named places are offered: towns, villages, areas, stations,
+// bus stands, airports and landmarks - never roads, house numbers, shops or
+// anything outside India.
+const PLACE_CLASSES = new Set(["place", "boundary", "railway", "aeroway", "tourism", "historic", "natural"]);
+const PLACE_BUS = new Set(["bus_station", "bus_stop"]);
+function knownPlaces(results) {
+  const seen = new Set();
+  return (results || [])
+    .filter((d) => {
+      if ((d.address?.country_code || "in") !== "in") return false;
+      const ok =
+        PLACE_CLASSES.has(d.class) ||
+        (d.class === "amenity" && ["bus_station", "college", "university", "hospital"].includes(d.type)) ||
+        (d.class === "highway" && PLACE_BUS.has(d.type)) ||
+        (d.class === "public_transport" && d.type === "station");
+      if (!ok) return false;
+      if (d.class === "boundary" && d.type !== "administrative") return false;
+      if (d.class === "place" && ["house", "plot", "postcode", "locality"].includes(d.type)) return false;
+      const key = (d.display_name || "").split(",").slice(0, 3).join(",").toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 6);
+}
+
 export default function LocationFields({ prefix, label, placeholder }) {
   const { notification } = App.useApp();
   const form = Form.useFormInstance();
@@ -86,12 +112,13 @@ export default function LocationFields({ prefix, label, placeholder }) {
       try {
         setLoading(true);
         const q = encodeURIComponent(value);
-        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6`;
+        // India only; extra results requested because the non-places are filtered out below.
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=20&countrycodes=in&accept-language=en`;
         const res = await fetch(url, { headers: { "Accept-Language": "en" } });
         if (!res.ok) throw new Error("search failed");
         const data = await res.json();
         if (requestId !== requestRef.current) return;
-        const opts = data.map((d) => ({ value: d.display_name, raw: d }));
+        const opts = knownPlaces(data).map((d) => ({ value: d.display_name, raw: d }));
         setOptions(opts);
         if (opts.length === 0) {
           const text = `Unknown location "${value.trim()}". Please search for a known place.`;

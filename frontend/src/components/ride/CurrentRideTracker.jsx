@@ -9,6 +9,8 @@ import { connectSocket } from "../../services/socket.js";
 import { onTripChanged } from "../../services/tripEvents.js";
 
 const POLL_MS = 30000;
+// Sign-in / sign-up screens: never show live tracking there.
+const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password"];
 // Notifications that mean someone's current trip started or ended.
 const TRIP_NOTIFICATIONS = ["RIDE_STARTED", "RIDE_COMPLETED", "RIDE_CANCELLED", "RIDE_EXPIRED", "PASSENGER_DROPPED", "BOOKING_CANCELLED", "PAYMENT_SUCCESS"];
 
@@ -78,7 +80,7 @@ export default function CurrentRideTracker() {
     };
   }, [open]);
 
-  if (!current) return null;
+  if (!current || AUTH_PAGES.includes(pathname)) return null;
 
   return (
     <>

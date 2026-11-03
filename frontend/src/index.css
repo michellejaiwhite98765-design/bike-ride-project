@@ -564,3 +564,10 @@ body::-webkit-scrollbar,
   padding: 2px 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+
+/* Hide the map credit box ("Leaflet | © OpenStreetMap contributors") on
+   every map. Note: the map tiles' terms ask for this credit to be visible;
+   it's hidden here by choice. */
+.leaflet-control-attribution {
+  display: none !important;
+}

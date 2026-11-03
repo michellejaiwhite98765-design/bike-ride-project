@@ -37,7 +37,7 @@ export default function RideDetailsModal({ ride, open, onClose, isOwner }) {
       </div>
 
       <div className="rdm-rider">
-        <Avatar size={48} className="rdm-rider-avatar" icon={<UserOutlined />}>
+        <Avatar size={48} className="rdm-rider-avatar" src={ride.rider?.profileImage || undefined} icon={<UserOutlined />}>
           {ride.rider?.firstName?.[0]}
         </Avatar>
         <div className="rdm-rider-info">

@@ -30,3 +30,25 @@ export const uploadSingleRcDocument = (req, res, next) => {
     next();
   });
 };
+
+// Profile photo: any picture format and size. The browser normally shrinks
+// it first; this limit only matters when it couldn't (e.g. HEIC on Windows).
+const photoUpload = multer({
+  storage,
+  limits: { fileSize: 30 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!String(file.mimetype).startsWith("image/") && file.mimetype !== "application/octet-stream") {
+      return cb(ApiError.badRequest("Please choose a picture"));
+    }
+    cb(null, true);
+  },
+});
+
+export const uploadSingleProfilePhoto = (req, res, next) => {
+  photoUpload.single("photo")(req, res, (err) => {
+    if (err?.code === "LIMIT_FILE_SIZE") return next(ApiError.badRequest("This picture is too large to upload. Please choose another one"));
+    if (err) return next(err);
+    if (!req.file) return next(ApiError.badRequest("Please choose a picture"));
+    next();
+  });
+};

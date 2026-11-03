@@ -580,7 +580,7 @@ export default function RideDetailsPage() {
           {/* Driver Profile Section */}
           <DriverProfileCard>
             <DriverHeader>
-              <Avatar className="driver-avatar" icon={<UserOutlined />}>
+              <Avatar className="driver-avatar" src={ride.rider?.profileImage || undefined} icon={<UserOutlined />}>
                 {ride.rider?.firstName?.[0]}
               </Avatar>
               <div className="driver-info">

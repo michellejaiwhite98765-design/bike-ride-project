@@ -2,6 +2,7 @@ import { Router } from "express";
 import { userController } from "../controllers/user.controller.js";
 import { authenticate } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { uploadSingleProfilePhoto } from "../middleware/upload.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import { updateProfileSchema, verifyOwnPhoneOtpSchema } from "../validators/user.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
@@ -46,6 +47,23 @@ export const userRoutes = Router();
  */
 userRoutes.get("/me", authenticate, userController.getMe);
 userRoutes.put("/me", authenticate, validateBody(updateProfileSchema), userController.updateMe);
+
+/**
+ * @openapi
+ * /users/me/photo:
+ *   put:
+ *     tags: [Users]
+ *     summary: Upload a profile photo (multipart field "photo", any picture) - stored as a small square image
+ *     responses:
+ *       200: { description: Updated user }
+ *   delete:
+ *     tags: [Users]
+ *     summary: Remove the profile photo
+ *     responses:
+ *       200: { description: Updated user }
+ */
+userRoutes.put("/me/photo", authenticate, uploadSingleProfilePhoto, userController.setPhoto);
+userRoutes.delete("/me/photo", authenticate, userController.removePhoto);
 // Changing the mobile number, step 1: prove the current number (OTP to it).
 userRoutes.post("/me/phone-otp", authenticate, authLimiter, userController.sendOwnPhoneOtp);
 userRoutes.post("/me/phone-otp/verify", authenticate, authLimiter, validateBody(verifyOwnPhoneOtpSchema), userController.verifyOwnPhoneOtp);

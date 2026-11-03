@@ -11,6 +11,15 @@ export const userService = {
   verifyOwnPhoneOtp(otp) {
     return api.post("/users/me/phone-otp/verify", { otp }).then((res) => res.data);
   },
+  // Any picture; the server stores a small square copy. Returns the updated user.
+  uploadPhoto(file) {
+    const form = new FormData();
+    form.append("photo", file);
+    return api.put("/users/me/photo", form, { timeout: 120000 }).then((res) => res.data);
+  },
+  removePhoto() {
+    return api.delete("/users/me/photo").then((res) => res.data);
+  },
   getPublicProfile(id) {
     return api.get(`/users/${id}`).then((res) => res.data);
   },

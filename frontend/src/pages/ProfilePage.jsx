@@ -1,4 +1,4 @@
-import { Card, Form, Input, Button, Avatar, App } from "antd";
+import { Card, Form, Input, Button, App } from "antd";
 import { UserOutlined, MailOutlined, PhoneOutlined, FileTextOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -8,6 +8,7 @@ import colors from "../theme/colors.js";
 import AccountMenu from "../components/layout/AccountMenu.jsx";
 import ChangePhoneModal from "../components/ChangePhoneModal.jsx";
 import { useState } from "react";
+import ProfilePhotoPicker from "../components/profile/ProfilePhotoPicker.jsx";
 
 const PageContainer = styled.div`
   max-width: 600px;
@@ -23,12 +24,10 @@ const ProfileHeader = styled.div`
   border: 1px solid ${colors.border};
 `;
 
-const ProfileAvatar = styled(Avatar)`
-  width: 80px !important;
-  height: 80px !important;
-  font-size: 32px !important;
-  background: ${colors.primary} !important;
-  margin: 0 auto 16px;
+const ProfilePhotoHint = styled.div`
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 `;
 
 const ProfileName = styled.h1`
@@ -106,7 +105,8 @@ export default function ProfilePage({ editing = false }) {
     return (
       <PageContainer>
         <ProfileHeader>
-          <ProfileAvatar icon={<UserOutlined />}>{user.firstName?.[0]}</ProfileAvatar>
+          <ProfilePhotoPicker size={96} />
+          <ProfilePhotoHint>Tap your photo to change it</ProfilePhotoHint>
           <ProfileName>
             {user.firstName} {user.lastName}
           </ProfileName>

@@ -30,7 +30,7 @@ export default function RideCard({ ride, showMatch = false, pickup, drop }) {
       >
         <div className="rc-top">
           <div className="rc-person">
-            <Avatar size={44} className="rc-avatar" icon={<UserOutlined />}>
+            <Avatar size={44} className="rc-avatar" src={ride.rider?.profileImage || undefined} icon={<UserOutlined />}>
               {ride.rider?.firstName?.[0]}
             </Avatar>
             <div>

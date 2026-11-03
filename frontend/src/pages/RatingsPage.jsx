@@ -34,7 +34,7 @@ export default function RatingsPage() {
             <List.Item>
               <Card style={{ width: "100%" }}>
                 <div style={{ display: "flex", gap: 12 }}>
-                  <Avatar style={{ background: "#0f766e" }} icon={<UserOutlined />}>
+                  <Avatar style={{ background: "#0f766e" }} src={r.reviewer?.profileImage || undefined} icon={<UserOutlined />}>
                     {r.reviewer?.firstName?.[0]}
                   </Avatar>
                   <div style={{ flex: 1 }}>

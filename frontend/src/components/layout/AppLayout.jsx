@@ -512,6 +512,7 @@ export default function AppLayout() {
   const userMenu = {
     items: [
       { key: "profile", label: <Link to="/profile">Profile</Link> },
+      { key: "photo", label: <Link to="/profile">{user?.profileImage ? "Change profile photo" : "Add profile photo"}</Link> },
       { key: "bookings", label: <Link to="/bookings">My Bookings</Link> },
       { key: "vehicles", label: <Link to="/vehicles">My Vehicles</Link> },
       { key: "history", label: <Link to="/history">Ride History</Link> },
@@ -601,7 +602,13 @@ export default function AppLayout() {
                         </NotificationIcon>
                       </Link>
                       <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-                        <AvatarButton shape="circle" size="large" icon={<UserOutlined />} />
+                        <AvatarButton shape="circle" size="large" style={user?.profileImage ? { padding: 0, overflow: "hidden" } : undefined}>
+                          {user?.profileImage ? (
+                            <img src={user.profileImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                          ) : (
+                            <UserOutlined />
+                          )}
+                        </AvatarButton>
                       </Dropdown>
                     </span>
                   )}

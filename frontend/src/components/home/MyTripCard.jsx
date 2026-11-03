@@ -119,7 +119,7 @@ export default function MyTripCard({ onChanged }) {
           {pending.length === 0 && <div className="mtc-empty">No pending requests right now - they&apos;ll show up here.</div>}
           {pending.map((req) => (
             <div key={req.id} className="mtc-req">
-              <Avatar size={38} icon={<UserOutlined />} className="mtc-avatar">
+              <Avatar size={38} src={req.passenger?.profileImage || undefined} icon={<UserOutlined />} className="mtc-avatar">
                 {req.passenger?.firstName?.[0]}
               </Avatar>
               <div className="mtc-req-info">
@@ -164,7 +164,7 @@ export default function MyTripCard({ onChanged }) {
           <span className="mtc-sub">Riding with you</span>
           <Avatar.Group max={{ count: 4 }}>
             {accepted.map((req) => (
-              <Avatar key={req.id} className="mtc-avatar" icon={<UserOutlined />}>{req.passenger?.firstName?.[0]}</Avatar>
+              <Avatar key={req.id} className="mtc-avatar" src={req.passenger?.profileImage || undefined} icon={<UserOutlined />}>{req.passenger?.firstName?.[0]}</Avatar>
             ))}
           </Avatar.Group>
         </div>

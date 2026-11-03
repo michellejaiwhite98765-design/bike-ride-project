@@ -228,7 +228,7 @@ export default function RideRequestsPage() {
             <List.Item style={{ marginBottom: 0, padding: 0 }}>
               <RequestCard style={{ width: "100%", marginBottom: 12 }}>
                 <RequestHeader>
-                  <Avatar className="avatar" icon={<UserOutlined />}>
+                  <Avatar className="avatar" src={req.passenger?.profileImage || undefined} icon={<UserOutlined />}>
                     {req.passenger?.firstName?.[0]}
                   </Avatar>
                   <div className="info">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import CurrentRideTracker from "../ride/CurrentRideTracker.jsx";
+import { notificationLink } from "../../services/notificationLinks.js";
 import { Layout, Dropdown, Drawer, Button, Badge as AntBadge, App as AntdApp } from "antd";
 import { css } from "styled-components";
 import {
@@ -412,10 +413,21 @@ export default function AppLayout() {
       // OTP notifications carry the code in their message, so show the whole
       // thing and keep it on screen long enough to read.
       const isOtp = ["PICKUP_OTP", "DROP_OTP"].includes(incoming?.type);
+      // Tapping the pop-up opens what it's about (e.g. "Payment required" opens the payment sheet).
+      const link = notificationLink(incoming);
+      const key = `n-${Date.now()}`;
       notification.info({
+        key,
         title: incoming?.title || "New notification",
         description: incoming?.message || "You have a new notification",
-        duration: isOtp ? 15 : 4,
+        duration: isOtp ? 15 : incoming?.type === "PAYMENT_REQUIRED" ? 10 : 4,
+        ...(link && {
+          style: { cursor: "pointer" },
+          onClick: () => {
+            notification.destroy(key);
+            navigate(link.to, { state: link.state });
+          },
+        }),
       });
     };
     socket.on("notification:new", onNotification);
@@ -423,7 +435,7 @@ export default function AppLayout() {
     return () => {
       socket.off("notification:new", onNotification);
     };
-  }, [isAuthenticated, notification]);
+  }, [isAuthenticated, notification, navigate]);
 
   async function requestLocationPermission() {
     try {
@@ -454,6 +466,7 @@ export default function AppLayout() {
   const userMenu = {
     items: [
       { key: "profile", label: <Link to="/profile">Profile</Link> },
+      { key: "bookings", label: <Link to="/bookings">My Bookings</Link> },
       { key: "vehicles", label: <Link to="/vehicles">My Vehicles</Link> },
       { key: "history", label: <Link to="/history">Ride History</Link> },
       { key: "safety", label: <Link to="/safety">Safety</Link> },
@@ -591,6 +604,7 @@ export default function AppLayout() {
                 { to: "/search", icon: <SearchOutlined />, label: "Find Ride" },
                 { to: "/rides/create", icon: <PlusCircleOutlined />, label: "Create Ride" },
                 { to: "/rides", icon: <CarOutlined />, label: "My Rides" },
+                { to: "/bookings", icon: <FileTextOutlined />, label: "My Bookings" },
                 { to: "/notifications", icon: <BellOutlined />, label: "Notifications" },
                 { to: "/profile", icon: <UserOutlined />, label: "Profile" },
                 { to: "/vehicles", icon: <CarOutlined />, label: "My Vehicles" },

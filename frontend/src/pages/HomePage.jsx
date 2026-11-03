@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { rideService } from "../services/rideService.js";
 import HomeMapView from "../components/home/HomeMapView.jsx";
 import HomeCardView from "../components/home/HomeCardView.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useActiveBookings } from "../components/home/MyBookingCard.jsx";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -69,6 +70,16 @@ function HomePage() {
     };
   }, []);
 
+  // The passenger's accepted rides: shown on the map and as a "your ride" card
+  // (with Pay now while payment is due). An accepted ride is usually full, so
+  // it isn't in the explore list - add it so it still appears.
+  const myBookings = useActiveBookings(isAuthenticated);
+  const ridesOnMap = useMemo(() => {
+    const booked = myBookings.map((b) => ({ ...b.ride, id: b.ride?.id || b.rideId, myBooking: b }));
+    const bookedIds = new Set(booked.map((r) => r.id));
+    return [...booked, ...nearbyRides.filter((r) => !bookedIds.has(r.id))];
+  }, [myBookings, nearbyRides]);
+
   return (
     <div className="hp-shell">
       {isAuthenticated && (
@@ -86,9 +97,9 @@ function HomePage() {
 
       <div className="hp-stage">
         {view === "card" && isAuthenticated ? (
-          <HomeCardView nearbyRides={nearbyRides} loading={loadingNearby} onSearchAll={findRide} />
+          <HomeCardView nearbyRides={nearbyRides} myBookings={myBookings} loading={loadingNearby} onSearchAll={findRide} />
         ) : (
-          <HomeMapView userLocation={userLocation} nearbyRides={nearbyRides} loading={loadingNearby} />
+          <HomeMapView userLocation={userLocation} nearbyRides={ridesOnMap} myBookings={myBookings} loading={loadingNearby} />
         )}
       </div>
 

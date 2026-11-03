@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { notificationLink } from "../services/notificationLinks.js";
 import {
   BellOutlined,
   CheckCircleFilled,
@@ -200,6 +202,7 @@ const EmptyState = styled.div`
 `;
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -215,6 +218,14 @@ export default function NotificationsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Tapping a notification marks it read and opens what it's about (e.g. the
+  // booking's payment sheet for "Payment required").
+  function openNotification(n) {
+    if (!n.isRead) markRead(n.id);
+    const link = notificationLink(n);
+    if (link) navigate(link.to, { state: link.state });
+  }
 
   async function markRead(id) {
     // Optimistic: flip the row immediately instead of flashing the skeleton.
@@ -267,7 +278,7 @@ export default function NotificationsPage() {
               const meta = TYPE_META[n.type] || DEFAULT_META;
               const unread = !n.isRead;
               return (
-                <Item key={n.id} $unread={unread} $color={meta.color} onClick={() => unread && markRead(n.id)}>
+                <Item key={n.id} $unread={unread} $color={meta.color} onClick={() => openNotification(n)} style={notificationLink(n) ? { cursor: "pointer" } : undefined}>
                   <div className="avatar">
                     <div className="avatar-inner">{meta.icon}</div>
                   </div>

@@ -3,15 +3,17 @@ import { Button, Empty } from "antd";
 import RideCard from "../ride/RideCard.jsx";
 import BrandLoader from "../ui/BrandLoader.jsx";
 import MyTripCard from "./MyTripCard.jsx";
+import MyBookingCard from "./MyBookingCard.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function HomeCardView({ nearbyRides: allRides, loading, onSearchAll }) {
+export default function HomeCardView({ nearbyRides: allRides, myBookings = [], loading, onSearchAll }) {
   const { user } = useAuth();
   // The user's own open trip is shown in MyTripCard, not again in the grid.
   const nearbyRides = allRides.filter((ride) => ride.riderId !== user?.id);
   return (
     <div className="hcv-wrap">
       <MyTripCard />
+      <MyBookingCard bookings={myBookings} />
       {loading ? (
         <BrandLoader variant="inline" label="Finding rides near you…" />
       ) : nearbyRides.length === 0 ? (

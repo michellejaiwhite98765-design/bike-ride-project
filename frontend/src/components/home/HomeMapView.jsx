@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import MyBookingCard from "./MyBookingCard.jsx";
 import JoinRideButton from "../ride/JoinRideButton.jsx";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -55,6 +56,16 @@ function meIcon() {
 }
 
 function priceIcon(ride, color) {
+  // The passenger's own accepted ride: a "Your ride" pin instead of a price.
+  if (ride.myBooking) {
+    const due = ride.myBooking.bookingStatus === "PAYMENT_PENDING";
+    return L.divIcon({
+      className: "hmv-marker-wrap",
+      html: `<div class="hmv-price-pin hmv-price-pin-mine${due ? " is-due" : ""}" style="--pin-color:${due ? "#f59e0b" : "#2DD4BF"}"><span>${due ? "Pay now" : "Your ride"}</span><i></i></div>`,
+      iconSize: [86, 40],
+      iconAnchor: [43, 40],
+    });
+  }
   const isFull = ride.availableSeats <= 0;
   const isFree = ride.rideType === "WITHOUT_TIP";
   const label = isFull ? "Full" : isFree ? "Free" : `₹${ride.tipAmount}`;
@@ -75,7 +86,7 @@ function endPinIcon(color) {
   });
 }
 
-function FitToMarkers({ points }) {
+function FitToMarkers({ points, bottomPad = 60 }) {
   const map = useMap();
   useEffect(() => {
     if (points.length === 0) return;
@@ -84,12 +95,12 @@ function FitToMarkers({ points }) {
         map.setView(points[0], ZOOM);
       } else {
         // Extra room on top: the floating header and Map/Card switch sit over the map.
-        map.fitBounds(L.latLngBounds(points), { paddingTopLeft: [48, 150], paddingBottomRight: [48, 60], maxZoom: 15 });
+        map.fitBounds(L.latLngBounds(points), { paddingTopLeft: [48, 150], paddingBottomRight: [48, bottomPad], maxZoom: 15 });
       }
     } catch {
       // Map may already be mid-teardown.
     }
-  }, [map, points]);
+  }, [map, points, bottomPad]);
   return null;
 }
 
@@ -132,7 +143,7 @@ function RecenterOnSignal({ target, signal }) {
  * a message card when there are no rides (used by the search page; the home
  * page shows nothing).
  */
-export default function HomeMapView({ userLocation, nearbyRides, loading, emptyState, pickup, drop }) {
+export default function HomeMapView({ userLocation, nearbyRides, myBookings = [], loading, emptyState, pickup, drop }) {
   const { mode } = useTheme();
   const isDark = mode === "dark";
   const [recenterSignal, setRecenterSignal] = useState(0);
@@ -143,6 +154,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
   const palette = useMemo(() => shuffled(TRIP_COLORS), []);
   const colorByRide = useRef(new Map());
   const tripColor = (rideId) => {
+    const mine = nearbyRides.find((r) => r.id === rideId)?.myBooking;
+    if (mine) return mine.bookingStatus === "PAYMENT_PENDING" ? "#f59e0b" : "#2DD4BF";
     const assigned = colorByRide.current;
     if (!assigned.has(rideId)) assigned.set(rideId, palette[assigned.size % palette.length]);
     return assigned.get(rideId);
@@ -189,14 +202,24 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
   }, [ridePoints]);
 
   const center = userLocation ? [userLocation.latitude, userLocation.longitude] : DEFAULT_CENTER;
+  // With a booked ride, frame just that ride (the "your ride" card covers the
+  // bottom of the map, hence the extra bottom padding); otherwise everything.
+  const bookedPoints = ridePoints.filter((p) => p.ride.myBooking);
   const fitPoints = useMemo(() => {
+    if (bookedPoints.length) {
+      return bookedPoints.flatMap((p) => [
+        [p.source.latitude, p.source.longitude],
+        [p.destination.latitude, p.destination.longitude],
+      ]);
+    }
     const points = ridePoints.flatMap((p) => [
       [p.source.latitude, p.source.longitude],
       [p.destination.latitude, p.destination.longitude],
     ]);
     if (userLocation) points.push([userLocation.latitude, userLocation.longitude]);
     return points;
-  }, [ridePoints, userLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ridePoints, userLocation, bookedPoints.length]);
 
   const nearest = nearbyRides[0];
 
@@ -212,7 +235,7 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         <TileLayer attribution={COLOR_TILE_ATTRIBUTION} url={COLOR_TILE_URL} />
         <ZoomControl position="bottomright" />
         <InvalidateOnResize />
-        <FitToMarkers points={fitPoints} />
+        <FitToMarkers points={fitPoints} bottomPad={myBookings.length ? 60 + 170 * myBookings.length : 60} />
         {userLocation && (
           <RecenterOnSignal target={[userLocation.latitude, userLocation.longitude]} signal={recenterSignal} />
         )}
@@ -237,8 +260,8 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
               positions={linePoints}
               pathOptions={{
                 color,
-                weight: 4,
-                opacity: 0.85,
+                weight: ride.myBooking ? 7 : 4,
+                opacity: ride.myBooking ? 1 : 0.85,
                 lineCap: "round",
                 lineJoin: "round",
                 dashArray: routePoints ? undefined : "1 8",
@@ -248,7 +271,7 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         })}
 
         {ridePoints.map(({ ride, source }) => (
-          <Marker key={ride.id} position={[source.latitude, source.longitude]} icon={priceIcon(ride, tripColor(ride.id))}>
+          <Marker key={ride.id} position={[source.latitude, source.longitude]} icon={priceIcon(ride, tripColor(ride.id))} zIndexOffset={ride.myBooking ? 1000 : 0}>
             <Popup>
               <div className="hmv-popup">
                 <strong>
@@ -263,7 +286,17 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
                 {ride.pickupZone?.zone === "DETOUR" && (
                   <span className="hmv-popup-zone">Detour pickup · +₹{ride.pickupZone.extraTip}</span>
                 )}
-                <JoinRideButton ride={ride} pickup={pickup} drop={drop} size="small" block />
+                {ride.myBooking ? (
+                  ride.myBooking.bookingStatus === "PAYMENT_PENDING" ? (
+                    <Link to={`/bookings/${ride.myBooking.id}`} state={{ pay: true }} className="hmv-popup-pay">
+                      Pay ₹{Number(ride.myBooking.totalAmount)} now
+                    </Link>
+                  ) : (
+                    <Link to={`/bookings/${ride.myBooking.id}`} className="hmv-popup-pay is-done">Seat confirmed · View booking</Link>
+                  )
+                ) : (
+                  <JoinRideButton ride={ride} pickup={pickup} drop={drop} size="small" block />
+                )}
                 <Link to={`/rides/${ride.id}`}>View ride</Link>
               </div>
             </Popup>
@@ -287,6 +320,7 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
       </MapContainer>
 
       <div className="hmv-top-shade" />
+      <MyBookingCard bookings={myBookings} floating />
 
       {loading && <div className="hmv-loading-pill">Finding rides near you…</div>}
 
@@ -314,6 +348,9 @@ export default function HomeMapView({ userLocation, nearbyRides, loading, emptyS
         @keyframes hmvPulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 
         .hmv-price-pin{position:relative;background:#fff;color:#0f172a;font-size:12px;font-weight:700;padding:6px 10px 6px 13px;border-radius:10px;border-left:4px solid var(--pin-color,#2563eb);box-shadow:0 3px 10px rgba(0,0,0,.3);white-space:nowrap;text-align:center}
+        .hmv-price-pin.hmv-price-pin-mine{background:var(--pin-color);color:#fff;font-weight:800;border-left-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.35),0 6px 16px rgba(0,0,0,.4)}
+        .hmv-popup-pay{display:block;margin:6px 0 4px;padding:7px 10px;border-radius:10px;background:#f59e0b;color:#fff!important;font-weight:800;text-align:center;text-decoration:none}
+        .hmv-popup-pay.is-done{background:#2DD4BF;color:#04211d!important}
         .hmv-price-pin i{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%) rotate(45deg);width:9px;height:9px;background:#fff;box-shadow:2px 2px 4px rgba(0,0,0,.12)}
 
         .hmv-end-pin{width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--pin-color,#0f766e);border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.35);display:grid;place-items:center}

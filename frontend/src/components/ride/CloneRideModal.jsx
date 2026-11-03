@@ -121,7 +121,7 @@ export default function CloneRideModal({ ride, rides = [], open, onClose, onClon
           loading={submitting === "draft"}
           disabled={submitting === "publish"}
         >
-          Clone as draft
+          Save draft
         </Button>,
         <Button
           key="publish"

@@ -871,7 +871,7 @@ export default function RideDetailsPage() {
                 {["DRAFT", "PUBLISHED"].includes(ride.status) && (
                   <Popconfirm title="Cancel this ride?" onConfirm={() => runAction(() => rideService.cancel(ride.id), "Ride cancelled")}>
                     <Button size="large" danger style={{ flex: 1 }}>
-                      Cancel Ride
+                      Cancel
                     </Button>
                   </Popconfirm>
                 )}

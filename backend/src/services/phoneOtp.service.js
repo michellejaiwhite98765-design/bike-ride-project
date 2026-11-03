@@ -33,9 +33,13 @@ function safeEqual(a, b) {
 }
 
 export const phoneOtpService = {
-  async send(rawPhone) {
+  /**
+   * @param ownNumber true when a signed-in user is proving they still have
+   *   their current number (changing it) - that number is registered, by them.
+   */
+  async send(rawPhone, { ownNumber = false } = {}) {
     const phone = normalizePhone(rawPhone);
-    if (await userRepository.findByPhone(phone)) {
+    if (!ownNumber && (await userRepository.findByPhone(phone))) {
       throw ApiError.conflict("This phone number is already registered. Please log in instead.");
     }
 
@@ -61,7 +65,8 @@ export const phoneOtpService = {
       phone,
       expiresAt,
       resendAfterSeconds: RESEND_COOLDOWN_SECONDS,
-      // No SMS provider yet: hand the code back so sign-up can be tested.
+      smsSent: Boolean(sent.delivered),
+      // OTP_DEV_MODE: also hand the code to the app (testing / no SMS provider yet).
       ...(sent.devMode ? { devOtp: otp } : {}),
     };
   },
@@ -85,6 +90,17 @@ export const phoneOtpService = {
     const token = crypto.randomBytes(24).toString("hex");
     await phoneOtpRepository.markVerified(phone, hash(`verified:${token}`), new Date(Date.now() + VERIFIED_VALID_MINUTES * 60 * 1000));
     return { phone, verificationToken: token, validForMinutes: VERIFIED_VALID_MINUTES };
+  },
+
+  /** True if this phone was verified with this token (and it hasn't expired), without using it up. */
+  async isVerified(phone, token) {
+    const state = await phoneOtpRepository.find(normalizePhone(phone));
+    return Boolean(
+      token &&
+        state?.verificationTokenHash &&
+        new Date(state.verificationExpiresAt).getTime() > Date.now() &&
+        safeEqual(hash(`verified:${token}`), state.verificationTokenHash)
+    );
   },
 
   /** For /register: true (and used up) only if this phone was verified with this token. */

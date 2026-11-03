@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Indian mobile number: 10 digits starting 6-9, optionally with +91 / 91 / 0 in front.
-const mobile = z
+export const mobile = z
   .string()
   .trim()
   .transform((v) => v.replace(/[\s-]/g, ""))

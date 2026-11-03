@@ -9,6 +9,16 @@ export const userController = {
     ok(res, user, "Profile updated");
   },
 
+  async sendOwnPhoneOtp(req, res) {
+    const result = await userService.sendOwnPhoneOtp(req.user.id);
+    ok(res, result, result.devOtp ? "Verification code generated (test mode - no SMS sent)" : "Verification code sent");
+  },
+
+  async verifyOwnPhoneOtp(req, res) {
+    const result = await userService.verifyOwnPhoneOtp(req.user.id, req.body.otp);
+    ok(res, result, "Current number verified");
+  },
+
   async getMe(req, res) {
     ok(res, serializeUser(req.user));
   },

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Form, Input, Button, Card, App, Row, Col, Alert, Steps } from "antd";
+import { Form, Input, Button, Card, App, Row, Col, Steps } from "antd";
 import { MailOutlined, LockOutlined, PhoneOutlined, ArrowLeftOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { authService } from "../../services/authService.js";
+import OtpCodeNotice from "../../components/OtpCodeNotice.jsx";
 
 // Indian mobile: 10 digits starting 6-9 (a +91 / 0 prefix and spaces are fine).
 const MOBILE_RE = /^(\+?91|0)?[6-9]\d{9}$/;
@@ -27,7 +28,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [details, setDetails] = useState(null); // step-1 values, phone as 10 digits
   const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState(null); // test mode only (no SMS provider)
+  const [devOtp, setDevOtp] = useState(null); // shown while OTP_DEV_MODE is on (testing)
+  const [smsSent, setSmsSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resendIn, setResendIn] = useState(0);
@@ -52,6 +54,7 @@ export default function RegisterPage() {
       const res = await authService.sendPhoneOtp(phone);
       setOtp("");
       setDevOtp(res?.devOtp || null);
+      setSmsSent(Boolean(res?.smsSent));
       setResendIn(res?.resendAfterSeconds || 30);
       return true;
     } catch (err) {
@@ -182,14 +185,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {devOtp && (
-              <Alert
-                type="info"
-                showIcon
-                className="rp-dev-otp"
-                message={<>Test mode (no SMS yet) · your code is <strong>{devOtp}</strong></>}
-              />
-            )}
+            <OtpCodeNotice code={devOtp} smsSent={smsSent} style={{ marginBottom: 12 }} />
 
             <Input
               ref={otpInput}

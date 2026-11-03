@@ -10,9 +10,9 @@ import { ApiError } from "../utils/ApiError.js";
  * needed. Needs TWOFACTOR_API_KEY; TWOFACTOR_TEMPLATE optionally names a
  * custom template approved in the 2Factor dashboard.
  *
- * No provider: with OTP_DEV_MODE=true (the default outside production) the
- * code is only logged and `{ devMode: true }` is returned so the app can show
- * it for testing; otherwise sending fails with 503.
+ * OTP_DEV_MODE=true also shows the code in the app (`devMode: true`), with or
+ * without a provider - handy while testing. With no provider it's the only
+ * way to get the code; with no provider and OTP_DEV_MODE off, sending fails (503).
  */
 async function sendVia2Factor(phone, otp) {
   const { apiKey, template, baseUrl, timeoutMs } = env.sms.twoFactor;
@@ -38,7 +38,7 @@ export const smsService = {
   async sendOtp(phone, otp) {
     switch (env.sms.provider) {
       case "2factor":
-        return sendVia2Factor(phone, otp);
+        return { ...(await sendVia2Factor(phone, otp)), devMode: env.sms.otpDevMode };
       case "":
         if (env.sms.otpDevMode) {
           logger.info(`[SMS dev mode] OTP for ${phone}: ${otp}`);

@@ -31,6 +31,10 @@ services:
     environment:
       PORT: "5000"
       NODE_ENV: production
+      # For now, also show sign-up / change-number OTPs in the app (SMS is
+      # still sent when SMS_PROVIDER=2factor + TWOFACTOR_API_KEY are set).
+      # Set OTP_DEV_MODE=false in deploy/.env to stop showing codes.
+      OTP_DEV_MODE: ${OTP_DEV_MODE:-true}
       DATABASE_URL: postgresql://bikeride:${POSTGRES_PASSWORD}@db:5432/bikeride?schema=public
 
   caddy:

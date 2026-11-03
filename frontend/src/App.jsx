@@ -48,6 +48,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<ProfilePage editing />} />
 
           <Route path="/vehicles" element={<VehiclesPage />} />
           <Route path="/vehicles/add" element={<VehicleFormPage />} />

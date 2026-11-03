@@ -1,10 +1,13 @@
 import { Card, Form, Input, Button, Avatar, App } from "antd";
-import { UserOutlined, MailOutlined, PhoneOutlined, FileTextOutlined } from "@ant-design/icons";
+import { UserOutlined, MailOutlined, PhoneOutlined, FileTextOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
+import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../context/AuthContext.jsx";
 import { userService } from "../services/userService.js";
 import colors from "../theme/colors.js";
 import AccountMenu from "../components/layout/AccountMenu.jsx";
+import ChangePhoneModal from "../components/ChangePhoneModal.jsx";
+import { useState } from "react";
 
 const PageContainer = styled.div`
   max-width: 600px;
@@ -77,14 +80,21 @@ const FormGroup = styled.div`
   }
 `;
 
-export default function ProfilePage() {
+/**
+ * /profile: your name card plus the account menu (Personal information, My
+ * Bookings, ...). /profile/edit (`editing`): the personal-information form.
+ */
+export default function ProfilePage({ editing = false }) {
   const { user, setUser } = useAuth();
   const { notification } = App.useApp();
   const [form] = Form.useForm();
+  const [changingPhone, setChangingPhone] = useState(false);
 
   async function onFinish(values) {
     try {
-      const updated = await userService.updateProfile(values);
+      // The mobile number is changed through ChangePhoneModal (OTP), not this form.
+      const { phone: _phone, ...changes } = values;
+      const updated = await userService.updateProfile(changes);
       setUser(updated);
       notification.success({ title: "Success", description: "Profile updated successfully" });
     } catch (err) {
@@ -92,20 +102,27 @@ export default function ProfilePage() {
     }
   }
 
+  if (!editing) {
+    return (
+      <PageContainer>
+        <ProfileHeader>
+          <ProfileAvatar icon={<UserOutlined />}>{user.firstName?.[0]}</ProfileAvatar>
+          <ProfileName>
+            {user.firstName} {user.lastName}
+          </ProfileName>
+          <ProfileEmail>{user.email}</ProfileEmail>
+        </ProfileHeader>
+        <AccountMenu />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
-      {/* Profile Header */}
-      <ProfileHeader>
-        <ProfileAvatar icon={<UserOutlined />}>
-          {user.firstName?.[0]}
-        </ProfileAvatar>
-        <ProfileName>
-          {user.firstName} {user.lastName}
-        </ProfileName>
-        <ProfileEmail>{user.email}</ProfileEmail>
-      </ProfileHeader>
+      <Link to="/profile" style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "4px 0 12px", fontWeight: 600 }}>
+        <ArrowLeftOutlined /> Back to profile
+      </Link>
 
-      <AccountMenu />
 
       {/* Edit Profile Form */}
       <FormCard>
@@ -140,9 +157,25 @@ export default function ProfilePage() {
             Contact Information
           </SectionTitle>
 
-          <Form.Item name="phone" label="Phone Number" rules={[{ pattern: /^\+?[0-9]{10,15}$/, message: "Enter a valid phone number" }]}>
-            <Input size="large" placeholder="+91 XXXXX XXXXX" />
+          <Form.Item label="Mobile number" extra="Verified. Changing it needs an OTP sent to the new number.">
+            <div style={{ display: "flex", gap: 8 }}>
+              <Form.Item name="phone" noStyle>
+                <Input size="large" disabled prefix={<PhoneOutlined />} suffix={<CheckCircleFilled style={{ color: "#16a34a" }} aria-label="Verified" />} />
+              </Form.Item>
+              <Button size="large" onClick={() => setChangingPhone(true)}>
+                Change
+              </Button>
+            </div>
           </Form.Item>
+          <ChangePhoneModal
+            open={changingPhone}
+            currentPhone={user.phone}
+            onClose={() => setChangingPhone(false)}
+            onChanged={(updated) => {
+              setUser(updated);
+              form.setFieldValue("phone", updated.phone);
+            }}
+          />
 
           <SectionTitle style={{ marginTop: 24 }}>
             <FileTextOutlined className="icon" />

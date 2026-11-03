@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { userController } from "../controllers/user.controller.js";
 import { authenticate } from "../middleware/auth.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
-import { updateProfileSchema } from "../validators/user.validator.js";
+import { updateProfileSchema, verifyOwnPhoneOtpSchema } from "../validators/user.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
 
 export const userRoutes = Router();
@@ -45,5 +46,8 @@ export const userRoutes = Router();
  */
 userRoutes.get("/me", authenticate, userController.getMe);
 userRoutes.put("/me", authenticate, validateBody(updateProfileSchema), userController.updateMe);
+// Changing the mobile number, step 1: prove the current number (OTP to it).
+userRoutes.post("/me/phone-otp", authenticate, authLimiter, userController.sendOwnPhoneOtp);
+userRoutes.post("/me/phone-otp/verify", authenticate, authLimiter, validateBody(verifyOwnPhoneOtpSchema), userController.verifyOwnPhoneOtp);
 userRoutes.get("/:id", authenticate, validateParams(idParamSchema), userController.getPublicProfile);
 userRoutes.get("/:id/ratings", authenticate, validateParams(idParamSchema), userController.getRatings);

@@ -749,7 +749,7 @@ export default function AppLayout() {
             </AntBadge>
             Alerts
           </BottomNavItem>
-          <BottomNavItem to="/profile" $active={location.pathname === "/profile"}>
+          <BottomNavItem to="/profile" $active={location.pathname.startsWith("/profile")}>
             <UserOutlined />
             Profile
           </BottomNavItem>

@@ -197,10 +197,9 @@ const UserSection = styled.div`
   .phone-create-trip {
     display: none;
   }
-  /* Phones (bottom bar visible): no bell / avatar / menu, just Create trip. */
+  /* Phones (bottom bar visible): no bell / avatar, just Create trip and ☰. */
   @media (max-width: 768px) {
-    .desktop-only-icons,
-    .authed-menu {
+    .desktop-only-icons {
       display: none !important;
     }
     .phone-create-trip {
@@ -289,13 +288,10 @@ const ThemeToggleButton = styled.button`
   }
 `;
 
+// The ☰ menu button: always shown, on every screen size.
 const MobileBar = styled.div`
-  display: none;
+  display: flex;
   align-items: center;
-
-  @media (max-width: 1024px) {
-    display: flex;
-  }
 `;
 
 const BottomNav = styled.nav`

@@ -91,8 +91,10 @@ export default function SearchPage() {
   const sourceName = Form.useWatch("sourceName", form);
   const destinationName = Form.useWatch("destinationName", form);
 
-  const hasSource = Boolean(sourceLatitude && sourceLongitude);
-  const hasDestination = Boolean(destinationLatitude && destinationLongitude);
+  // Real numbers only: a bad coordinate would crash the map (blank page).
+  const isCoord = (lat, lng) => Boolean(lat && lng) && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+  const hasSource = isCoord(sourceLatitude, sourceLongitude);
+  const hasDestination = isCoord(destinationLatitude, destinationLongitude);
   const hasBoth = hasSource && hasDestination;
 
   // The searched start/end double as the pickup/drop for "Request to join".
@@ -235,7 +237,7 @@ export default function SearchPage() {
     <div className={`sp-shell ${isMobile ? "sp-mobile" : ""}`} style={{ "--sheet-h": `${sheetHeight}px` }}>
       <div className="sp-map-stage">
         <HomeMapView
-          userLocation={sourceLatitude && sourceLongitude ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) } : null}
+          userLocation={hasSource ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) } : null}
           nearbyRides={results}
           loading={loading}
           pickup={pickup}

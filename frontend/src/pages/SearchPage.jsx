@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Form, Input, App, Drawer, Button } from "antd";
-import { SwapOutlined, UpOutlined, CloseOutlined } from "@ant-design/icons";
+import { Form, App, Drawer, Button, DatePicker } from "antd";
+import {
+  SwapOutlined,
+  UpOutlined,
+  CloseOutlined,
+  SearchOutlined,
+  CalendarOutlined,
+  InfoCircleOutlined,
+  CheckCircleFilled,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { rideService } from "../services/rideService.js";
 import HomeMapView from "../components/home/HomeMapView.jsx";
@@ -22,6 +30,19 @@ function useIsMobile(breakpoint = 768) {
   return matches;
 }
 
+const short = (name, fallback) => (name || fallback).split(",")[0].trim();
+
+// "today" / "tomorrow" / "on Tue, 4 Nov" / "between 4 and 10 Nov"
+function whenText(start, end) {
+  const today = dayjs();
+  if (start.isSame(end, "day")) {
+    if (start.isSame(today, "day")) return "today";
+    if (start.isSame(today.add(1, "day"), "day")) return "tomorrow";
+    return `on ${start.format("ddd, D MMM")}`;
+  }
+  return `between ${start.format(start.isSame(end, "month") ? "D" : "D MMM")} and ${end.format("D MMM")}`;
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const { notification } = App.useApp();
@@ -30,7 +51,11 @@ export default function SearchPage() {
 
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // The last search the user ran with the Search button - what they asked
+  // for, so the result banner can say it back to them.
+  const [lastSearch, setLastSearch] = useState(null);
+  const [bannerOpen, setBannerOpen] = useState(false);
+  const [dates, setDates] = useState(() => [dayjs(), dayjs()]);
 
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(true);
@@ -63,71 +88,75 @@ export default function SearchPage() {
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
   const destinationLongitude = Form.useWatch("destinationLongitude", form);
+  const sourceName = Form.useWatch("sourceName", form);
+  const destinationName = Form.useWatch("destinationName", form);
 
   const hasSource = Boolean(sourceLatitude && sourceLongitude);
   const hasDestination = Boolean(destinationLatitude && destinationLongitude);
   const hasBoth = hasSource && hasDestination;
 
-  // Once both ends are picked, tuck the sheet away so the routes are visible.
-  useEffect(() => {
-    if (isMobile && hasBoth) setSheetOpen(false);
-  }, [isMobile, hasBoth]);
-  const sourceName = Form.useWatch("sourceName", form);
-  const destinationName = Form.useWatch("destinationName", form);
   // The searched start/end double as the pickup/drop for "Request to join".
   const pickup = hasBoth ? { name: sourceName, latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) } : undefined;
   const drop = hasBoth ? { name: destinationName, latitude: Number(destinationLatitude), longitude: Number(destinationLongitude) } : undefined;
 
-  // No filter UI: every search is always "today", any seat count, any ride
-  // type (with tip and without), including rides with no seats left - the
-  // map should show the full picture, not a pre-filtered slice.
-  //
-  // Mirrors the home page until both ends are known: with only one point set
-  // (source auto-filled by geolocation, or the user typed just one field),
-  // search broadly around that single point instead of showing nothing.
-  // Once both source and destination are set, switch to the precise,
-  // directional route match.
+  // Before the first search: show today's rides around the one point that's
+  // known (the auto-filled current location) so the map isn't empty. The
+  // route search itself only runs when the user presses Search.
   useEffect(() => {
-    if (!hasSource && !hasDestination) {
-      setResults([]);
-      return undefined;
-    }
-
-    const anchorLat = hasSource ? sourceLatitude : destinationLatitude;
-    const anchorLng = hasSource ? sourceLongitude : destinationLongitude;
-
+    if (lastSearch?.kind === "route" || !(hasSource || hasDestination) || hasBoth) return undefined;
     let cancelled = false;
-    setLoading(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const params = {
-          sourceLatitude: Number(hasSource ? sourceLatitude : anchorLat),
-          sourceLongitude: Number(hasSource ? sourceLongitude : anchorLng),
-          destinationLatitude: Number(hasDestination ? destinationLatitude : anchorLat),
-          destinationLongitude: Number(hasDestination ? destinationLongitude : anchorLng),
-          date: dayjs().format("YYYY-MM-DD"),
-          includeFull: true,
-          ...(hasBoth ? {} : { radius: 50 }),
-        };
-
-        const data = await rideService.search(params);
-        if (!cancelled) {
-          setResults(Array.isArray(data) ? data : []);
-          setHasSearched(true);
-        }
-      } catch (err) {
-        if (!cancelled) notification.error({ title: "Error", description: err.message });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    const lat = Number(hasSource ? sourceLatitude : destinationLatitude);
+    const lng = Number(hasSource ? sourceLongitude : destinationLongitude);
+    const timer = setTimeout(() => {
+      rideService
+        .search({ sourceLatitude: lat, sourceLongitude: lng, destinationLatitude: lat, destinationLongitude: lng, date: dayjs().format("YYYY-MM-DD"), includeFull: true, radius: 50 })
+        .then((data) => !cancelled && setResults(Array.isArray(data) ? data : []))
+        .catch(() => {});
     }, 450);
-
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [hasSource, hasDestination, hasBoth, sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, notification]);
+  }, [lastSearch, hasSource, hasDestination, hasBoth, sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude]);
+
+  async function runSearch() {
+    if (!hasBoth) {
+      setLastSearch({ kind: "missing", missing: !hasSource ? "pickup" : "destination" });
+      setBannerOpen(true);
+      return;
+    }
+    const [start, end] = dates?.[0] ? dates : [dayjs(), dayjs()];
+    const asked = { kind: "route", from: short(sourceName, "your pickup"), to: short(destinationName, "your destination"), start, end: end || start };
+    setLoading(true);
+    try {
+      const data = await rideService.search({
+        sourceLatitude: Number(sourceLatitude),
+        sourceLongitude: Number(sourceLongitude),
+        destinationLatitude: Number(destinationLatitude),
+        destinationLongitude: Number(destinationLongitude),
+        date: asked.start.format("YYYY-MM-DD"),
+        toDate: asked.end.format("YYYY-MM-DD"),
+        includeFull: true,
+      });
+      const list = Array.isArray(data) ? data : [];
+      setResults(list);
+      setLastSearch({ ...asked, count: list.length });
+      setBannerOpen(true);
+      if (isMobile) setSheetOpen(false);
+    } catch (err) {
+      notification.error({ title: "Couldn't search", description: err.message });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const presets = [
+    { label: "Today", value: [dayjs(), dayjs()] },
+    { label: "Tomorrow", value: [dayjs().add(1, "day"), dayjs().add(1, "day")] },
+    { label: "Next 3 days", value: [dayjs(), dayjs().add(2, "day")] },
+    { label: "This week", value: [dayjs(), dayjs().add(6, "day")] },
+    { label: "Next 30 days", value: [dayjs(), dayjs().add(30, "day")] },
+  ];
 
   const goHome = () => navigate("/", { state: { view: "map" } });
 
@@ -142,44 +171,90 @@ export default function SearchPage() {
         </div>
         <LocationFields prefix="destination" label="End Location" placeholder="Where are you going?" />
       </Form>
+
+      <div className="sp-date-label">
+        <CalendarOutlined /> When
+      </div>
+      <DatePicker.RangePicker
+        className="sp-range"
+        classNames={{ popup: { root: "sp-range-popup" } }}
+        value={dates}
+        onChange={(v) => setDates(v)}
+        presets={isMobile ? undefined : presets}
+        format="ddd, D MMM"
+        allowClear={false}
+        inputReadOnly
+        placement="bottomLeft"
+        separator={<span className="sp-range-sep">→</span>}
+        disabledDate={(d, info) =>
+          d.isBefore(dayjs(), "day") || (info?.from ? Math.abs(d.diff(info.from, "day")) > 30 : d.isAfter(dayjs().add(90, "day")))
+        }
+      />
+      {isMobile && (
+        <div className="sp-chips">
+          {presets.slice(0, 4).map((p) => (
+            <button type="button" key={p.label} className="sp-chip" onClick={() => setDates(p.value)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button type="button" className="sp-search-btn" onClick={runSearch} disabled={loading}>
+        <span className={`sp-search-icon ${loading ? "spinning" : ""}`}>
+          <SearchOutlined />
+        </span>
+        {loading ? "Searching…" : "Search rides"}
+      </button>
+
       <div className="sp-hint">
-        Rides along your route show up on the map as you fill in the start and end.
         Within 2.5 km of a rider&apos;s route is a normal pickup; farther away the rider can make a short detour for a higher fare.
       </div>
     </>
   );
 
+  let banner = null;
+  if (bannerOpen && lastSearch?.kind === "missing") {
+    banner = { tone: "warn", text: `Add your ${lastSearch.missing} to search for rides.` };
+  } else if (bannerOpen && lastSearch?.kind === "route") {
+    const when = whenText(lastSearch.start, lastSearch.end);
+    banner =
+      lastSearch.count > 0
+        ? { tone: "ok", text: `${lastSearch.count} ride${lastSearch.count > 1 ? "s" : ""} from ${lastSearch.from} to ${lastSearch.to} ${when}` }
+        : {
+            tone: "warn",
+            text: `No rides from ${lastSearch.from} to ${lastSearch.to} ${when}.`,
+            hint: lastSearch.start.isSame(lastSearch.end, "day") ? "Try a wider date range." : "Try other dates or a nearby town.",
+          };
+  }
+
   const summary =
-    sourceName || destinationName
-      ? `${(sourceName || "Start").split(",")[0]} → ${(destinationName || "Where to?").split(",")[0]}`
-      : "Where to?";
+    sourceName || destinationName ? `${short(sourceName, "Start")} → ${short(destinationName, "Where to?")}` : "Where to?";
 
   return (
     <div className={`sp-shell ${isMobile ? "sp-mobile" : ""}`} style={{ "--sheet-h": `${sheetHeight}px` }}>
       <div className="sp-map-stage">
         <HomeMapView
-          userLocation={
-            sourceLatitude && sourceLongitude
-              ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) }
-              : null
-          }
+          userLocation={sourceLatitude && sourceLongitude ? { latitude: Number(sourceLatitude), longitude: Number(sourceLongitude) } : null}
           nearbyRides={results}
           loading={loading}
           pickup={pickup}
           drop={drop}
-          emptyState={
-            <div className="sp-empty-card">
-              {!hasSource && !hasDestination
-                ? "Choose a pickup or destination to see today's rides."
-                : hasSearched
-                ? hasBoth
-                  ? "No rides found for this exact route today."
-                  : "No rides found near this location today."
-                : "Finding rides…"}
-            </div>
-          }
         />
       </div>
+
+      {banner && (
+        <div className={`sp-banner sp-banner-${banner.tone}`} role="status">
+          {banner.tone === "ok" ? <CheckCircleFilled className="sp-banner-icon" /> : <InfoCircleOutlined className="sp-banner-icon" />}
+          <span className="sp-banner-text">
+            {banner.text}
+            {banner.hint && <span className="sp-banner-hint"> {banner.hint}</span>}
+          </span>
+          <button type="button" className="sp-banner-close" onClick={() => setBannerOpen(false)} aria-label="Dismiss">
+            <CloseOutlined />
+          </button>
+        </div>
+      )}
 
       {isMobile ? (
         <div ref={sheetRef} className={`sp-sheet ${sheetOpen ? "open" : ""}`}>
@@ -209,9 +284,50 @@ export default function SearchPage() {
         .sp-drawer .ant-drawer-section{background:rgba(11,15,23,0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
         .sp-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .sp-drawer .ant-drawer-title{color:var(--text-primary)}
-        .sp-hint{margin-top:8px;font-size:12.5px;color:var(--text-secondary)}
+        .sp-hint{margin-top:12px;font-size:12px;color:var(--text-secondary);line-height:1.5}
 
-        .sp-sheet{position:absolute;left:0;right:0;bottom:0;z-index:600;max-height:70%;display:flex;flex-direction:column;border-radius:20px 20px 0 0;background:rgba(11,15,23,0.72);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-top:1px solid var(--chrome-border);box-shadow:0 -10px 30px rgba(0,0,0,.3)}
+        .sp-date-label{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-size:13px;color:var(--text-secondary)}
+        .sp-range{width:100%;height:44px;border-radius:12px!important;background:var(--chrome-tint)!important;border-color:var(--chrome-border)!important}
+        .sp-range .ant-picker-input>input{font-weight:650;color:var(--text-primary)!important;text-align:center}
+        .sp-range .ant-picker-suffix{color:#2DD4BF}
+        .sp-range-sep{color:#2DD4BF;font-weight:800}
+        .sp-range.ant-picker-focused,.sp-range:hover{border-color:#2DD4BF!important;box-shadow:0 0 0 3px rgba(45,212,191,.15)!important}
+        .sp-range-popup .ant-picker-panel-container{border-radius:16px!important;overflow:hidden}
+        .sp-range-popup .ant-picker-presets ul li{border-radius:999px!important;font-weight:600}
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner,
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner{background:linear-gradient(135deg,#2DD4BF,#8B5CF6)!important;border-radius:50%!important;color:#fff!important}
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-in-range::before,
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start:not(.ant-picker-cell-range-start-single)::before,
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end:not(.ant-picker-cell-range-end-single)::before{background:rgba(45,212,191,.16)!important}
+        .sp-range-popup .ant-picker-cell-today .ant-picker-cell-inner::before{border-color:#2DD4BF!important;border-radius:50%!important}
+        @media (max-width:768px){.sp-range-popup .ant-picker-panels{flex-direction:column}}
+
+        .sp-chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto}
+        .sp-chip{flex-shrink:0;border:1px solid var(--chrome-border);background:var(--chrome-tint);color:var(--text-primary);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+        .sp-chip:hover{border-color:#2DD4BF;color:#2DD4BF}
+
+        .sp-search-btn{margin-top:14px;width:100%;height:48px;border:0;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:800;letter-spacing:.01em;color:#fff;background:linear-gradient(135deg,#2DD4BF,#8B5CF6);box-shadow:0 10px 26px rgba(45,212,191,.28);transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
+        .sp-search-btn:hover{filter:brightness(1.07);box-shadow:0 12px 30px rgba(139,92,246,.32)}
+        .sp-search-btn:active{transform:scale(.98)}
+        .sp-search-btn:disabled{cursor:progress;filter:saturate(.7)}
+        .sp-search-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.2)}
+        .sp-search-icon.spinning .anticon{animation:spSpin .8s linear infinite}
+        @keyframes spSpin{to{transform:rotate(360deg)}}
+
+        .sp-banner{position:absolute;top:108px;left:50%;transform:translateX(-50%);z-index:650;display:flex;align-items:center;gap:8px;width:max-content;max-width:min(560px,calc(100% - 24px));padding:7px 8px 7px 14px;border-radius:999px;font-size:12.5px;line-height:1.35;color:var(--text-primary);background:rgba(11,15,23,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--chrome-border);box-shadow:0 8px 24px rgba(0,0,0,.25);animation:spIn .25s ease}
+        .sp-banner-warn{border-color:rgba(245,158,11,.45)}
+        .sp-banner-warn .sp-banner-icon{color:#fbbf24}
+        .sp-banner-ok{border-color:rgba(45,212,191,.45)}
+        .sp-banner-ok .sp-banner-icon{color:#2DD4BF}
+        .sp-banner-text{min-width:0}
+        .sp-banner-hint{color:var(--text-secondary)}
+        .sp-banner-close{flex-shrink:0;border:0;background:none;cursor:pointer;color:var(--text-tertiary);width:22px;height:22px;border-radius:50%;font-size:10px}
+        .sp-banner-close:hover{background:var(--chrome-tint);color:var(--text-primary)}
+        @keyframes spIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+        @media (min-width:769px){.sp-banner{left:calc(380px + (100% - 380px) / 2)}}
+
+        .sp-sheet{position:absolute;left:0;right:0;bottom:0;z-index:600;max-height:78%;display:flex;flex-direction:column;border-radius:20px 20px 0 0;background:rgba(11,15,23,0.72);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-top:1px solid var(--chrome-border);box-shadow:0 -10px 30px rgba(0,0,0,.3)}
         .sp-sheet-head{display:flex;align-items:center;gap:4px;padding:6px 8px 6px 4px}
         .sp-sheet-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:10px;position:relative;border:0;background:none;cursor:pointer;padding:16px 8px 10px 12px;color:var(--text-primary);text-align:left}
         .sp-sheet-grip{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:4px;background:var(--chrome-border)}
@@ -220,7 +336,7 @@ export default function SearchPage() {
         .sp-sheet.open .sp-sheet-chevron{transform:rotate(0)}
         .sp-sheet-close{border:0;background:none;cursor:pointer;color:var(--text-secondary);font-size:15px;width:36px;height:36px;border-radius:50%}
         .sp-sheet-body{overflow:auto;padding:0 16px 16px;max-height:0;transition:max-height .25s ease;padding-bottom:0}
-        .sp-sheet.open .sp-sheet-body{max-height:60vh;padding-bottom:16px}
+        .sp-sheet.open .sp-sheet-body{max-height:68vh;padding-bottom:16px}
 
         .sp-mobile .sp-hint{display:none}
         .sp-mobile .sp-sheet .ant-form-item-label{display:none}
@@ -228,9 +344,7 @@ export default function SearchPage() {
         .sp-mobile .sp-sheet .ant-form-item{margin-bottom:8px}
         .sp-mobile .leaflet-control-zoom{display:none}
         .sp-mobile .hmv-locate-btn{bottom:calc(var(--sheet-h, 64px) + 14px)}
-        .sp-mobile .sp-empty-card{top:84px;bottom:auto}
-
-        .sp-empty-card{position:absolute;left:14px;right:14px;bottom:14px;z-index:500;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:14px;text-align:center;color:#475569;font-size:13px}
+        .sp-mobile .sp-banner{top:84px}
       `}</style>
     </div>
   );

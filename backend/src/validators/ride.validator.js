@@ -87,12 +87,15 @@ export const updateRideSchema = z
     { message: "departureDate/departureTime cannot be in the past", path: ["departureDate"] }
   );
 
-export const searchRideSchema = z.object({
+export const searchRideSchema = z
+  .object({
   sourceLatitude: latitude,
   sourceLongitude: longitude,
   destinationLatitude: latitude,
   destinationLongitude: longitude,
   date: z.coerce.date(),
+  // Optional end of a date range (inclusive); `date` is the start.
+  toDate: z.coerce.date().optional(),
   time: timeOfDay.optional(),
   seats: z.coerce.number().int().min(1).max(8).default(1),
   rideType: z.enum(["WITH_TIP", "WITHOUT_TIP"]).optional(),
@@ -102,7 +105,9 @@ export const searchRideSchema = z.object({
   // map views that want to show every ride on the route, not just bookable
   // ones.
   includeFull: z.coerce.boolean().optional().default(false),
-});
+  })
+  .refine((d) => !d.toDate || d.toDate >= d.date, { message: "End date must be on or after the start date", path: ["toDate"] })
+  .refine((d) => !d.toDate || (d.toDate - d.date) / 86400000 <= 31, { message: "Pick a range of up to 31 days", path: ["toDate"] });
 
 // Home page "what's on": upcoming published rides, not tied to a route. An
 // optional point only sorts them nearest-first - it never filters any out.

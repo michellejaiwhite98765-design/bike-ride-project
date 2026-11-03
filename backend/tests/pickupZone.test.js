@@ -110,3 +110,20 @@ describe("Two-zone pickup: rider Colachel -> Tirunelveli", () => {
     expect(after.myRequest).toEqual({ id: sent.body.data.id, status: "REQUESTED" });
   });
 });
+
+describe("Search by date range", () => {
+  it("finds a ride on any day inside the range, and not outside it", async () => {
+    const rider = await registerUser();
+    const ride = await createPublishedRide(rider.token, (await createVehicle(rider.token)).id, rideAt(futureDate(20)));
+    const passenger = await registerUser();
+    const search = (date, toDate) => request(app).get("/api/rides/search")
+      .query({ sourceLatitude: NAGERCOIL[0], sourceLongitude: NAGERCOIL[1], destinationLatitude: TIRUNELVELI[0], destinationLongitude: TIRUNELVELI[1], date, ...(toDate ? { toDate } : {}), includeFull: true })
+      .set("Authorization", `Bearer ${passenger.token}`);
+
+    const ids = async (...args) => (await search(...args)).body.data.map((r) => r.id);
+    expect(await ids(futureDate(18), futureDate(22))).toContain(ride.id);
+    expect(await ids(futureDate(18))).not.toContain(ride.id);
+    expect(await ids(futureDate(21), futureDate(25))).not.toContain(ride.id);
+    expect((await search(futureDate(22), futureDate(18))).status).toBe(400);
+  });
+});

@@ -1,4 +1,5 @@
-import { Card, Form, Input, Button, App } from "antd";
+import { useRiderStatus } from "../hooks/useRiderStatus.js";
+import { Card, Form, Input, Button, App, Tag } from "antd";
 import { UserOutlined, MailOutlined, PhoneOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -84,6 +85,7 @@ const FormGroup = styled.div`
  * Bookings, ...). /profile/edit (`editing`): the personal-information form.
  */
 export default function ProfilePage({ editing = false }) {
+  const { status: riderStatus } = useRiderStatus();
   const { user, setUser } = useAuth();
   const { notification } = App.useApp();
   const [form] = Form.useForm();
@@ -111,6 +113,12 @@ export default function ProfilePage({ editing = false }) {
             {user.firstName} {user.lastName}
           </ProfileName>
           <ProfileEmail>{user.email}</ProfileEmail>
+          {/* A user with a vehicle is a driver; everyone else rides as a passenger. */}
+          {riderStatus && !riderStatus.unknown && (
+            <Tag color={riderStatus.isRider ? "cyan" : "purple"} style={{ marginTop: 8, borderRadius: 999, padding: "2px 12px", fontWeight: 700 }}>
+              {riderStatus.isRider ? "Driver" : "Passenger"}
+            </Tag>
+          )}
         </ProfileHeader>
         <AccountMenu />
       </PageContainer>

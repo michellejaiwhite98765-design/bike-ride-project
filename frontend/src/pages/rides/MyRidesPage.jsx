@@ -35,7 +35,7 @@ import { BookingList } from "../bookings/BookingsPage.jsx";
 
 // Status filters. Trips I offer have drafts; my bookings don't.
 const RIDE_FILTERS = [
-  { value: "current", label: "Current", match: (r) => r.status === "STARTED" },
+  { value: "current", label: "Live", match: (r) => r.status === "STARTED" },
   { value: "upcoming", label: "Upcoming", match: (r) => r.status === "PUBLISHED" },
   { value: "draft", label: "Drafts", match: (r) => r.status === "DRAFT" },
   { value: "completed", label: "Completed", match: (r) => ["COMPLETED", "CANCELLED", "EXPIRED"].includes(r.status) },
@@ -44,7 +44,7 @@ const rideOf = (b) => b.ride?.status;
 // The trip is over but the passenger still has to pay: keep it under Current.
 const paymentDue = (b) => rideOf(b) === "COMPLETED" && b.bookingStatus === "PAYMENT_PENDING";
 const BOOKING_FILTERS = [
-  { value: "current", label: "Current", match: (b) => b.bookingStatus !== "CANCELLED" && (rideOf(b) === "STARTED" || paymentDue(b)) },
+  { value: "current", label: "Live", match: (b) => b.bookingStatus !== "CANCELLED" && (rideOf(b) === "STARTED" || paymentDue(b)) },
   { value: "upcoming", label: "Upcoming", match: (b) => b.bookingStatus !== "CANCELLED" && ["PUBLISHED", "DRAFT"].includes(rideOf(b)) },
   {
     value: "completed",
@@ -317,7 +317,7 @@ function RideTrackingCard({ ride, rides, onOpenDetails, onClone }) {
       </div>
 
       <RideSummary ride={ride} />
-      <RideProgress ride={ride} livePosition={livePosition} />
+      {!["COMPLETED", "CANCELLED"].includes(ride.status) && <RideProgress ride={ride} livePosition={livePosition} />}
       <LiveMiniStats ride={ride} />
 
       {started && (

@@ -327,6 +327,13 @@ const ActionButtons = styled.div`
   padding-top: 20px;
   border-top: 1px solid ${dark.divider};
 
+  /* Every button in this group is the same height (Complete Ride used to shrink). */
+  .ant-btn {
+    height: 48px !important;
+    min-height: 48px;
+    border-radius: 12px;
+  }
+
   .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
     background: var(--chrome-tint) !important;
     border-color: var(--chrome-tint-strong) !important;
@@ -356,6 +363,12 @@ const ActionButtons = styled.div`
   @media (max-width: 600px) {
     flex-direction: column;
     gap: 8px;
+
+    /* flex: 1 in a column squeezed bare buttons; stack them at full height. */
+    & > * {
+      flex: none !important;
+      width: 100%;
+    }
   }
 `;
 

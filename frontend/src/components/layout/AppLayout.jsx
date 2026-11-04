@@ -112,9 +112,10 @@ const BrandContainer = styled.div`
     font-size: 21px;
   }
 
-  @media (max-width: 480px) {
+  /* Phones: logo mark only. */
+  @media (max-width: 768px) {
     span.wordmark {
-      font-size: 18px;
+      display: none;
     }
   }
 
@@ -200,6 +201,10 @@ const UserSection = styled.div`
   /* Phones (bottom bar visible): no bell / avatar, just Create trip and ☰. */
   @media (max-width: 768px) {
     .desktop-only-icons {
+      display: none !important;
+    }
+    /* Phones: just the logo mark and a plain "Create trip" button. */
+    .phone-create-trip .anticon {
       display: none !important;
     }
     .phone-create-trip {

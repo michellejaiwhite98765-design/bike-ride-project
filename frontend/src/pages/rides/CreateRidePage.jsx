@@ -460,7 +460,17 @@ export default function CreateRidePage() {
             rules={[{ required: true }]}
             extra={selectedVehicle ? `This vehicle carries up to ${maxSeats} passenger${maxSeats === 1 ? "" : "s"}.` : undefined}
           >
-            <InputNumber size="large" style={{ width: "100%" }} min={1} max={maxSeats} />
+            <InputNumber
+              size="large"
+              style={{ width: "100%" }}
+              min={1}
+              max={maxSeats}
+              precision={0}
+              // Digits only - no "e", "-", "+" or "." from the keyboard.
+              onKeyDown={(e) => {
+                if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !/\d/.test(e.key)) e.preventDefault();
+              }}
+            />
           </Form.Item>
         </FormCard>
 
@@ -513,7 +523,19 @@ export default function CreateRidePage() {
         </SectionHeader>
         <FormCard>
           <Form.Item name="notes" label="Notes for Passengers (optional)">
-            <Input.TextArea rows={3} maxLength={500} placeholder="E.g., air conditioning available, prefer quiet ride, etc." showCount />
+            <Input.TextArea
+              rows={3}
+              maxLength={500}
+              placeholder="E.g., air conditioning available, prefer quiet ride, etc."
+              showCount
+              // Letters, numbers, spaces, commas and full stops only.
+              onKeyDown={(e) => {
+                if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !/[\p{L}\p{M}\p{N} ,.]/u.test(e.key)) e.preventDefault();
+              }}
+              onPaste={(e) => {
+                if (/[^\p{L}\p{M}\p{N}\s,.]/u.test(e.clipboardData.getData("text"))) e.preventDefault();
+              }}
+            />
           </Form.Item>
         </FormCard>
 

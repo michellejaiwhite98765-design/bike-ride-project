@@ -94,7 +94,10 @@ export default function LocationFields({ prefix, label, placeholder }) {
     }, 1000);
   };
 
-  const handleSearch = (value) => {
+  const handleSearch = (raw) => {
+    // Phone keyboards don't always send key events, so also strip symbols here.
+    const value = raw.replace(/[^\p{L}\p{M}\p{N} ]/gu, "");
+    if (value !== raw) form.setFieldValue(`${prefix}Name`, value);
     clearTimeout(eraseRef.current);
     if (timerRef.current) clearTimeout(timerRef.current);
     requestRef.current += 1;
@@ -128,14 +131,33 @@ export default function LocationFields({ prefix, label, placeholder }) {
         const q = encodeURIComponent(value);
         // India only; extra results requested because the non-places are filtered out below.
         const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=20&countrycodes=in&accept-language=en`;
-        const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+        // Also ask where the name mainly points worldwide: "London", "Kenya" and
+        // "Singapore" all have namesake streets/hamlets in India that would show up.
+        // Photon (not Nominatim, which allows ~1 request/second) answers this.
+        const res = await fetch(url);
         if (!res.ok) throw new Error("search failed");
         const data = await res.json();
         if (requestId !== requestRef.current) return;
-        const opts = knownPlaces(data).map((d) => ({ value: d.display_name, raw: d }));
+        const world = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=en`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null);
+        if (requestId !== requestRef.current) return;
+        let places = knownPlaces(data);
+        const worldCountry = world?.features?.[0]?.properties?.countrycode;
+        if (worldCountry && worldCountry.toUpperCase() !== "IN") {
+          // Mainly a place outside India: keep only a real Indian city/town of that exact name
+          // (Salem, Tamil Nadu), not lookalike streets or shops.
+          const name = value.trim().toLowerCase();
+          places = places.filter(
+            (d) =>
+              ["city", "town", "municipality", "district"].includes(d.addresstype) &&
+              (d.name || "").toLowerCase() === name
+          );
+        }
+        const opts = places.map((d) => ({ value: d.display_name, raw: d }));
         setOptions(opts);
         if (opts.length === 0) {
-          const text = `Unknown location "${value.trim()}". Please search for a known place.`;
+          const text = `No place in India found for "${value.trim()}". Please search for a place in India.`;
           setNotFound(text);
           notification.error({ title: "Error", description: text, key: `location-${prefix}` });
           eraseSoon();
@@ -194,6 +216,7 @@ export default function LocationFields({ prefix, label, placeholder }) {
         validateStatus={notFound ? "error" : undefined}
         help={notFound || undefined}
         validateTrigger={["onBlur"]}
+        validateFirst
         rules={[
           { required: true, message: `${label} is required` },
           { type: "string", max: 150, message: `${label} must be 150 characters or fewer` },
@@ -217,7 +240,20 @@ export default function LocationFields({ prefix, label, placeholder }) {
           }}
           notFoundContent={loading ? <Spin size="small" /> : null}
         >
-          <Input prefix={<EnvironmentOutlined />} placeholder={placeholder} size="large" maxLength={150} />
+          <Input
+            prefix={<EnvironmentOutlined />}
+            placeholder={placeholder}
+            size="large"
+            maxLength={150}
+            // Typing: letters, numbers and spaces only - no special characters.
+            onKeyDown={(e) => {
+              if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !/[\p{L}\p{M}\p{N} ]/u.test(e.key)) e.preventDefault();
+            }}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData("text");
+              if (/[^\p{L}\p{M}\p{N} ]/u.test(text)) e.preventDefault();
+            }}
+          />
         </AutoComplete>
       </Form.Item>
       <Form.Item name={`${prefix}Latitude`} noStyle hidden>

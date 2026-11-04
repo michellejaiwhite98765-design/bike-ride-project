@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Form, App, Drawer, Button, DatePicker } from "antd";
 import {
   SwapOutlined,
-  UpOutlined,
   CloseOutlined,
   SearchOutlined,
   ArrowRightOutlined,
@@ -131,6 +130,8 @@ export default function SearchPage() {
 
   async function runSearch() {
     if (!hasBoth) {
+      // Red border + message on whichever box is empty / not picked.
+      form.validateFields(["sourceName", "destinationName"]).catch(() => {});
       setLastSearch({ kind: "missing", missing: !hasSource ? "pickup" : "destination" });
       setBannerOpen(true);
       return;
@@ -280,7 +281,6 @@ export default function SearchPage() {
               {sheetOpen ? (
                 <>
                   <span className="sp-sheet-title">Find trip</span>
-                  <UpOutlined className="sp-sheet-chevron" />
                 </>
               ) : (
                 // Minimized: look like a search box so it's clear where to search.
@@ -295,7 +295,7 @@ export default function SearchPage() {
               )}
             </button>
             {sheetOpen && (
-              <button type="button" className="sp-sheet-close" onClick={goHome} aria-label="Close">
+              <button type="button" className="sp-sheet-close" onClick={() => { setSheetOpen(false); goHome(); }} aria-label="Close">
                 <CloseOutlined />
               </button>
             )}
@@ -333,6 +333,8 @@ export default function SearchPage() {
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start:not(.ant-picker-cell-range-start-single)::before,
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end:not(.ant-picker-cell-range-end-single)::before{background:rgba(45,212,191,.16)!important}
         .sp-range-popup .ant-picker-cell-today .ant-picker-cell-inner::before{border-color:#2DD4BF!important;border-radius:50%!important}
+        .sp-range-popup .ant-picker-cell-disabled .ant-picker-cell-inner{color:var(--text-secondary)!important;opacity:.35;text-decoration:line-through}
+        .sp-range-popup .ant-picker-cell-disabled{cursor:not-allowed}
         @media (max-width:768px){.sp-range-popup .ant-picker-panels{flex-direction:column}}
 
         .sp-chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto}

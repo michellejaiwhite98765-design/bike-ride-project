@@ -8,6 +8,7 @@ const RIDE_JOIN_SELECT = `
   r."available_seats", r."total_seats", r."ride_type", r."tip_amount", r."notes", r."status",
   r."started_at", r."completed_at", r."cancelled_at", r."created_at", r."updated_at",
   ROUND((ST_Length(r."route_geog") / 1000)::numeric, 1)::float8 AS "route_distance_km",
+  ST_AsGeoJSON(ST_Simplify(r."route_geog"::geometry, 0.0001), 5) AS "route_geojson",
   v."id" AS "vehicle__id", v."owner_id" AS "vehicle__owner_id", v."vehicle_type" AS "vehicle__vehicle_type",
   v."brand" AS "vehicle__brand", v."model" AS "vehicle__model", v."registration_number" AS "vehicle__registration_number",
   v."color" AS "vehicle__color", v."manufacturing_year" AS "vehicle__manufacturing_year",
@@ -27,7 +28,17 @@ export const ROUTE_KM = `(ST_Length(${ROUTE_GEOG}) / 1000)`;
 
 function hydrateRide(row) {
   if (!row) return null;
-  return nestPrefixed(row, { vehicle: "vehicle", rider: "rider" });
+  const { routeGeojson, ...rest } = nestPrefixed(row, { vehicle: "vehicle", rider: "rider" });
+  // The road the rider chose when creating the trip, as [lat, lng] points
+  // (simplified to ~10 m), so every map draws that route rather than re-routing.
+  let routePath = null;
+  try {
+    const coords = routeGeojson ? JSON.parse(routeGeojson).coordinates : null;
+    if (Array.isArray(coords) && coords.length >= 2) routePath = coords.map(([lng, lat]) => [lat, lng]);
+  } catch {
+    routePath = null;
+  }
+  return { ...rest, routePath };
 }
 
 export const rideRepository = {

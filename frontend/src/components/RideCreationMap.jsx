@@ -121,7 +121,26 @@ function formatDuration(minutes) {
   return h ? `${h}h ${m}m` : `${m} min`;
 }
 
-export default function RideCreationMap({ source, destination, form, onRouteSelect, occludedLeft = 0 }) {
+// Which loaded route is the one saved with the trip (closest midpoint), else the fastest.
+function matchSavedRoute(routes, savedPath) {
+  if (!savedPath || savedPath.length < 2 || routes.length < 2) return 0;
+  const mid = (pts) => pts[Math.floor(pts.length / 2)];
+  const [sLat, sLng] = mid(savedPath);
+  let best = 0;
+  let bestD = Infinity;
+  routes.forEach((r, i) => {
+    if (!r.coordinates?.length) return;
+    const [lat, lng] = mid(r.coordinates);
+    const d = (lat - sLat) ** 2 + (lng - sLng) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+export default function RideCreationMap({ source, destination, form, onRouteSelect, savedPath = null, occludedLeft = 0 }) {
   const { notification } = App.useApp();
   const { mode: themeMode } = useTheme();
   const isDark = themeMode === "dark";
@@ -152,7 +171,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
         const loaded = await getRoutes(source, destination);
         if (!cancelled) {
           setRoutes(loaded);
-          setSelectedIndex(0);
+          setSelectedIndex(matchSavedRoute(loaded, savedPath));
         }
       } catch {
         if (!cancelled) {
@@ -177,7 +196,8 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
     return () => {
       cancelled = true;
     };
-  }, [source, destination]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, destination, savedPath]);
 
   // Bubble the currently-selected route (defaulting to the first/fastest
   // one) up to the create-ride form so it can use its real driving distance.
@@ -341,21 +361,31 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
           </div>
         )}
 
-        {routes.length > 1 && (
-          <div className="ride-map-route-options">
-            {routes.map((route, i) => (
-              <button
-                key={i}
-                type="button"
-                className={i === selectedIndex ? "active" : ""}
-                onClick={() => setSelectedIndex(i)}
-              >
-                <span className="route-name">{i === 0 ? "Fastest route" : `Alternative ${i}`}</span>
-                <span className="route-meta">
-                  {route.distanceKm != null ? `${route.distanceKm.toFixed(1)} km` : "—"} · {formatDuration(route.durationMin)}
-                </span>
-              </button>
-            ))}
+        {routes.length > 0 && routes[0].distanceKm != null && (
+          <div className="ride-map-route-options" role="radiogroup" aria-label="Choose your route">
+            <div className="route-options-title">
+              {routes.length > 1 ? `Choose your route · ${routes.length} found` : "Your route"}
+            </div>
+            <div className="route-options-list">
+              {routes.map((route, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="radio"
+                  aria-checked={i === selectedIndex}
+                  className={i === selectedIndex ? "active" : ""}
+                  onClick={() => setSelectedIndex(i)}
+                >
+                  <span className="route-name">
+                    {i === selectedIndex && <span className="route-check">✓ </span>}
+                    {i === 0 ? "Fastest route" : `Alternative ${i}`}
+                  </span>
+                  <span className="route-meta">
+                    {route.distanceKm != null ? `${route.distanceKm.toFixed(1)} km` : "—"} · {formatDuration(route.durationMin)}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

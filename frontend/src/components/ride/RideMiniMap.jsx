@@ -6,7 +6,21 @@ import { haversineKm } from "../../utils/geo.js";
 import { COLOR_TILE_URL } from "../../constants/mapTiles.js";
 import { bikeIcon, endIcon } from "./mapIcons.js";
 
-async function getRoute(source, destination) {
+// The trip's saved route (the one the rider chose) wins over a fresh fastest route;
+// OSRM is still asked for the timing, scaled to the saved route's length.
+async function getRoute(source, destination, ride) {
+  const saved = ride?.routePath;
+  if (saved?.length >= 2) {
+    const fastest = await getFastestRoute(source, destination).catch(() => null);
+    const km = ride.routeDistanceKm ?? fastest?.distanceKm ?? null;
+    const durationMin =
+      fastest?.durationMin != null && fastest?.distanceKm && km != null ? (fastest.durationMin * km) / fastest.distanceKm : null;
+    return { points: saved, distanceKm: km, durationMin };
+  }
+  return getFastestRoute(source, destination);
+}
+
+async function getFastestRoute(source, destination) {
   const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=simplified&geometries=geojson`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Unable to load route");
@@ -87,7 +101,7 @@ export default function RideMiniMap({ ride, showChips = true }) {
     if (!hasCoords) return undefined;
     let cancelled = false;
 
-    getRoute(source, destination)
+    getRoute(source, destination, ride)
       .then((result) => {
         if (!cancelled) setRoute(result);
       })

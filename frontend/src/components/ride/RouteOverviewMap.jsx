@@ -29,7 +29,21 @@ function FitRoute({ source, destination }) {
   return null;
 }
 
-async function getRoute(source, destination) {
+// The trip's saved route (the one the rider chose) wins over a fresh fastest route;
+// OSRM is still asked for the timing, scaled to the saved route's length.
+async function getRoute(source, destination, ride) {
+  const saved = ride?.routePath;
+  if (saved?.length >= 2) {
+    const fastest = await getFastestRoute(source, destination).catch(() => null);
+    const km = ride.routeDistanceKm ?? fastest?.distanceKm ?? null;
+    const durationMin =
+      fastest?.durationMin != null && fastest?.distanceKm && km != null ? (fastest.durationMin * km) / fastest.distanceKm : null;
+    return { points: saved, distanceKm: km, durationMin };
+  }
+  return getFastestRoute(source, destination);
+}
+
+async function getFastestRoute(source, destination) {
   const url = `https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Unable to load route");
@@ -70,7 +84,7 @@ export default function RouteOverviewMap({ ride, compact = false }) {
     setLoading(true);
     setFailed(false);
 
-    getRoute(source, destination)
+    getRoute(source, destination, ride)
       .then((result) => {
         if (cancelled) return;
         setRoute(result);

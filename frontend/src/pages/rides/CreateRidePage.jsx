@@ -99,6 +99,8 @@ export default function CreateRidePage() {
   const [locatingMe, setLocatingMe] = useState(false);
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const [selectedRoute, setSelectedRoute] = useState(null);
+  // Editing: the route saved with the trip, so the map re-selects it.
+  const [savedPath, setSavedPath] = useState(null);
   const isOnline = useOnlineStatus();
   const { status: riderStatus } = useRiderStatus();
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
@@ -219,6 +221,7 @@ export default function CreateRidePage() {
 
       if (isEdit) {
         const ride = await rideService.getById(id);
+        setSavedPath(ride.routePath || null);
         form.setFieldsValue({
           ...ride,
           departureDate: dayjs(ride.departureDate),
@@ -274,6 +277,15 @@ export default function CreateRidePage() {
         departureTime: values.departureTime.format("HH:mm"),
       };
       if (values.rideType === "WITHOUT_TIP") payload.tipAmount = 0;
+      // Save the road the rider picked on the map, so the trip follows that route.
+      const coords = selectedRoute?.coordinates || [];
+      // (distanceKm is null for the straight-line fallback when routing failed.)
+      if (coords.length >= 2 && selectedRoute?.distanceKm != null) {
+        const step = Math.ceil(coords.length / 1900);
+        const path = coords.filter((_, i) => i % step === 0);
+        if (path[path.length - 1] !== coords[coords.length - 1]) path.push(coords[coords.length - 1]);
+        payload.routePath = path.map(([lat, lng]) => [Number(lat.toFixed(5)), Number(lng.toFixed(5))]);
+      }
 
       let ride;
       if (isEdit) {
@@ -324,6 +336,7 @@ export default function CreateRidePage() {
           destination={destinationPoint}
           form={form}
           onRouteSelect={setSelectedRoute}
+          savedPath={savedPath}
           occludedLeft={420}
         />
       </div>

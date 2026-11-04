@@ -288,8 +288,29 @@ a {
   bottom: 60px;
   z-index: 600;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ride-map-route-options .route-options-title {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ride-map-route-options .route-options-list {
+  display: flex;
   gap: 8px;
   overflow-x: auto;
+}
+
+.ride-map-route-options .route-check {
+  color: #2DD4BF;
 }
 
 .ride-map-route-options button {

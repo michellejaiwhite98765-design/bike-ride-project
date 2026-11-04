@@ -308,7 +308,8 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false, autoSh
   const [routePoints, setRoutePoints] = useState([]);
   useEffect(() => {
     let cancelled = false;
-    getRoute(source, destination)
+    // The route the rider chose when creating the trip, else the fastest road route.
+    (ride?.routePath?.length >= 2 ? Promise.resolve(ride.routePath) : getRoute(source, destination))
       .then((points) => {
         if (!cancelled) setRoutePoints(points);
       })

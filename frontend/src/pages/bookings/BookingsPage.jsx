@@ -110,41 +110,48 @@ export default function BookingsPage() {
       {bookings.length === 0 ? (
         <Empty description="You haven't booked any rides yet" style={{ marginTop: 40 }} />
       ) : (
-        <List
-          grid={{ gutter: 16, xs: 1, sm: 1, md: 2 }}
-          dataSource={bookings}
-          renderItem={(b) => (
-            <List.Item>
-              <Link to={`/bookings/${b.id}`} style={{ width: "100%", textDecoration: "none" }}>
-                <BookingCard>
-                  <BookingHeader>
-                    <div className="route">
-                      <span>{b.ride.sourceName}</span>
-                      <ArrowRightOutlined style={{ fontSize: 12 }} />
-                      <span>{b.ride.destinationName}</span>
-                    </div>
-                    <div className="status-price">
-                      <StatusTag status={b.bookingStatus} />
-                      <div className="price">₹{b.totalAmount}</div>
-                    </div>
-                  </BookingHeader>
-
-                  <BookingDetails>
-                    <div className="detail">
-                      <CalendarOutlined className="icon" />
-                      <span>{dayjs(b.ride.departureDate).format("DD MMM YYYY")} at {b.ride.departureTime}</span>
-                    </div>
-                    <div className="detail">
-                      <DollarCircleOutlined className="icon" />
-                      <span>{b.seats} seat{b.seats !== 1 ? "s" : ""}</span>
-                    </div>
-                  </BookingDetails>
-                </BookingCard>
-              </Link>
-            </List.Item>
-          )}
-        />
+        <BookingList bookings={bookings} />
       )}
     </div>
+  );
+}
+
+/** Booking cards (also used by the My Bookings tab on My Rides). */
+export function BookingList({ bookings }) {
+  return (
+    <List
+      grid={{ gutter: 16, xs: 1, sm: 1, md: 2 }}
+      dataSource={bookings}
+      renderItem={(b) => (
+        <List.Item>
+          <Link to={`/bookings/${b.id}`} style={{ width: "100%", textDecoration: "none" }}>
+            <BookingCard>
+              <BookingHeader>
+                <div className="route">
+                  <span>{b.ride.sourceName}</span>
+                  <ArrowRightOutlined style={{ fontSize: 12 }} />
+                  <span>{b.ride.destinationName}</span>
+                </div>
+                <div className="status-price">
+                  <StatusTag status={b.bookingStatus} />
+                  <div className="price">₹{b.totalAmount}</div>
+                </div>
+              </BookingHeader>
+
+              <BookingDetails>
+                <div className="detail">
+                  <CalendarOutlined className="icon" />
+                  <span>{dayjs(b.ride.departureDate).format("DD MMM YYYY")} at {b.ride.departureTime}</span>
+                </div>
+                <div className="detail">
+                  <DollarCircleOutlined className="icon" />
+                  <span>{b.seats} seat{b.seats !== 1 ? "s" : ""}</span>
+                </div>
+              </BookingDetails>
+            </BookingCard>
+          </Link>
+        </List.Item>
+      )}
+    />
   );
 }

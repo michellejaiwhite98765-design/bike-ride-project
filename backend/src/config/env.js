@@ -75,9 +75,9 @@ export const env = {
   // Sign-up phone OTP (services/phoneOtp.service.js, services/sms.service.js).
   sms: {
     provider: (process.env.SMS_PROVIDER || "").trim().toLowerCase(),
-    // Also show the code in the app (with or without SMS) - for testing.
-    // On by default for local/dev; deploy/docker-compose.prod.yml turns it on for now.
-    otpDevMode: (process.env.OTP_DEV_MODE ?? (process.env.NODE_ENV === "production" ? "false" : "true")) === "true",
+    // Shows the code in the app too. On by default (also live) until SMS is set up;
+    // set OTP_DEV_MODE=false on the server to turn it off.
+    otpDevMode: (process.env.OTP_DEV_MODE ?? "true") === "true",
     twoFactor: {
       apiKey: process.env.TWOFACTOR_API_KEY || "",
       template: process.env.TWOFACTOR_TEMPLATE || "",

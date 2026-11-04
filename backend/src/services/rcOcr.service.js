@@ -189,7 +189,7 @@ async function ocrWithPsm(buffer, psm, timeoutMs) {
 // number. All modes share one time budget (RC_OCR_TIMEOUT_MS), so a slow
 // server gives up cleanly instead of waiting the full timeout per mode.
 // Returns the first match, or all text read if none match.
-async function ocrImage(buffer, expected) {
+async function ocrImage(buffer, found) {
   const deadline = Date.now() + env.rcOcr.timeoutMs;
   const processed = await preprocessImage(buffer);
   let allText = "";
@@ -206,7 +206,7 @@ async function ocrImage(buffer, expected) {
     }
     allText += `
 ${text}`;
-    if (extractRegistrationNumber(text) || findExpectedRegistrationNumber(text, expected)) return text;
+    if (found(text)) return text;
   }
   return allText;
 }
@@ -225,15 +225,30 @@ async function renderPdfPages(buffer) {
   }
 }
 
-async function ocrPdf(buffer, expected) {
+async function ocrPdf(buffer, found) {
   const pages = await renderPdfPages(buffer);
   let combinedText = "";
   for (const page of pages) {
-    const text = await ocrImage(page, expected);
+    const text = await ocrImage(page, found);
     combinedText += `\n${text}`;
-    if (extractRegistrationNumber(text) || findExpectedRegistrationNumber(text, expected)) return combinedText;
+    if (found(text)) return combinedText;
   }
   return combinedText;
+}
+
+// Reads an image or PDF, stopping as soon as found(text) is true.
+async function readDocument(file, found, label) {
+  try {
+    if (IMAGE_TYPES.has(file.mimetype)) return await ocrImage(file.buffer, found);
+    if (file.mimetype === "application/pdf") return await ocrPdf(file.buffer, found);
+    throw ApiError.badRequest(`Unsupported ${label} document type`);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    // errorHandler doesn't log ApiError instances, so log the real cause
+    // here or it's lost entirely once we wrap it below.
+    logger.error(`${label} OCR failed: ${error.stack || error.message || String(error)}`);
+    throw ApiError.badRequest(`${label} could not be read. Make sure the document is clear and try again.`);
+  }
 }
 
 export const rcOcrService = {
@@ -243,22 +258,24 @@ export const rcOcrService = {
   async extractRegistrationNumber(file, expectedRegistrationNumber) {
     if (!file?.buffer) throw ApiError.badRequest("RC document is required");
     const expected = normalizeRegistrationNumber(expectedRegistrationNumber);
-    let text;
-    try {
-      if (IMAGE_TYPES.has(file.mimetype)) text = await ocrImage(file.buffer, expected);
-      else if (file.mimetype === "application/pdf") text = await ocrPdf(file.buffer, expected);
-      else throw ApiError.badRequest("Unsupported RC document type");
-    } catch (error) {
-      if (error instanceof ApiError) throw error;
-      // errorHandler doesn't log ApiError instances, so log the real cause
-      // here or it's lost entirely once we wrap it below.
-      logger.error(`RC OCR failed: ${error.stack || error.message || String(error)}`);
-      throw ApiError.badRequest("RC could not be read. Make sure the document is clear and try again.");
-    }
+    const text = await readDocument(file, (t) => extractRegistrationNumber(t) || findExpectedRegistrationNumber(t, expected), "RC");
     const registrationNumber = findExpectedRegistrationNumber(text, expected) || extractRegistrationNumber(text);
     if (!registrationNumber) {
       logger.debug(`RC OCR found no registration number. Raw text: ${JSON.stringify(text?.slice(0, 1000))}`);
     }
     return { registrationNumber, text };
+  },
+
+  /**
+   * Driving licence: true if the typed licence number appears on the
+   * uploaded document (allowing OCR look-alike characters, e.g. O/0).
+   */
+  async documentContainsNumber(file, expectedNumber, label = "Licence") {
+    if (!file?.buffer) throw ApiError.badRequest(`${label} document is required`);
+    const expected = normalizeRegistrationNumber(expectedNumber);
+    const text = await readDocument(file, (t) => Boolean(findExpectedRegistrationNumber(t, expected)), label);
+    const found = Boolean(findExpectedRegistrationNumber(text, expected));
+    if (!found) logger.debug(`${label} OCR didn't find ${expected}. Raw text: ${JSON.stringify(text?.slice(0, 1000))}`);
+    return { found, text };
   },
 };

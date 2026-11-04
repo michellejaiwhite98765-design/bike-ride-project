@@ -1,3 +1,4 @@
+import { drivingLicenceService } from "./drivingLicence.service.js";
 import { tripLifecycleService } from "./tripLifecycle.service.js";
 import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
@@ -21,6 +22,7 @@ function assertOwner(ride, userId) {
 
 export const rideService = {
   async create(riderId, data) {
+    await drivingLicenceService.assertVerified(riderId);
     const vehicle = await vehicleRepository.findById(data.vehicleId);
     if (!vehicle || vehicle.ownerId !== riderId) throw ApiError.badRequest("Vehicle not found");
     if (!vehicle.isActive) throw ApiError.badRequest("This vehicle has been removed. Please select another vehicle.");
@@ -96,6 +98,7 @@ export const rideService = {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "PUBLISHED");
+    await drivingLicenceService.assertVerified(userId);
 
     const vehicle = await vehicleRepository.findById(ride.vehicleId);
     if (!vehicle || vehicle.ownerId !== userId || !vehicle.isActive || vehicle.verificationStatus !== "VERIFIED") {

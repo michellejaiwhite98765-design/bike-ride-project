@@ -24,6 +24,8 @@ import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../../utils/geo.js";
 import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
+import RiderChecklist from "../../components/ride/RiderChecklist.jsx";
+import { useRiderStatus } from "../../hooks/useRiderStatus.js";
 
 const SectionHeader = styled.div`
   display: flex;
@@ -98,6 +100,7 @@ export default function CreateRidePage() {
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const [selectedRoute, setSelectedRoute] = useState(null);
   const isOnline = useOnlineStatus();
+  const { status: riderStatus } = useRiderStatus();
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
@@ -306,31 +309,11 @@ export default function CreateRidePage() {
     );
   }
 
-  if (loading) return <BrandLoader label="Loading your trip…" />;
+  if (loading || !riderStatus) return <BrandLoader label="Loading your trip…" />;
 
-  if (verifiedVehicles.length === 0) {
-    const hasPendingVehicles = vehicles.length > 0;
-    return (
-      <div style={{ padding: "100px 24px 24px", height: "100%", overflow: "auto", boxSizing: "border-box" }}>
-        <Alert
-          type="warning"
-          showIcon
-          message={hasPendingVehicles ? "Vehicle verification pending" : "Add a vehicle first"}
-          description={
-            hasPendingVehicles
-              ? "Your vehicle is still being verified. You'll be able to create a ride once it's verified."
-              : "You need at least one verified vehicle before you can create a ride."
-          }
-          action={
-            !hasPendingVehicles && (
-              <Button size="small" onClick={() => navigate("/vehicles/add")}>
-                Add Vehicle
-              </Button>
-            )
-          }
-        />
-      </div>
-    );
+  // A verified driving licence and a verified vehicle are needed first.
+  if (!riderStatus.canCreateTrip && (!riderStatus.unknown || verifiedVehicles.length === 0)) {
+    return <RiderChecklist status={riderStatus} vehicles={vehicles} next={isEdit ? `/rides/${id}/edit` : "/rides/create"} />;
   }
 
   return (

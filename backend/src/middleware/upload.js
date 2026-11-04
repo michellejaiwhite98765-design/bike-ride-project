@@ -31,6 +31,16 @@ export const uploadSingleRcDocument = (req, res, next) => {
   });
 };
 
+// Driving licence: same file rules as the RC.
+export const uploadSingleLicenceDocument = (req, res, next) => {
+  upload.single("licenceDocument")(req, res, (err) => {
+    if (err?.code === "LIMIT_FILE_SIZE") return next(ApiError.badRequest("The licence file must be 5 MB or smaller"));
+    if (err) return next(err.message?.startsWith("RC document") ? ApiError.badRequest("Licence must be a JPG, PNG, WEBP or PDF") : err);
+    if (!req.file) return next(ApiError.badRequest("Please upload a photo of your driving licence"));
+    next();
+  });
+};
+
 // Profile photo: any picture format and size. The browser normally shrinks
 // it first; this limit only matters when it couldn't (e.g. HEIC on Windows).
 const photoUpload = multer({

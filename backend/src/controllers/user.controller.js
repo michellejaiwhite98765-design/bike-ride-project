@@ -3,6 +3,7 @@ import { ratingService } from "../services/rating.service.js";
 import { serializeUser } from "../utils/serializers.js";
 import { ok } from "../utils/apiResponse.js";
 import { userRepository } from "../repositories/user.repository.js";
+import { drivingLicenceService } from "../services/drivingLicence.service.js";
 import { toProfilePhoto } from "../services/profilePhoto.service.js";
 
 export const userController = {
@@ -30,6 +31,19 @@ export const userController = {
   async verifyOwnPhoneOtp(req, res) {
     const result = await userService.verifyOwnPhoneOtp(req.user.id, req.body.otp);
     ok(res, result, "Current number verified");
+  },
+
+  async getLicence(req, res) {
+    ok(res, await drivingLicenceService.get(req.user.id));
+  },
+
+  async submitLicence(req, res) {
+    const licence = await drivingLicenceService.submit(req.user.id, req.body, req.file);
+    ok(res, licence, "Driving licence verified");
+  },
+
+  async riderStatus(req, res) {
+    ok(res, await drivingLicenceService.riderStatus(req.user.id));
   },
 
   async getMe(req, res) {

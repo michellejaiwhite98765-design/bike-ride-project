@@ -40,6 +40,14 @@ export const cloudinaryService = {
     };
   },
 
+  /** Any verification document (licence etc.) under <folder>/<subfolder>. */
+  async uploadDocument(file, subfolder) {
+    if (!this.isConfigured()) throw new Error("Cloudinary is not configured");
+    const resourceType = file.mimetype === "application/pdf" ? "raw" : "image";
+    const result = await uploadBuffer(file.buffer, resourceType, `${env.cloudinary.folder}/${subfolder}`);
+    return { secureUrl: result.secure_url, publicId: result.public_id };
+  },
+
   async destroy(publicId, resourceType = "image") {
     if (!publicId) return;
     await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });

@@ -20,6 +20,7 @@ async function clearData() {
       "ride_stops",
       "rides",
       "vehicles",
+      "driving_licences",
       "safety_reports",
       "audit_logs",
       "users",
@@ -82,6 +83,12 @@ async function main() {
     insert("vehicles", { id: crypto.randomUUID(), ownerId: arjun.id, vehicleType: "SCOOTER", brand: "TVS", model: "Jupiter", registrationNumber: "TN02CD5678", color: "Blue", manufacturingYear: 2021, verificationStatus: "VERIFIED", createdAt: new Date(), updatedAt: new Date() }),
     insert("vehicles", { id: crypto.randomUUID(), ownerId: karthik.id, vehicleType: "MOTORCYCLE", brand: "Royal Enfield", model: "Classic 350", registrationNumber: "TN03EF9012", color: "Green", manufacturingYear: 2023, verificationStatus: "PENDING", createdAt: new Date(), updatedAt: new Date() }),
   ]);
+
+  console.log("Creating driving licences...");
+  // Ravi and Arjun can create trips; Karthik's licence is still to be verified.
+  for (const [user, licenceNumber] of [[ravi, "TN0120190001234"], [arjun, "TN0220180005678"]]) {
+    await insert("driving_licences", { userId: user.id, licenceNumber, holderName: `${user.first_name} ${user.last_name}`, expiryDate: inDays(3650), status: "VERIFIED", verifiedAt: new Date() });
+  }
 
   console.log("Creating rides...");
   const rideRoutes = [

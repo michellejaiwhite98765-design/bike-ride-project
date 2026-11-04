@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Avatar,
   Button,
   Empty,
   Progress,
+  Segmented,
   Tag,
   Tooltip,
 } from "antd";
@@ -30,6 +31,35 @@ import CloneRideModal, { getCloneBlockReason } from "../../components/ride/Clone
 import StatusTag from "../../components/StatusTag.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
+import { bookingService } from "../../services/bookingService.js";
+import { BookingList } from "../bookings/BookingsPage.jsx";
+import { useRiderStatus } from "../../hooks/useRiderStatus.js";
+
+// Status filters. Trips I offer have drafts; my bookings don't.
+const RIDE_FILTERS = [
+  { value: "current", label: "Current", match: (r) => r.status === "STARTED" },
+  { value: "upcoming", label: "Upcoming", match: (r) => r.status === "PUBLISHED" },
+  { value: "draft", label: "Drafts", match: (r) => r.status === "DRAFT" },
+  { value: "completed", label: "Completed", match: (r) => ["COMPLETED", "CANCELLED", "EXPIRED"].includes(r.status) },
+];
+const rideOf = (b) => b.ride?.status;
+// The trip is over but the passenger still has to pay: keep it under Current.
+const paymentDue = (b) => rideOf(b) === "COMPLETED" && b.bookingStatus === "PAYMENT_PENDING";
+const BOOKING_FILTERS = [
+  { value: "current", label: "Current", match: (b) => b.bookingStatus !== "CANCELLED" && (rideOf(b) === "STARTED" || paymentDue(b)) },
+  { value: "upcoming", label: "Upcoming", match: (b) => b.bookingStatus !== "CANCELLED" && ["PUBLISHED", "DRAFT"].includes(rideOf(b)) },
+  {
+    value: "completed",
+    label: "Completed",
+    match: (b) => b.bookingStatus === "CANCELLED" || (["COMPLETED", "CANCELLED", "EXPIRED"].includes(rideOf(b)) && !paymentDue(b)),
+  },
+];
+// Open the first filter with something in it (Current, then Upcoming...).
+const firstNonEmpty = (filters, list) => (filters.find((f) => list.some(f.match)) || filters[1]).value;
+const EMPTY_TEXT = {
+  rides: { current: "No trip in progress", upcoming: "No upcoming trips", draft: "No drafts", completed: "No completed trips yet" },
+  bookings: { current: "You're not on a trip right now", upcoming: "No upcoming bookings", completed: "No past bookings yet" },
+};
 
 const HOME = {
   primary: "#2DD4BF",
@@ -330,8 +360,10 @@ function RideTrackingCard({ ride, rides, onOpenDetails, onClone }) {
 
 export default function MyRidesPage() {
   const { user } = useAuth();
-  const [rides, setRides] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [params, setParams] = useSearchParams();
+  const { status: riderStatus } = useRiderStatus();
+  const [rides, setRides] = useState(null);
+  const [bookings, setBookings] = useState(null);
   const [detailsRide, setDetailsRide] = useState(null);
   const [cloneSource, setCloneSource] = useState(null);
 
@@ -340,13 +372,31 @@ export default function MyRidesPage() {
     rideService
       .listMine()
       .then((data) => mounted && setRides(Array.isArray(data) ? data : []))
-      .catch(() => mounted && setRides([]))
-      .finally(() => mounted && setLoading(false));
-
+      .catch(() => mounted && setRides([]));
+    bookingService
+      .listMine()
+      .then((data) => mounted && setBookings(Array.isArray(data) ? data : []))
+      .catch(() => mounted && setBookings([]));
     return () => { mounted = false; };
   }, []);
 
-  const activeCount = useMemo(() => rides.filter((ride) => ride.status === "STARTED").length, [rides]);
+  const loading = rides === null || bookings === null || riderStatus === null;
+  // A user with a vehicle is a rider (so is anyone who already has trips).
+  // Passengers only see their bookings.
+  const isRider = Boolean(riderStatus?.isRider || rides?.length);
+  const tab = isRider && params.get("tab") !== "bookings" ? "rides" : "bookings";
+  const filters = tab === "rides" ? RIDE_FILTERS : BOOKING_FILTERS;
+  const list = (tab === "rides" ? rides : bookings) || [];
+  const filter = filters.some((f) => f.value === params.get("filter")) ? params.get("filter") : firstNonEmpty(filters, list);
+  const shown = list.filter(filters.find((f) => f.value === filter).match);
+
+  const setView = (next) => {
+    const p = new URLSearchParams(params);
+    Object.entries(next).forEach(([k, v]) => (v ? p.set(k, v) : p.delete(k)));
+    setParams(p, { replace: true });
+  };
+
+  const activeCount = useMemo(() => (rides || []).filter((ride) => ride.status === "STARTED").length, [rides]);
 
   return (
     <div className="my-rides-page">
@@ -357,45 +407,102 @@ export default function MyRidesPage() {
         <header className="my-rides-header">
           <div>
             <div className="my-rides-eyebrow"><ThunderboltFilled /> YOUR JOURNEYS</div>
-            <h1>My Rides</h1>
-            <p>See every journey at a glance, with live progress and location updates when you're on the road.</p>
+            <h1>{tab === "rides" ? "My Rides" : "My Bookings"}</h1>
+            <p>
+              {tab === "rides"
+                ? "Trips you offer, with live progress and location updates when you're on the road."
+                : "Trips you've booked as a passenger."}
+            </p>
           </div>
-          <Link to="/rides/create">
-            <Button type="primary" size="large" icon={<PlusOutlined />} className="create-ride-btn">
-              Create Ride
-            </Button>
-          </Link>
+          {tab === "rides" ? (
+            <Link to="/rides/create">
+              <Button type="primary" size="large" icon={<PlusOutlined />} className="create-ride-btn">
+                Create Ride
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/search">
+              <Button type="primary" size="large" icon={<CompassOutlined />} className="create-ride-btn">
+                Find a trip
+              </Button>
+            </Link>
+          )}
         </header>
 
-        {!loading && rides.length > 0 && (
-          <div className="my-rides-overview">
-            <div className="overview-card">
-              <span className="overview-icon blue"><CarOutlined /></span>
-              <div><small>Total rides</small><strong>{rides.length}</strong></div>
-            </div>
-            <div className="overview-card">
-              <span className="overview-icon green"><ThunderboltFilled /></span>
-              <div><small>Live now</small><strong>{activeCount}</strong></div>
-            </div>
-            <div className="overview-card route-overview">
-              <span className="overview-icon purple"><EnvironmentFilled /></span>
-              <div><small>Tracking</small><strong>{activeCount ? "Connected" : "Standby"}</strong></div>
-              {activeCount > 0 && <Tag color="green">LIVE</Tag>}
-            </div>
-          </div>
-        )}
-
         {loading ? (
-          <BrandLoader variant="inline" label="Loading your rides…" />
-        ) : rides.length === 0 ? (
-          <div className="my-rides-empty">
-            <Empty description="You haven't created any rides yet" />
-            <Link to="/rides/create"><Button type="primary" icon={<PlusOutlined />}>Create your first ride</Button></Link>
-          </div>
+          <BrandLoader variant="inline" label="Loading your trips…" />
         ) : (
-          <div className="my-rides-grid">
-            {rides.map((ride) => <RideTrackingCard key={ride.id} ride={ride} rides={rides} onOpenDetails={setDetailsRide} onClone={setCloneSource} />)}
-          </div>
+          <>
+            {isRider && (
+              <Segmented
+                block
+                size="large"
+                className="my-rides-tabs"
+                value={tab}
+                onChange={(v) => setView({ tab: v === "bookings" ? "bookings" : null, filter: null })}
+                options={[
+                  { value: "rides", label: <span className="tab-label"><CarOutlined /> My Rides <em>{rides.length}</em></span> },
+                  { value: "bookings", label: <span className="tab-label"><UserOutlined /> My Bookings <em>{bookings.length}</em></span> },
+                ]}
+              />
+            )}
+
+            <div className="my-rides-filters" role="tablist" aria-label="Filter by status" style={{ "--chips": filters.length }}>
+              {filters.map((f) => {
+                const count = list.filter(f.match).length;
+                return (
+                  <button
+                    key={f.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === f.value}
+                    className={`filter-chip ${filter === f.value ? "active" : ""}`}
+                    onClick={() => setView({ filter: f.value })}
+                  >
+                    {f.value === "current" && count > 0 && <span className="live-dot pulse" />}
+                    {f.label}
+                    <em>{count}</em>
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "rides" && filter === "current" && activeCount > 0 && (
+              <div className="my-rides-overview single">
+                <div className="overview-card route-overview">
+                  <span className="overview-icon purple"><EnvironmentFilled /></span>
+                  <div><small>Tracking</small><strong>Connected</strong></div>
+                  <Tag color="green">LIVE</Tag>
+                </div>
+              </div>
+            )}
+
+            {shown.length === 0 ? (
+              <div className="my-rides-empty">
+                <Empty
+                  description={
+                    list.length > 0
+                      ? EMPTY_TEXT[tab][filter]
+                      : tab === "rides"
+                        ? "You haven't created any rides yet"
+                        : "You haven't booked any rides yet"
+                  }
+                />
+                {list.length === 0 &&
+                  (tab === "rides" ? (
+                    <Link to="/rides/create"><Button type="primary" icon={<PlusOutlined />}>Create your first ride</Button></Link>
+                  ) : (
+                    <Link to="/search"><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
+                  ))}
+              </div>
+            ) : tab === "rides" ? (
+              <div className="my-rides-grid">
+                {shown.map((ride) => <RideTrackingCard key={ride.id} ride={ride} rides={rides} onOpenDetails={setDetailsRide} onClone={setCloneSource} />)}
+              </div>
+            ) : (
+              <BookingList bookings={shown} />
+            )}
+          </>
         )}
       </div>
 
@@ -408,19 +515,25 @@ export default function MyRidesPage() {
 
       <CloneRideModal
         ride={cloneSource}
-        rides={rides}
+        rides={rides || []}
         open={Boolean(cloneSource)}
         onClose={() => setCloneSource(null)}
-        onCloned={(created) => setRides((list) => [created, ...list])}
+        onCloned={(created) => {
+          setRides((list) => [created, ...(list || [])]);
+          setView({ filter: created.status === "DRAFT" ? "draft" : "upcoming" });
+        }}
       />
 
       <style>{`
-        .my-rides-page{position:relative;min-height:100vh;padding:38px 0 64px;background:radial-gradient(circle at 8% 0%,rgba(219,234,254,.85),transparent 28%),radial-gradient(circle at 96% 12%,rgba(224,231,255,.75),transparent 30%),linear-gradient(180deg,var(--bg-secondary) 0%,var(--bg-secondary) 72%);overflow:hidden;color:${HOME.text};}
+        .my-rides-page{position:relative;min-height:100vh;padding:38px 0 64px;background:radial-gradient(circle at 8% 0%,rgba(219,234,254,.85),transparent 28%),radial-gradient(circle at 96% 12%,rgba(224,231,255,.75),transparent 30%),linear-gradient(180deg,var(--bg-secondary) 0%,var(--bg-secondary) 72%);overflow:hidden;overflow:clip;color:${HOME.text};}
         .my-rides-page *{box-sizing:border-box;}
         .my-rides-glow{position:absolute;border-radius:999px;filter:blur(5px);pointer-events:none;}.glow-one{width:260px;height:260px;right:-120px;top:230px;background:rgba(96, 165, 250, 0.16)}.glow-two{width:220px;height:220px;left:-130px;bottom:160px;background:rgba(167, 139, 250, 0.14)}
         .my-rides-container{width:min(1240px,calc(100% - 40px));margin:0 auto;position:relative;z-index:1;}
         .my-rides-header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:28px;}.my-rides-eyebrow{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:${HOME.soft};color:${HOME.primary};padding:7px 11px;font-size:11px;font-weight:800;letter-spacing:.9px;}.my-rides-header h1{margin:15px 0 8px;color:${HOME.dark};font-size:clamp(34px,4vw,50px);line-height:1;letter-spacing:-2.5px;font-weight:850}.my-rides-header p{max-width:650px;margin:0;color:${HOME.muted};font-size:15px;line-height:1.65}.create-ride-btn{height:48px!important;border-radius:12px!important;background:${HOME.primary}!important;border-color:${HOME.primary}!important;box-shadow:0 10px 25px rgba(45, 212, 191, 0.25);font-weight:700;}
         .my-rides-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}.overview-card{display:flex;align-items:center;gap:13px;background:var(--surface-glass);border:1px solid var(--border);border-radius:16px;padding:15px 17px;box-shadow:0 8px 25px rgba(0, 0, 0, 0.4);backdrop-filter:blur(10px)}.overview-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:18px}.overview-icon.blue{background:rgba(45, 212, 191, 0.12);color:#2DD4BF}.overview-icon.green{background:rgba(34, 197, 94, 0.14);color:#22C55E}.overview-icon.purple{background:rgba(167, 139, 250, 0.12);color:#A78BFA}.overview-card small{display:block;color:${HOME.muted};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}.overview-card strong{display:block;margin-top:2px;color:${HOME.dark};font-size:18px}.route-overview{position:relative}.route-overview .ant-tag{margin-left:auto}
+        .my-rides-tabs{margin-bottom:14px;padding:4px;border-radius:14px;background:var(--surface-glass);border:1px solid var(--border)}.my-rides-tabs .ant-segmented-item-label{min-height:42px;line-height:42px;font-weight:700}.tab-label{display:inline-flex;align-items:center;gap:7px}.tab-label em,.filter-chip em{font-style:normal;line-height:18px;font-size:11px;font-weight:800;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--divider);color:var(--text-secondary)}.my-rides-tabs .ant-segmented-item-selected .tab-label em{background:${HOME.soft};color:${HOME.primary}}
+        .my-rides-filters{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.my-rides-filters::-webkit-scrollbar{display:none}.filter-chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface-glass);color:${HOME.muted};font:inherit;font-size:13px;font-weight:700;cursor:pointer}.filter-chip:hover{border-color:${HOME.primary};color:${HOME.dark}}.filter-chip.active{background:${HOME.primary};border-color:${HOME.primary};color:#06201c}.filter-chip.active em{background:rgba(0,0,0,.15);color:#06201c}
+        .my-rides-overview.single{grid-template-columns:1fr}
         .my-rides-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.my-rides-card{background:var(--surface-glass);border:1px solid ${HOME.border};border-radius:22px;overflow:hidden;box-shadow:0 16px 45px rgba(0, 0, 0, 0.4);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.my-rides-card:hover{transform:translateY(-2px);box-shadow:0 22px 55px rgba(0, 0, 0, 0.5)}.my-rides-card.is-live{border-color:rgba(45, 212, 191, 0.3);box-shadow:0 18px 50px rgba(45, 212, 191, 0.16)}
         .my-rides-card-top{height:48px;padding:0 14px 0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--divider)}.my-rides-live-badge{display:inline-flex;align-items:center;gap:7px;color:${HOME.muted};font-size:10px;font-weight:850;letter-spacing:.8px}.live-dot{width:7px;height:7px;border-radius:50%;background:var(--text-secondary)}.live-dot.pulse{background:#22C55E;box-shadow:0 0 0 5px rgba(22,163,74,.10);animation:livePulse 1.8s infinite}.my-rides-card-top .ant-btn{color:var(--text-secondary)}.my-rides-card-top .ant-btn:hover{color:${HOME.primary};background:${HOME.soft}}@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.4}}
         .my-rides-summary{padding:18px 20px 15px}.my-rides-summary-top{display:flex;align-items:center;gap:12px}.my-rides-avatar-wrap{position:relative}.online-dot{position:absolute;right:-1px;bottom:1px;width:11px;height:11px;background:#22c55e;border:2px solid var(--bg-primary);border-radius:50%}.my-rides-driver{flex:1;min-width:0}.my-rides-driver strong{display:block;color:${HOME.dark};font-size:15px}.my-rides-driver span{display:block;color:${HOME.muted};font-size:12px;margin-top:3px}.my-rides-summary .ant-tag{margin:0}
@@ -433,8 +546,8 @@ export default function MyRidesPage() {
         .my-rides-footer-actions{display:flex;align-items:center;gap:8px}.my-rides-card-footer .ant-btn.clone-ride-btn{background:transparent;border:1px solid ${HOME.primary};color:${HOME.primary}}.my-rides-card-footer .ant-btn.clone-ride-btn:hover:not(:disabled){background:${HOME.soft};color:${HOME.primary}}.my-rides-card-footer .ant-btn.clone-ride-btn:disabled{border-color:var(--border);color:var(--text-tertiary)}
         .my-rides-loading{display:grid;grid-template-columns:1fr 1fr;gap:20px}.my-rides-loading .ant-skeleton{background:var(--bg-primary);border-radius:18px;padding:20px}.my-rides-empty{min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:var(--surface-glass);border:1px solid ${HOME.border};border-radius:22px}.my-rides-empty .ant-btn{background:${HOME.primary};border-color:${HOME.primary};border-radius:10px}
         @media(max-width:1000px){.my-rides-grid{grid-template-columns:1fr}.my-rides-loading{grid-template-columns:1fr}}
-        @media(max-width:700px){.my-rides-page{padding:25px 0 45px}.my-rides-container{width:min(100% - 24px,620px)}.my-rides-header{align-items:flex-start;flex-direction:column}.my-rides-header h1{font-size:38px}.create-ride-btn{width:100%}.my-rides-overview{grid-template-columns:1fr}.my-rides-route-summary{grid-template-columns:30px minmax(0,1fr);row-gap:12px}.route-arrow{display:none}.route-copy strong{white-space:normal;overflow:visible;word-break:break-word;font-size:13px}.route-stop strong{white-space:normal;max-width:none;word-break:break-word}.route-current{font-size:0;padding:5px}.route-current svg{font-size:10px}.my-rides-card-footer{align-items:flex-start;flex-direction:column}.my-rides-footer-actions{width:100%}.my-rides-footer-actions>*{flex:1}.my-rides-footer-actions .ant-btn{width:100%}}
-        @media(max-width:450px){.my-rides-summary{padding:15px}.my-rides-summary-top{gap:10px}.my-rides-avatar-wrap{flex-shrink:0}.my-rides-driver strong,.my-rides-driver span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.my-rides-summary .ant-tag{flex-shrink:0;font-size:10px;line-height:18px;padding:0 6px}.my-rides-progress{margin:0 15px}.my-rides-route-summary{grid-template-columns:27px minmax(0,1fr);padding:10px;column-gap:8px}.route-icon{width:27px;height:27px}.route-copy strong{font-size:12px}.my-rides-live-stats{grid-template-columns:1fr 1fr 1fr}.live-stat{padding:9px 7px;gap:5px}.live-stat-icon{width:24px;height:24px}.live-stat small{font-size:8px}.live-stat strong{font-size:10px}}
+        @media(max-width:700px){.my-rides-page{padding:25px 0 45px}.my-rides-container{width:min(100% - 24px,620px)}.my-rides-header{align-items:flex-start;flex-direction:column}.my-rides-header{margin-bottom:18px}.my-rides-header h1{font-size:34px;margin-top:10px}.my-rides-header p{font-size:13px}.create-ride-btn{width:100%}.my-rides-overview{grid-template-columns:1fr}.my-rides-route-summary{grid-template-columns:30px minmax(0,1fr);row-gap:12px}.route-arrow{display:none}.route-copy strong{white-space:normal;overflow:visible;word-break:break-word;font-size:13px}.route-stop strong{white-space:normal;max-width:none;word-break:break-word}.route-current{font-size:0;padding:5px}.route-current svg{font-size:10px}.my-rides-card-footer{align-items:flex-start;flex-direction:column}.my-rides-footer-actions{width:100%}.my-rides-footer-actions>*{flex:1}.my-rides-footer-actions .ant-btn{width:100%}}
+        @media(max-width:450px){.my-rides-tabs .ant-segmented-item-label{padding:0 6px;font-size:14px}.tab-label{gap:5px}.tab-label .anticon{display:none}.my-rides-filters{display:grid;grid-template-columns:repeat(var(--chips),1fr);gap:6px;overflow:visible}.filter-chip{height:auto;flex-direction:column;justify-content:center;gap:3px;padding:7px 2px;border-radius:12px;font-size:12px}.filter-chip em{min-width:18px;padding:0 6px}.filter-chip .live-dot{display:none}.my-rides-summary{padding:15px}.my-rides-summary-top{gap:10px}.my-rides-avatar-wrap{flex-shrink:0}.my-rides-driver strong,.my-rides-driver span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.my-rides-summary .ant-tag{flex-shrink:0;font-size:10px;line-height:18px;padding:0 6px}.my-rides-progress{margin:0 15px}.my-rides-route-summary{grid-template-columns:27px minmax(0,1fr);padding:10px;column-gap:8px}.route-icon{width:27px;height:27px}.route-copy strong{font-size:12px}.my-rides-live-stats{grid-template-columns:1fr 1fr 1fr}.live-stat{padding:9px 7px;gap:5px}.live-stat-icon{width:24px;height:24px}.live-stat small{font-size:8px}.live-stat strong{font-size:10px}}
       `}</style>
     </div>
   );

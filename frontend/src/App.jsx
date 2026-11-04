@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout.jsx";
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import BrandLoader from "./components/ui/BrandLoader.jsx";
@@ -11,6 +11,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import LicencePage from "./pages/LicencePage.jsx";
 import VehiclesPage from "./pages/vehicles/VehiclesPage.jsx";
 // import VehicleFormPage from "./pages/vehicles/VehicleFormPage.jsx";
 import VehicleFormPage from "../src/pages/vehicles/VehicleFormPage.jsx"
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<ProfilePage editing />} />
+          <Route path="/profile/licence" element={<LicencePage />} />
 
           <Route path="/vehicles" element={<VehiclesPage />} />
           <Route path="/vehicles/add" element={<VehicleFormPage />} />
@@ -62,7 +64,7 @@ export default function App() {
 
           <Route path="/search" element={<SearchPage />} />
 
-          <Route path="/bookings" element={<BookingsPage />} />
+          <Route path="/bookings" element={<Navigate to="/rides?tab=bookings" replace />} />
           <Route path="/bookings/:id" element={<BookingDetailsPage />} />
           <Route path="/payments" element={<BookingsPage />} />
 

@@ -17,3 +17,15 @@ export const verifyOwnPhoneOtpSchema = z.object({
   profileImage: z.string().trim().url().optional().nullable(),
   bio: z.string().trim().max(500).optional().nullable(),
 });
+
+// Indian driving licence, e.g. "TN01 20190012345" / "MH-1220110012345":
+// state code, then digits (spaces and dashes are ignored).
+export const drivingLicenceSchema = z.object({
+  licenceNumber: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/[\s-]/g, "").toUpperCase())
+    .refine((v) => /^[A-Z]{2}[0-9A-Z]{2}[0-9]{7,12}$/.test(v), "Enter a valid driving licence number, e.g. TN01 20190012345"),
+  holderName: z.string().trim().min(2).max(100).optional(),
+  expiryDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the expiry date"),
+});

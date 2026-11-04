@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import request from "supertest";
 import { app } from "../src/app.js";
 import { vehicleRepository } from "../src/repositories/vehicle.repository.js";
+import { drivingLicenceRepository } from "../src/repositories/drivingLicence.repository.js";
 
 let counter = 0;
 function unique() {
@@ -86,7 +87,21 @@ export function futureDate(daysAhead = 5) {
 // run in tests - go straight to the DB instead, same as a completed manual
 // verification would leave the row.
 export async function verifyVehicle(vehicleId) {
-  return vehicleRepository.update(vehicleId, { verificationStatus: "VERIFIED" });
+  const vehicle = await vehicleRepository.update(vehicleId, { verificationStatus: "VERIFIED" });
+  await verifyLicence(vehicle.ownerId);
+  return vehicle;
+}
+
+// Creating a trip also needs a verified driving licence; the real flow OCRs
+// an uploaded document, so tests write the verified row directly.
+export async function verifyLicence(userId, overrides = {}) {
+  return drivingLicenceRepository.upsert(userId, {
+    licenceNumber: `TN01${crypto.randomInt(10000000000, 99999999999)}`,
+    expiryDate: futureDate(365),
+    status: "VERIFIED",
+    verifiedAt: new Date(),
+    ...overrides,
+  });
 }
 
 export async function createPublishedRide(token, vehicleId, overrides = {}) {

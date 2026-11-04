@@ -20,6 +20,23 @@ export const userService = {
   removePhoto() {
     return api.delete("/users/me/photo").then((res) => res.data);
   },
+  // Driving licence verification: { status: NOT_SUBMITTED | VERIFIED | REJECTED | EXPIRED, ... }
+  getLicence() {
+    return api.get("/users/me/licence").then((res) => res.data);
+  },
+  // OCR on the server checks the number is on the document (can take a while on small servers).
+  submitLicence({ licenceNumber, holderName, expiryDate, file }) {
+    const form = new FormData();
+    form.append("licenceNumber", licenceNumber);
+    if (holderName) form.append("holderName", holderName);
+    form.append("expiryDate", expiryDate);
+    form.append("licenceDocument", file);
+    return api.put("/users/me/licence", form, { timeout: 120000 }).then((res) => res.data);
+  },
+  // { isRider (has a vehicle), canCreateTrip, missing: ["LICENCE","VEHICLE"], licence, ... }
+  getRiderStatus() {
+    return api.get("/users/me/rider-status").then((res) => res.data);
+  },
   getPublicProfile(id) {
     return api.get(`/users/${id}`).then((res) => res.data);
   },

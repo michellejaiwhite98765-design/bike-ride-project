@@ -62,13 +62,26 @@ async function sendViaFast2Sms(phone, otp) {
   return { delivered: true, providerRef: body.request_id };
 }
 
+// With OTP_DEV_MODE on, a provider that refuses or fails (e.g. Fast2SMS before
+// its website verification is approved) must not block the user: the code is
+// shown in the app instead, as the dev-mode note above promises.
+async function sendWithDevFallback(send, phone, otp) {
+  try {
+    return { ...(await send(phone, otp)), devMode: env.sms.otpDevMode };
+  } catch (err) {
+    if (!env.sms.otpDevMode) throw err;
+    logger.warn(`SMS not delivered (${err.message}); showing the code in the app instead`);
+    return { delivered: false, devMode: true };
+  }
+}
+
 export const smsService = {
   async sendOtp(phone, otp) {
     switch (env.sms.provider) {
       case "2factor":
-        return { ...(await sendVia2Factor(phone, otp)), devMode: env.sms.otpDevMode };
+        return sendWithDevFallback(sendVia2Factor, phone, otp);
       case "fast2sms":
-        return { ...(await sendViaFast2Sms(phone, otp)), devMode: env.sms.otpDevMode };
+        return sendWithDevFallback(sendViaFast2Sms, phone, otp);
       case "":
         if (env.sms.otpDevMode) {
           logger.info(`[SMS dev mode] OTP for ${phone}: ${otp}`);

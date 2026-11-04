@@ -10,6 +10,10 @@ import { ApiError } from "../utils/ApiError.js";
  * needed. Needs TWOFACTOR_API_KEY; TWOFACTOR_TEMPLATE optionally names a
  * custom template approved in the 2Factor dashboard.
  *
+ * SMS_PROVIDER=fast2sms (Fast2SMS.com): uses their "otp" route, which sends
+ * Fast2SMS's own pre-approved OTP message ("Your OTP is 123456"), so no DLT
+ * template of our own is needed. Needs FAST2SMS_API_KEY.
+ *
  * OTP_DEV_MODE=true also shows the code in the app (`devMode: true`), with or
  * without a provider - handy while testing. With no provider it's the only
  * way to get the code; with no provider and OTP_DEV_MODE off, sending fails (503).
@@ -34,11 +38,37 @@ async function sendVia2Factor(phone, otp) {
   return { delivered: true, providerRef: body.Details };
 }
 
+async function sendViaFast2Sms(phone, otp) {
+  const { apiKey, baseUrl, timeoutMs } = env.sms.fast2sms;
+  if (!apiKey) throw new ApiError(503, "SMS is not set up yet (missing FAST2SMS_API_KEY)");
+  let body;
+  try {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { authorization: apiKey, "Content-Type": "application/json" },
+      // Fast2SMS takes 10-digit Indian numbers.
+      body: JSON.stringify({ route: "otp", variables_values: otp, numbers: phone.slice(-10) }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    body = await res.json().catch(() => ({}));
+    if (!res.ok || body.return !== true) {
+      throw new Error([body.status_code, Array.isArray(body.message) ? body.message.join(" ") : body.message].filter(Boolean).join(" ") || `HTTP ${res.status}`);
+    }
+  } catch (err) {
+    // The API key is only in a header, never logged.
+    logger.warn(`Fast2SMS OTP to ${phone.slice(0, 4)}****${phone.slice(-2)} failed: ${err.message}`);
+    throw new ApiError(502, "We couldn't send the code to this number right now. Please try again in a minute.");
+  }
+  return { delivered: true, providerRef: body.request_id };
+}
+
 export const smsService = {
   async sendOtp(phone, otp) {
     switch (env.sms.provider) {
       case "2factor":
         return { ...(await sendVia2Factor(phone, otp)), devMode: env.sms.otpDevMode };
+      case "fast2sms":
+        return { ...(await sendViaFast2Sms(phone, otp)), devMode: env.sms.otpDevMode };
       case "":
         if (env.sms.otpDevMode) {
           logger.info(`[SMS dev mode] OTP for ${phone}: ${otp}`);

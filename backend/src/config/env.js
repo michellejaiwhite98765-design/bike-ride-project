@@ -84,6 +84,11 @@ export const env = {
       baseUrl: process.env.TWOFACTOR_URL || "https://2factor.in/API/V1",
       timeoutMs: Number(process.env.TWOFACTOR_TIMEOUT_MS || 10000),
     },
+    fast2sms: {
+      apiKey: process.env.FAST2SMS_API_KEY || "",
+      baseUrl: process.env.FAST2SMS_URL || "https://www.fast2sms.com/dev/bulkV2",
+      timeoutMs: Number(process.env.FAST2SMS_TIMEOUT_MS || 10000),
+    },
   },
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",

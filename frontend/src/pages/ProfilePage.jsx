@@ -1,5 +1,5 @@
 import { Card, Form, Input, Button, App } from "antd";
-import { UserOutlined, MailOutlined, PhoneOutlined, FileTextOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
+import { UserOutlined, MailOutlined, PhoneOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -133,7 +133,6 @@ export default function ProfilePage({ editing = false }) {
             firstName: user.firstName,
             lastName: user.lastName,
             phone: user.phone,
-            bio: user.bio,
           }}
           onFinish={onFinish}
           requiredMark={false}
@@ -176,20 +175,6 @@ export default function ProfilePage({ editing = false }) {
               form.setFieldValue("phone", updated.phone);
             }}
           />
-
-          <SectionTitle style={{ marginTop: 24 }}>
-            <FileTextOutlined className="icon" />
-            About You
-          </SectionTitle>
-
-          <Form.Item name="bio" label="Bio">
-            <Input.TextArea
-              rows={4}
-              maxLength={500}
-              placeholder="Tell other riders about yourself..."
-              showCount
-            />
-          </Form.Item>
 
           <div style={{ marginTop: 32 }}>
             <Button

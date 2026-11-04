@@ -59,9 +59,16 @@ export default function SearchPage() {
   const [dates, setDates] = useState(() => [dayjs(), dayjs()]);
 
   const isMobile = useIsMobile();
-  const [sheetOpen, setSheetOpen] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false) // starts minimized; tap the bar to open;
   const [sheetHeight, setSheetHeight] = useState(64);
   const sheetRef = useRef(null);
+
+  // Lift the floating "Live track" button above the search bar.
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    document.documentElement.style.setProperty("--search-sheet-h", `${sheetHeight + 8}px`);
+    return () => document.documentElement.style.removeProperty("--search-sheet-h");
+  }, [isMobile, sheetHeight]);
 
   // Keep the map's floating controls clear of the sheet, whatever its height.
   useEffect(() => {
@@ -145,7 +152,8 @@ export default function SearchPage() {
       setResults(list);
       setLastSearch({ ...asked, count: list.length });
       setBannerOpen(true);
-      if (isMobile) setSheetOpen(false);
+      // Show the rides on the map; with no results keep the form open so they can change the search.
+      if (isMobile && list.length > 0) setSheetOpen(false);
     } catch (err) {
       notification.error({ title: "Couldn't search", description: err.message });
     } finally {
@@ -210,7 +218,7 @@ export default function SearchPage() {
           </>
         ) : (
           <>
-            Find rides <ArrowRightOutlined className="sp-arrow" />
+            Find Rides <ArrowRightOutlined className="sp-arrow" />
           </>
         )}
       </button>
@@ -269,12 +277,28 @@ export default function SearchPage() {
           <div className="sp-sheet-head">
             <button type="button" className="sp-sheet-toggle" onClick={() => setSheetOpen((v) => !v)} aria-expanded={sheetOpen}>
               <span className="sp-sheet-grip" />
-              <span className="sp-sheet-title">{sheetOpen ? "Find trip" : summary}</span>
-              <UpOutlined className="sp-sheet-chevron" />
+              {sheetOpen ? (
+                <>
+                  <span className="sp-sheet-title">Find trip</span>
+                  <UpOutlined className="sp-sheet-chevron" />
+                </>
+              ) : (
+                // Minimized: look like a search box so it's clear where to search.
+                <span className="sp-search-pill">
+                  <SearchOutlined className="sp-search-icon" />
+                  <span className="sp-search-text">
+                    <strong>{summary}</strong>
+                    <small>Tap to search for a trip</small>
+                  </span>
+                  <span className="sp-search-go" aria-label="Search"><ArrowRightOutlined /></span>
+                </span>
+              )}
             </button>
-            <button type="button" className="sp-sheet-close" onClick={goHome} aria-label="Close">
-              <CloseOutlined />
-            </button>
+            {sheetOpen && (
+              <button type="button" className="sp-sheet-close" onClick={goHome} aria-label="Close">
+                <CloseOutlined />
+              </button>
+            )}
           </div>
           <div className="sp-sheet-body">{fields}</div>
         </div>
@@ -344,6 +368,12 @@ export default function SearchPage() {
         .sp-sheet-title{flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sp-sheet-chevron{font-size:13px;color:var(--text-secondary);transition:transform .2s ease;transform:rotate(180deg)}
         .sp-sheet.open .sp-sheet-chevron{transform:rotate(0)}
+        .sp-search-pill{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:999px;background:var(--bg-primary);border:1.5px solid #2DD4BF;box-shadow:0 0 0 4px rgba(45,212,191,.15)}
+        .sp-search-icon{font-size:18px;color:#2DD4BF}
+        .sp-search-text{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+        .sp-search-text strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sp-search-text small{font-size:11.5px;color:var(--text-secondary)}
+        .sp-search-go{flex-shrink:0;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#2DD4BF;color:#04211d;font-size:15px}
         .sp-sheet-close{border:0;background:none;cursor:pointer;color:var(--text-secondary);font-size:15px;width:36px;height:36px;border-radius:50%}
         .sp-sheet-body{overflow:auto;padding:0 16px 16px;max-height:0;transition:max-height .25s ease;padding-bottom:0}
         .sp-sheet.open .sp-sheet-body{max-height:68vh;padding-bottom:16px}

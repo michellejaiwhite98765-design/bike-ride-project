@@ -29,6 +29,12 @@ import SafetyPage from "./pages/SafetyPage.jsx";
 import AdminPage from "./pages/admin/AdminPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
+// Signed-in users land on Find Ride; visitors get the public nearby-rides map.
+function HomeRoute() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <SearchPage /> : <HomePage />;
+}
+
 export default function App() {
   // Hold every page (login, home, ...) until the saved session is checked, so
   // the app opens straight on the right screen instead of flashing the guest
@@ -40,7 +46,7 @@ export default function App() {
     <Routes>
         <Route path="/login" element={<LoginPage />} />
       <Route element={<AppLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -56,15 +62,15 @@ export default function App() {
           <Route path="/vehicles/add" element={<VehicleFormPage />} />
           <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
 
-          <Route path="/rides" element={<MyRidesPage />} />
+          <Route path="/rides" element={<MyRidesPage key="rides" />} />
           <Route path="/rides/create" element={<CreateRidePage />} />
           <Route path="/rides/:id" element={<RideDetailsPage />} />
           <Route path="/rides/:id/edit" element={<CreateRidePage />} />
           <Route path="/rides/:id/requests" element={<RideRequestsPage />} />
 
-          <Route path="/search" element={<SearchPage />} />
+          <Route path="/search" element={<Navigate to="/" replace />} />
 
-          <Route path="/bookings" element={<Navigate to="/rides?tab=bookings" replace />} />
+          <Route path="/bookings" element={<MyRidesPage key="bookings" mode="bookings" />} />
           <Route path="/bookings/:id" element={<BookingDetailsPage />} />
           <Route path="/payments" element={<BookingsPage />} />
 

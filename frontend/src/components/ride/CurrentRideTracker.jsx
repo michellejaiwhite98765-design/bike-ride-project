@@ -98,7 +98,7 @@ export default function CurrentRideTracker() {
         .crt-fab-label{position:relative;z-index:1}
         .crt-fab-pulse{position:absolute;inset:0;border-radius:999px;background:#2DD4BF;opacity:.5;animation:crtPulse 1.8s ease-out infinite}
         @keyframes crtPulse{0%{transform:scale(1);opacity:.45}100%{transform:scale(1.35,1.6);opacity:0}}
-        @media(max-width:768px){.crt-fab{right:auto;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom))}}
+        @media(max-width:768px){.crt-fab{right:auto;left:50%;transform:translateX(-50%);bottom:calc(84px + var(--search-sheet-h, 0px) + env(safe-area-inset-bottom))}}
       `}</style>
     </>
   );

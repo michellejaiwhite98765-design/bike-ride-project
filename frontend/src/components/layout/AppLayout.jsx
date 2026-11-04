@@ -495,7 +495,8 @@ export default function AppLayout() {
 
   const isActive = (path) => (location.pathname === path ? "active" : "");
   const isHome = location.pathname === "/";
-  const isSearchPage = location.pathname === "/search";
+  // Signed-in users get Find Ride as their home page.
+  const isSearchPage = location.pathname === "/search" || (isAuthenticated && location.pathname === "/");
   const isEditRide = /^\/rides\/[^/]+\/edit$/.test(location.pathname);
   const isCreateRidePage = location.pathname === "/rides/create" || isEditRide;
   const isFullBleedPage = isHome || isSearchPage || isCreateRidePage;
@@ -545,6 +546,15 @@ export default function AppLayout() {
                 exit={{ opacity: 0, y: 6 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
+                <MobileBar className={isAuthenticated ? "authed-menu" : undefined} style={{ marginRight: -20, marginLeft: -8 }}>
+                  <Button
+                    type="text"
+                    icon={<MenuOutlined />}
+                    size="large"
+                    onClick={() => setDrawerOpen(true)}
+                    style={{ color: colors.textSecondary }}
+                  />
+                </MobileBar>
                 <Link to="/" style={{ textDecoration: "none" }}>
                   <BrandContainer>
                     <LiftshareMark className="brand-logo" size={36} />
@@ -557,7 +567,7 @@ export default function AppLayout() {
                     <NavItems>
                       {!isSearchPage && (
                         <Link to="/search" className={isActive("/search")}>
-                          Find ride
+                          Find Rides
                         </Link>
                       )}
                       <Link to="/rides" className={isActive("/rides")}>
@@ -627,15 +637,6 @@ export default function AppLayout() {
                     </>
                   )}
 
-                  <MobileBar className={isAuthenticated ? "authed-menu" : undefined}>
-                    <Button
-                      type="text"
-                      icon={<MenuOutlined />}
-                      size="large"
-                      onClick={() => setDrawerOpen(true)}
-                      style={{ color: colors.textSecondary }}
-                    />
-                  </MobileBar>
                 </UserSection>
               </motion.div>
           </AnimatePresence>
@@ -660,8 +661,7 @@ export default function AppLayout() {
 
             <div style={{ padding: "0 16px" }}>
               {[
-                { to: "/", icon: <HomeOutlined />, label: "Home" },
-                { to: "/search", icon: <SearchOutlined />, label: "Find Ride" },
+                { to: "/", icon: <SearchOutlined />, label: "Find Rides" },
                 { to: "/rides/create", icon: <PlusCircleOutlined />, label: "Create Ride" },
                 { to: "/rides", icon: <CarOutlined />, label: "My Rides" },
                 { to: "/bookings", icon: <FileTextOutlined />, label: "My Bookings" },
@@ -738,11 +738,11 @@ export default function AppLayout() {
             <HomeOutlined />
             Home
           </BottomNavItem>
-          <BottomNavItem to="/search" $active={location.pathname === "/search"}>
-            <SearchOutlined />
-            Search
+          <BottomNavItem to="/bookings" $active={location.pathname.startsWith("/bookings")}>
+            <FileTextOutlined />
+            Bookings
           </BottomNavItem>
-          <BottomNavItem to="/rides" $active={location.pathname === "/rides"}>
+          <BottomNavItem to="/rides" $active={location.pathname.startsWith("/rides")}>
             <CarOutlined />
             Rides
           </BottomNavItem>

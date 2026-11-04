@@ -56,3 +56,12 @@ services:
       # minute in total before giving up.
       - key: RC_OCR_TIMEOUT_MS
         value: "60000"
+      # Sign-up / change-number OTP by SMS through Fast2SMS. FAST2SMS_API_KEY is
+      # sync:false: paste it in the Render dashboard (never commit it).
+      # OTP_DEV_MODE=true also shows the code in the app; set "false" to stop.
+      - key: SMS_PROVIDER
+        value: fast2sms
+      - key: FAST2SMS_API_KEY
+        sync: false
+      - key: OTP_DEV_MODE
+        value: "true"

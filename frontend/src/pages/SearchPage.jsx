@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Form, App, Drawer, Button, DatePicker } from "antd";
 import {
   SwapOutlined,
@@ -45,6 +45,7 @@ function whenText(start, end) {
 
 export default function SearchPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { notification } = App.useApp();
   const [form] = Form.useForm();
   useAutoCurrentLocation(form, "source");
@@ -58,7 +59,12 @@ export default function SearchPage() {
   const [dates, setDates] = useState(() => [dayjs(), dayjs()]);
 
   const isMobile = useIsMobile();
-  const [sheetOpen, setSheetOpen] = useState(false) // starts minimized; tap the bar to open;
+  // Starts minimized (tap the bar to open), unless a link asked for it open:
+  // navigate("/", { state: { openSearch: true } }) e.g. My Bookings' "Find a trip".
+  const [sheetOpen, setSheetOpen] = useState(() => Boolean(location.state?.openSearch));
+  useEffect(() => {
+    if (location.state?.openSearch) setSheetOpen(true);
+  }, [location.state]);
   const [sheetHeight, setSheetHeight] = useState(64);
   const sheetRef = useRef(null);
 
@@ -219,7 +225,7 @@ export default function SearchPage() {
           </>
         ) : (
           <>
-            Find Rides <ArrowRightOutlined className="sp-arrow" />
+            Find trip <ArrowRightOutlined className="sp-arrow" />
           </>
         )}
       </button>

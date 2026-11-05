@@ -445,7 +445,7 @@ export default function MyRidesPage({ mode = "rides" }) {
                 />
                 {/* My Bookings: nudge to find a trip on empty Live/Upcoming; not on Completed. */}
                 {tab === "bookings" && filter !== "completed" && (
-                  <Link to="/search"><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
+                  <Link to="/" state={{ openSearch: true }}><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
                 )}
               </div>
             ) : tab === "rides" ? (

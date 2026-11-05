@@ -18,7 +18,6 @@ import {
   EnvironmentOutlined,
   EyeOutlined,
   FlagFilled,
-  PlusOutlined,
   ThunderboltFilled,
   UserOutlined,
 } from "@ant-design/icons";
@@ -444,12 +443,10 @@ export default function MyRidesPage({ mode = "rides" }) {
                         : "You haven't booked any rides yet"
                   }
                 />
-                {list.length === 0 &&
-                  (tab === "rides" ? (
-                    <Link to="/rides/create"><Button type="primary" icon={<PlusOutlined />}>Create your first ride</Button></Link>
-                  ) : (
-                    <Link to="/search"><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
-                  ))}
+                {/* My Bookings: nudge to find a trip on empty Live/Upcoming; not on Completed. */}
+                {tab === "bookings" && filter !== "completed" && (
+                  <Link to="/search"><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
+                )}
               </div>
             ) : tab === "rides" ? (
               <div className="my-rides-grid">

@@ -8,11 +8,13 @@ export const userService = {
   // Changing the mobile number, step 1: OTP to the user's current number.
   // currentPhone: the user's own number (Firebase sends the SMS from the app).
   sendOwnPhoneOtp(currentPhone) {
-    if (firebasePhoneEnabled) return firebasePhone.send(currentPhone);
-    return api.post("/users/me/phone-otp").then((res) => res.data);
+    const viaServer = () => api.post("/users/me/phone-otp").then((res) => res.data);
+    if (!firebasePhoneEnabled) return viaServer();
+    // If Firebase can't send real SMS yet (no billing), use the server's code instead.
+    return firebasePhone.send(currentPhone).catch((err) => (err.fallback ? viaServer() : Promise.reject(err)));
   },
   async verifyOwnPhoneOtp(otp, currentPhone) {
-    if (firebasePhoneEnabled) {
+    if (firebasePhoneEnabled && firebasePhone.isPending(currentPhone)) {
       const firebaseIdToken = await firebasePhone.confirm(currentPhone, otp);
       return api.post("/users/me/phone-otp/verify", { firebaseIdToken }).then((res) => res.data);
     }

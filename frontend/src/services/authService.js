@@ -5,11 +5,13 @@ export const authService = {
   // Sign-up phone verification: send a code, then verify it for a token that register() needs.
   // With Firebase Phone Auth on, Firebase sends and checks the SMS code.
   sendPhoneOtp(phone) {
-    if (firebasePhoneEnabled) return firebasePhone.send(phone);
-    return api.post("/auth/phone-otp", { phone }).then((res) => res.data);
+    const viaServer = () => api.post("/auth/phone-otp", { phone }).then((res) => res.data);
+    if (!firebasePhoneEnabled) return viaServer();
+    // If Firebase can't send real SMS yet (no billing), use the server's code instead.
+    return firebasePhone.send(phone).catch((err) => (err.fallback ? viaServer() : Promise.reject(err)));
   },
   async verifyPhoneOtp(phone, otp) {
-    if (firebasePhoneEnabled) {
+    if (firebasePhoneEnabled && firebasePhone.isPending(phone)) {
       const firebaseIdToken = await firebasePhone.confirm(phone, otp);
       return api.post("/auth/phone-otp/verify", { phone, firebaseIdToken }).then((res) => res.data);
     }

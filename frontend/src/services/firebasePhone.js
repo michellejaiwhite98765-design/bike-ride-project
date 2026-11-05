@@ -63,6 +63,9 @@ function friendly(err) {
 const pending = new Map();
 
 export const firebasePhone = {
+  /** True once a code was sent by Firebase for this phone (so verify goes through Firebase). */
+  isPending: (phone) => pending.has(toE164(phone)),
+
   async send(phone) {
     const e164 = toE164(phone);
     try {
@@ -73,7 +76,10 @@ export const firebasePhone = {
       // A used/failed reCAPTCHA can't be reused: start fresh next time.
       try { verifier?.clear(); } catch { /* already cleared */ }
       verifier = null;
-      throw new Error(friendly(err));
+      const error = new Error(friendly(err));
+      // Firebase can't send real SMS on this project (no billing yet): callers fall back.
+      error.fallback = /billing-not-enabled|operation-not-allowed|quota-exceeded/.test(err?.code || "");
+      throw error;
     }
   },
 

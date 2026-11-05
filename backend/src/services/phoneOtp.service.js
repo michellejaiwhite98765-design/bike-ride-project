@@ -4,6 +4,7 @@ import { phoneOtpRepository } from "../repositories/phoneOtp.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { smsService } from "./sms.service.js";
+import { firebasePhoneService } from "./firebasePhone.service.js";
 
 // Sign-up phone verification. The app sends a code to the number, the user
 // enters it, and gets back a short-lived verification token that /register
@@ -71,8 +72,9 @@ export const phoneOtpService = {
     };
   },
 
-  async verify(rawPhone, otp) {
+  async verify(rawPhone, otp, firebaseIdToken) {
     const phone = normalizePhone(rawPhone);
+    if (firebaseIdToken) return this.verifyWithFirebase(phone, firebaseIdToken);
     const state = await phoneOtpRepository.find(phone);
     if (!state) throw ApiError.badRequest("Request a verification code first");
     if (new Date(state.expiresAt).getTime() < Date.now()) {
@@ -88,6 +90,23 @@ export const phoneOtpService = {
     }
 
     const token = crypto.randomBytes(24).toString("hex");
+    await phoneOtpRepository.markVerified(phone, hash(`verified:${token}`), new Date(Date.now() + VERIFIED_VALID_MINUTES * 60 * 1000));
+    return { phone, verificationToken: token, validForMinutes: VERIFIED_VALID_MINUTES };
+  },
+
+  /**
+   * The app verified the number with Firebase Phone Auth (Firebase sent the SMS
+   * and checked the code). Check Firebase's token is for this same number, then
+   * hand out the usual verification token.
+   */
+  async verifyWithFirebase(phone, idToken) {
+    const firebasePhone = await firebasePhoneService.verifiedPhone(idToken);
+    if (normalizePhone(firebasePhone) !== phone) {
+      throw ApiError.badRequest("The verified number doesn't match this phone number");
+    }
+    const token = crypto.randomBytes(24).toString("hex");
+    // A row to attach the verification to (there was no server-sent code).
+    await phoneOtpRepository.saveCode(phone, hash(`${phone}:firebase:${crypto.randomUUID()}`), new Date(Date.now() + OTP_VALID_MINUTES * 60 * 1000));
     await phoneOtpRepository.markVerified(phone, hash(`verified:${token}`), new Date(Date.now() + VERIFIED_VALID_MINUTES * 60 * 1000));
     return { phone, verificationToken: token, validForMinutes: VERIFIED_VALID_MINUTES };
   },

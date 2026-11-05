@@ -1,11 +1,18 @@
 import { api, tokenStorage } from "./api.js";
+import { firebasePhone, firebasePhoneEnabled } from "./firebasePhone.js";
 
 export const authService = {
   // Sign-up phone verification: send a code, then verify it for a token that register() needs.
+  // With Firebase Phone Auth on, Firebase sends and checks the SMS code.
   sendPhoneOtp(phone) {
+    if (firebasePhoneEnabled) return firebasePhone.send(phone);
     return api.post("/auth/phone-otp", { phone }).then((res) => res.data);
   },
-  verifyPhoneOtp(phone, otp) {
+  async verifyPhoneOtp(phone, otp) {
+    if (firebasePhoneEnabled) {
+      const firebaseIdToken = await firebasePhone.confirm(phone, otp);
+      return api.post("/auth/phone-otp/verify", { phone, firebaseIdToken }).then((res) => res.data);
+    }
     return api.post("/auth/phone-otp/verify", { phone, otp }).then((res) => res.data);
   },
   async register(payload) {

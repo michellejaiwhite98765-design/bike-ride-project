@@ -12,9 +12,9 @@ export const userService = {
     return phoneOtpService.send(user.phone, { ownNumber: true });
   },
 
-  async verifyOwnPhoneOtp(userId, otp) {
+  async verifyOwnPhoneOtp(userId, otp, firebaseIdToken) {
     const user = await userRepository.findById(userId);
-    const { verificationToken, validForMinutes } = await phoneOtpService.verify(user.phone, otp);
+    const { verificationToken, validForMinutes } = await phoneOtpService.verify(user.phone, otp, firebaseIdToken);
     return { currentPhoneToken: verificationToken, validForMinutes };
   },
 

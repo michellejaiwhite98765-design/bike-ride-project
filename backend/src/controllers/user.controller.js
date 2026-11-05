@@ -29,7 +29,7 @@ export const userController = {
   },
 
   async verifyOwnPhoneOtp(req, res) {
-    const result = await userService.verifyOwnPhoneOtp(req.user.id, req.body.otp);
+    const result = await userService.verifyOwnPhoneOtp(req.user.id, req.body.otp, req.body.firebaseIdToken);
     ok(res, result, "Current number verified");
   },
 

@@ -35,6 +35,8 @@ services:
       # still sent when SMS_PROVIDER=2factor + TWOFACTOR_API_KEY are set).
       # Set OTP_DEV_MODE=false in deploy/.env to stop showing codes.
       OTP_DEV_MODE: ${OTP_DEV_MODE:-true}
+      # Firebase Phone Auth: the server checks Firebase ID tokens for this project.
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-liftshare-e8dcf}
       DATABASE_URL: postgresql://bikeride:${POSTGRES_PASSWORD}@db:5432/bikeride?schema=public
 
   caddy:

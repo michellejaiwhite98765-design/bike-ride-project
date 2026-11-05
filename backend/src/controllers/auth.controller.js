@@ -14,7 +14,7 @@ export const authController = {
   },
 
   async verifyPhoneOtp(req, res) {
-    const result = await phoneOtpService.verify(req.body.phone, req.body.otp);
+    const result = await phoneOtpService.verify(req.body.phone, req.body.otp, req.body.firebaseIdToken);
     ok(res, result, "Phone number verified");
   },
 

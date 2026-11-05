@@ -1,14 +1,21 @@
 import { api } from "./api.js";
+import { firebasePhone, firebasePhoneEnabled } from "./firebasePhone.js";
 
 export const userService = {
   updateProfile(payload) {
     return api.put("/users/me", payload).then((res) => res.data);
   },
   // Changing the mobile number, step 1: OTP to the user's current number.
-  sendOwnPhoneOtp() {
+  // currentPhone: the user's own number (Firebase sends the SMS from the app).
+  sendOwnPhoneOtp(currentPhone) {
+    if (firebasePhoneEnabled) return firebasePhone.send(currentPhone);
     return api.post("/users/me/phone-otp").then((res) => res.data);
   },
-  verifyOwnPhoneOtp(otp) {
+  async verifyOwnPhoneOtp(otp, currentPhone) {
+    if (firebasePhoneEnabled) {
+      const firebaseIdToken = await firebasePhone.confirm(currentPhone, otp);
+      return api.post("/users/me/phone-otp/verify", { firebaseIdToken }).then((res) => res.data);
+    }
     return api.post("/users/me/phone-otp/verify", { otp }).then((res) => res.data);
   },
   // Any picture; the server stores a small square copy. Returns the updated user.

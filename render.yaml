@@ -56,12 +56,12 @@ services:
       # minute in total before giving up.
       - key: RC_OCR_TIMEOUT_MS
         value: "60000"
-      # Sign-up / change-number OTP by SMS through Fast2SMS. FAST2SMS_API_KEY is
-      # sync:false: paste it in the Render dashboard (never commit it).
-      # OTP_DEV_MODE=true also shows the code in the app; set "false" to stop.
+      # Sign-up / change-number OTP: the app uses Firebase Phone Auth (Firebase
+      # sends and checks the SMS); the server only checks Firebase's token,
+      # which needs just this (public) project ID. No server-side SMS provider.
+      - key: FIREBASE_PROJECT_ID
+        value: liftshare-e8dcf
       - key: SMS_PROVIDER
-        value: fast2sms
-      - key: FAST2SMS_API_KEY
-        sync: false
+        value: ""
       - key: OTP_DEV_MODE
         value: "true"

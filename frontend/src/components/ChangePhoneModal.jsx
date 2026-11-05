@@ -66,12 +66,12 @@ export default function ChangePhoneModal({ open, currentPhone, onClose, onChange
 
   // Step 1
   const sendCurrent = () => run(async () => {
-    codeSent(await userService.sendOwnPhoneOtp());
+    codeSent(await userService.sendOwnPhoneOtp(currentPhone));
     setSent(true);
   });
   const verifyCurrent = () => run(async () => {
     if (!/^\d{6}$/.test(otp)) throw new Error("Enter the 6-digit code");
-    const res = await userService.verifyOwnPhoneOtp(otp);
+    const res = await userService.verifyOwnPhoneOtp(otp, currentPhone);
     setCurrentToken(res.currentPhoneToken);
     setShown(null);
     setOtp("");

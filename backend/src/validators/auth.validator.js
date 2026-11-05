@@ -19,10 +19,14 @@ export const registerSchema = z.object({
 
 export const sendPhoneOtpSchema = z.object({ phone: mobile });
 
-export const verifyPhoneOtpSchema = z.object({
-  phone: mobile,
-  otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
-});
+export const verifyPhoneOtpSchema = z
+  .object({
+    phone: mobile,
+    otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code").optional(),
+    // Firebase Phone Auth: the app checked the code with Firebase and sends its ID token.
+    firebaseIdToken: z.string().min(20).max(5000).optional(),
+  })
+  .refine((d) => d.otp || d.firebaseIdToken, { message: "Enter the 6-digit code", path: ["otp"] });
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),

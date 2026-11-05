@@ -12,11 +12,15 @@ export const updateProfileSchema = z.object({
   currentPhoneToken: z.string().trim().min(1).optional(),
 });
 
-export const verifyOwnPhoneOtpSchema = z.object({
-  otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
-  profileImage: z.string().trim().url().optional().nullable(),
-  bio: z.string().trim().max(500).optional().nullable(),
-});
+export const verifyOwnPhoneOtpSchema = z
+  .object({
+    otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code").optional(),
+    // Firebase Phone Auth: the app checked the code with Firebase and sends its ID token.
+    firebaseIdToken: z.string().min(20).max(5000).optional(),
+    profileImage: z.string().trim().url().optional().nullable(),
+    bio: z.string().trim().max(500).optional().nullable(),
+  })
+  .refine((d) => d.otp || d.firebaseIdToken, { message: "Enter the 6-digit code", path: ["otp"] });
 
 // Indian driving licence, e.g. "TN01 20190012345" / "MH-1220110012345":
 // state code, then digits (spaces and dashes are ignored).

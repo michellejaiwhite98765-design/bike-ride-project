@@ -90,6 +90,11 @@ export const env = {
       timeoutMs: Number(process.env.FAST2SMS_TIMEOUT_MS || 10000),
     },
   },
+  // Firebase Phone Auth: the app sends/checks the SMS code with Firebase and the
+  // server only verifies Firebase's signed ID token, which needs just the project ID.
+  firebase: {
+    projectId: (process.env.FIREBASE_PROJECT_ID || "").trim(),
+  },
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",
     apiKey: process.env.WAY2API_API_KEY || "",

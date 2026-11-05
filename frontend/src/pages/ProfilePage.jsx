@@ -1,6 +1,6 @@
 import { useRiderStatus } from "../hooks/useRiderStatus.js";
-import { Card, Form, Input, Button, App, Tag } from "antd";
-import { UserOutlined, MailOutlined, PhoneOutlined, ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
+import { Card, Form, Input, Button, App } from "antd";
+import { UserOutlined, MailOutlined, PhoneOutlined, ArrowLeftOutlined, CheckCircleFilled, EditOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -16,32 +16,70 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
+// Profile top box: compact row - photo, then name + role, phone, email; edit icon.
 const ProfileHeader = styled.div`
-  text-align: center;
-  margin-bottom: 32px;
-  padding: 32px;
-  background: linear-gradient(135deg, ${colors.bgSecondary} 0%, ${colors.bgTertiary} 100%);
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 16px;
   border: 1px solid ${colors.border};
+  background: ${colors.bgPrimary};
 `;
 
-const ProfilePhotoHint = styled.div`
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
+const Info = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const NameRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
 `;
 
 const ProfileName = styled.h1`
-  margin: 0 0 4px;
-  font-size: 24px;
-  font-weight: 700;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
   color: ${colors.textPrimary};
+  overflow-wrap: anywhere;
 `;
 
-const ProfileEmail = styled.p`
-  margin: 0;
-  color: ${colors.textSecondary};
+const RoleChip = styled.span`
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: ${(p) => (p.$driver ? "#2DD4BF" : "#C4B5FD")};
+  background: ${(p) => (p.$driver ? "rgba(45,212,191,.14)" : "rgba(167,139,250,.16)")};
+  border: 1px solid ${(p) => (p.$driver ? "rgba(45,212,191,.4)" : "rgba(167,139,250,.4)")};
+`;
+
+const Contact = styled.div`
+  margin-top: 2px;
   font-size: 13px;
+  color: ${colors.textSecondary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const EditIcon = styled(Link)`
+  align-self: flex-start;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid ${colors.border};
+  background: ${colors.bgSecondary};
+  color: ${colors.textSecondary};
+  &:hover { color: ${colors.primary}; border-color: ${colors.primary}; }
 `;
 
 const FormCard = styled(Card)`
@@ -107,18 +145,23 @@ export default function ProfilePage({ editing = false }) {
     return (
       <PageContainer>
         <ProfileHeader>
-          <ProfilePhotoPicker size={96} />
-          <ProfilePhotoHint>Tap your photo to change it</ProfilePhotoHint>
-          <ProfileName>
-            {user.firstName} {user.lastName}
-          </ProfileName>
-          <ProfileEmail>{user.email}</ProfileEmail>
-          {/* A user with a vehicle is a driver; everyone else rides as a passenger. */}
-          {riderStatus && !riderStatus.unknown && (
-            <Tag color={riderStatus.isRider ? "cyan" : "purple"} style={{ marginTop: 8, borderRadius: 999, padding: "2px 12px", fontWeight: 700 }}>
-              {riderStatus.isRider ? "Driver" : "Passenger"}
-            </Tag>
-          )}
+          <ProfilePhotoPicker size={64} />
+          <Info>
+            <NameRow>
+              <ProfileName>
+                {user.firstName} {user.lastName}
+              </ProfileName>
+              {/* A user with a vehicle is a driver; everyone else rides as a passenger. */}
+              {riderStatus && !riderStatus.unknown && (
+                <RoleChip $driver={riderStatus.isRider}>{riderStatus.isRider ? "Driver" : "Passenger"}</RoleChip>
+              )}
+            </NameRow>
+            {user.phone && <Contact>{user.phone}</Contact>}
+            {user.email && <Contact>{user.email}</Contact>}
+          </Info>
+          <EditIcon to="/profile/edit" aria-label="Edit profile">
+            <EditOutlined />
+          </EditIcon>
         </ProfileHeader>
         <AccountMenu />
       </PageContainer>

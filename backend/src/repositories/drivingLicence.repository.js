@@ -20,14 +20,17 @@ export const drivingLicenceRepository = {
     const { rows } = await pool.query(
       `INSERT INTO "driving_licences"
          ("user_id", "licence_number", "holder_name", "expiry_date", "status", "ocr_extracted_number",
-          "failure_reason", "document_url", "document_public_id", "verified_at", "updated_at")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+          "failure_reason", "document_url", "document_public_id", "verified_at",
+          "date_of_birth", "verification_provider", "provider_order_id", "vehicle_classes", "updated_at")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now())
        ON CONFLICT ("user_id") DO UPDATE SET
          "licence_number" = EXCLUDED."licence_number", "holder_name" = EXCLUDED."holder_name",
          "expiry_date" = EXCLUDED."expiry_date", "status" = EXCLUDED."status",
          "ocr_extracted_number" = EXCLUDED."ocr_extracted_number", "failure_reason" = EXCLUDED."failure_reason",
          "document_url" = EXCLUDED."document_url", "document_public_id" = EXCLUDED."document_public_id",
-         "verified_at" = EXCLUDED."verified_at", "updated_at" = now()
+         "verified_at" = EXCLUDED."verified_at", "date_of_birth" = EXCLUDED."date_of_birth",
+         "verification_provider" = EXCLUDED."verification_provider", "provider_order_id" = EXCLUDED."provider_order_id",
+         "vehicle_classes" = EXCLUDED."vehicle_classes", "updated_at" = now()
        RETURNING *`,
       [
         userId,
@@ -40,6 +43,10 @@ export const drivingLicenceRepository = {
         data.documentUrl ?? null,
         data.documentPublicId ?? null,
         data.verifiedAt ?? null,
+        data.dateOfBirth ?? null,
+        data.verificationProvider ?? null,
+        data.providerOrderId ?? null,
+        data.vehicleClasses ?? null,
       ]
     );
     return toCamelRow(rows[0]);

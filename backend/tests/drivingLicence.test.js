@@ -2,6 +2,7 @@ import { describe, it, expect, jest, afterEach } from "@jest/globals";
 import crypto from "node:crypto";
 import { request, app, registerUser, createVehicle, verifyLicence, futureDate } from "./helpers.js";
 import { vehicleRepository } from "../src/repositories/vehicle.repository.js";
+import { env } from "../src/config/env.js";
 import { rcOcrService } from "../src/services/rcOcr.service.js";
 
 const licenceNumber = () => `TN01${crypto.randomInt(10000000000, 99999999999)}`;
@@ -110,4 +111,50 @@ describe("Driving licence", () => {
     const res = await request(app).get(`/api/users/${a.user.id}`).set("Authorization", `Bearer ${b.token}`);
     expect(JSON.stringify(res.body)).not.toMatch(/licence/i);
   });
+});
+
+describe("Driving licence - Way2API registry check", () => {
+
+  const reply = (status, body) => jest.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(body), { status }));
+  const withKey = (fn) => async () => {
+    const before = env.way2Api.apiKey;
+    env.way2Api.apiKey = "test-key";
+    try { await fn(); } finally { env.way2Api.apiKey = before; }
+  };
+
+  it("verifies from government records and takes name/expiry from them", withKey(async () => {
+    const user = await registerUser();
+    const number = licenceNumber();
+    const ocr = ocrFinds(false);
+    const fetchSpy = reply(200, { success: true, message: "", data: { order_id: "W2A1", result: { license_number: number, name: "SIVA MUTHU KUMAR", doe: "2037-05-05", vehicle_classes: ["MCWG", "LMV"] } } });
+    const res = await submit(user, { licenceNumber: number, expiryDate: futureDate(400), dateOfBirth: "1995-06-15", holderName: "Siva" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: "VERIFIED", holderName: "SIVA MUTHU KUMAR", expiryDate: "2037-05-05", verifiedBy: "WAY2API" });
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toEqual({ dl_number: number, dob: "15/06/1995" });
+    expect(ocr).not.toHaveBeenCalled();
+  }));
+
+  it("rejects when no record matches the number + DOB", withKey(async () => {
+    const user = await registerUser();
+    reply(422, { success: false, message: "Verification Failed.", data: { order_id: "W2A2", result: { name: null } } });
+    const res = await submit(user, { licenceNumber: licenceNumber(), expiryDate: futureDate(400), dateOfBirth: "1995-06-15" });
+    expect(res.status).toBe(400);
+    const got = await request(app).get("/api/users/me/licence").set("Authorization", `Bearer ${user.token}`);
+    expect(got.body.data.status).toBe("REJECTED");
+  }));
+
+  it("asks for the date of birth", withKey(async () => {
+    const user = await registerUser();
+    const res = await submit(user, { licenceNumber: licenceNumber(), expiryDate: futureDate(400) });
+    expect(res.status).toBe(400);
+  }));
+
+  it("falls back to OCR when the provider is down", withKey(async () => {
+    const user = await registerUser();
+    reply(503, { success: false, message: "down" });
+    ocrFinds(true);
+    const res = await submit(user, { licenceNumber: licenceNumber(), expiryDate: futureDate(400), dateOfBirth: "1995-06-15" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: "VERIFIED", verifiedBy: "OCR" });
+  }));
 });

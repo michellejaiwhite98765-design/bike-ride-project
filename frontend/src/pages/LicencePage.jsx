@@ -49,6 +49,7 @@ export default function LicencePage() {
           licenceNumber: l.licenceNumber,
           holderName: l.holderName || [user?.firstName, user?.lastName].filter(Boolean).join(" "),
           expiryDate: l.expiryDate || undefined,
+          dateOfBirth: l.dateOfBirth || undefined,
         });
       })
       .catch(() => setLicence({ status: "NOT_SUBMITTED" }));
@@ -66,6 +67,7 @@ export default function LicencePage() {
         licenceNumber: values.licenceNumber,
         holderName: values.holderName,
         expiryDate: values.expiryDate,
+        dateOfBirth: values.dateOfBirth,
         file,
       });
       setLicence(saved);
@@ -144,6 +146,22 @@ export default function LicencePage() {
               <Input size="large" placeholder="As printed on the licence" />
             </Form.Item>
             <Form.Item
+              name="dateOfBirth"
+              label="Date of birth"
+              extra="As on your licence - checked against government RTO records."
+              rules={[
+                { required: true, message: "Enter your date of birth" },
+                {
+                  validator: (_, v) =>
+                    !v || v <= dayjs().subtract(16, "year").format("YYYY-MM-DD")
+                      ? Promise.resolve()
+                      : Promise.reject(new Error("Enter a valid date of birth")),
+                },
+              ]}
+            >
+              <Input type="date" size="large" max={dayjs().subtract(16, "year").format("YYYY-MM-DD")} />
+            </Form.Item>
+            <Form.Item
               name="expiryDate"
               label="Valid till"
               rules={[
@@ -182,7 +200,7 @@ export default function LicencePage() {
             <Button type="primary" htmlType="submit" block size="large" loading={submitting} style={{ background: "#0f766e" }}>
               {submitting ? "Reading your licence…" : "Verify licence"}
             </Button>
-            {submitting && <div className="dl-wait">Checking the number on your licence - this can take up to a minute.</div>}
+            {submitting && <div className="dl-wait">Checking your licence with government records - this can take up to a minute.</div>}
             {licence.status === "VERIFIED" && (
               <Button type="link" block onClick={() => setEditing(false)} style={{ marginTop: 6 }}>
                 Cancel

@@ -34,11 +34,12 @@ export const userService = {
     return api.get("/users/me/licence").then((res) => res.data);
   },
   // OCR on the server checks the number is on the document (can take a while on small servers).
-  submitLicence({ licenceNumber, holderName, expiryDate, file }) {
+  submitLicence({ licenceNumber, holderName, expiryDate, dateOfBirth, file }) {
     const form = new FormData();
     form.append("licenceNumber", licenceNumber);
     if (holderName) form.append("holderName", holderName);
     form.append("expiryDate", expiryDate);
+    if (dateOfBirth) form.append("dateOfBirth", dateOfBirth);
     form.append("licenceDocument", file);
     return api.put("/users/me/licence", form, { timeout: 120000 }).then((res) => res.data);
   },

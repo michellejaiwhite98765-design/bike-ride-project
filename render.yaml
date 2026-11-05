@@ -61,6 +61,10 @@ services:
       # which needs just this (public) project ID. No server-side SMS provider.
       - key: FIREBASE_PROJECT_ID
         value: liftshare-e8dcf
+      # Way2API: government RTO checks for vehicle RC and driving licence.
+      # Set the key in the Render dashboard; empty = OCR-only checks.
+      - key: WAY2API_API_KEY
+        sync: false
       - key: SMS_PROVIDER
         value: ""
       - key: OTP_DEV_MODE

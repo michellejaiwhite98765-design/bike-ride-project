@@ -36,6 +36,63 @@ function classifyFailure(statusCode, payload) {
 }
 
 export const way2ApiService = {
+  isConfigured() {
+    return Boolean(env.way2Api.apiKey);
+  },
+
+  /**
+   * Looks the licence up in government RTO records. dob is "YYYY-MM-DD".
+   * Returns { status: VERIFIED | NOT_FOUND | INVALID | PROVIDER_ERROR | ..., result }.
+   * NOT_FOUND / INVALID mean the record doesn't exist for this number + DOB;
+   * the other non-VERIFIED statuses are the provider's problem, not the user's.
+   */
+  async verifyDrivingLicence({ licenceNumber, dob }) {
+    const dlNumber = normalizeRegistration(licenceNumber);
+    const [y, m, d] = String(dob).split("-");
+    const fail = (status, message, payload = null) => ({
+      status,
+      message,
+      orderId: payload?.data?.order_id || payload?.order_id || null,
+      result: payload?.data?.result || null,
+    });
+
+    let response;
+    try {
+      response = await fetch(env.way2Api.dlUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.way2Api.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ dl_number: dlNumber, dob: `${d}/${m}/${y}` }),
+        signal: AbortSignal.timeout(env.way2Api.timeoutMs),
+      });
+    } catch (error) {
+      const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
+      return fail(timedOut ? "TIMEOUT" : "PROVIDER_ERROR", "Licence verification service is unavailable");
+    }
+
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      return fail("PROVIDER_ERROR", `Licence verification service returned an invalid response (${response.status})`);
+    }
+
+    const result = payload?.data?.result;
+    if (response.ok && payload?.success === true && result?.name) {
+      if (normalizeRegistration(result.license_number) !== dlNumber) {
+        return fail("UNVERIFIED", "Licence verification response does not match the submitted number", payload);
+      }
+      return { status: "VERIFIED", message: "Licence verified", orderId: payload.data.order_id || null, result };
+    }
+
+    if (response.status === 401 || response.status === 402 || response.status === 403) {
+      return fail("PROVIDER_AUTH_ERROR", "Licence verification service authentication/credit failed", payload);
+    }
+    if (response.status === 429) return fail("RATE_LIMITED", "Licence verification service is busy", payload);
+    if (response.status >= 500) return fail("PROVIDER_ERROR", "Licence verification service is unavailable", payload);
+    // 2xx with success:false, or 400/404/422: no record for this number + DOB.
+    return fail("NOT_FOUND", payload?.message || "Verification Failed.", payload);
+  },
+
   async verifyRc({ registrationNumber, chassisNumber, engineNumber } = {}) {
     if (!env.way2Api.apiKey) {
       throw ApiError.badRequest("WAY2API_API_KEY is not configured");

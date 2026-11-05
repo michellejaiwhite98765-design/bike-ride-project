@@ -97,6 +97,7 @@ export const env = {
   },
   way2Api: {
     baseUrl: process.env.WAY2API_RC_URL || "https://app.way2api.com/api/v1/rc/verify",
+    dlUrl: process.env.WAY2API_DL_URL || "https://app.way2api.com/api/v1/driving-license/verify",
     apiKey: process.env.WAY2API_API_KEY || "",
     timeoutMs: Number(process.env.WAY2API_TIMEOUT_MS || 15000),
   },rcOcr: {

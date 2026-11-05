@@ -37,6 +37,8 @@ services:
       OTP_DEV_MODE: ${OTP_DEV_MODE:-true}
       # Firebase Phone Auth: the server checks Firebase ID tokens for this project.
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-liftshare-e8dcf}
+      # Way2API RTO checks (RC + driving licence); empty = OCR-only.
+      WAY2API_API_KEY: ${WAY2API_API_KEY:-}
       DATABASE_URL: postgresql://bikeride:${POSTGRES_PASSWORD}@db:5432/bikeride?schema=public
 
   caddy:

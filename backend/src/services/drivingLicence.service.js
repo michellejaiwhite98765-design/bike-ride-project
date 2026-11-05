@@ -5,6 +5,7 @@ import { audit } from "../utils/audit.js";
 import { normalizeRegistrationNumber } from "../utils/vehicle.utils.js";
 import { cloudinaryService } from "./cloudinary.service.js";
 import { rcOcrService } from "./rcOcr.service.js";
+import { way2ApiService } from "./way2api.service.js";
 import { logger } from "../config/logger.js";
 
 const TAKEN_MESSAGE = "This driving licence is already verified on another account. If it is yours, please contact support.";
@@ -24,6 +25,8 @@ function serialize(licence) {
     licenceNumber: licence.licenceNumber,
     holderName: licence.holderName,
     expiryDate: licence.expiryDate ? new Date(licence.expiryDate).toISOString().slice(0, 10) : null,
+    dateOfBirth: licence.dateOfBirth ? new Date(licence.dateOfBirth).toISOString().slice(0, 10) : null,
+    verifiedBy: licence.verificationProvider || null,
     failureReason: licence.failureReason,
     verifiedAt: licence.verifiedAt,
     updatedAt: licence.updatedAt,
@@ -40,7 +43,7 @@ export const drivingLicenceService = {
    * number must appear on it (OCR, same engine as the vehicle RC). A match
    * verifies it straight away; otherwise it is saved as REJECTED with why.
    */
-  async submit(userId, { licenceNumber: rawNumber, holderName, expiryDate }, file) {
+  async submit(userId, { licenceNumber: rawNumber, holderName, expiryDate, dateOfBirth }, file) {
     const licenceNumber = normalizeRegistrationNumber(rawNumber);
     if (new Date(`${expiryDate}T00:00:00.000Z`).getTime() < startOfToday()) {
       throw ApiError.badRequest("This driving licence has expired. Please renew it first.");
@@ -48,6 +51,41 @@ export const drivingLicenceService = {
     if (await drivingLicenceRepository.findVerifiedByNumber(licenceNumber, userId)) throw ApiError.conflict(TAKEN_MESSAGE);
 
     const base = { licenceNumber, holderName, expiryDate };
+
+    // Government registry check (Way2API) when configured; the OCR check below
+    // is the fallback when it isn't, or when the provider itself is down.
+    if (way2ApiService.isConfigured()) {
+      if (!dateOfBirth) throw ApiError.badRequest("Enter your date of birth as on the licence.");
+      const check = await way2ApiService.verifyDrivingLicence({ licenceNumber, dob: dateOfBirth });
+      const provider = { dateOfBirth, verificationProvider: "WAY2API", providerOrderId: check.orderId };
+
+      if (check.status === "VERIFIED") {
+        const r = check.result;
+        const doe = /^\d{4}-\d{2}-\d{2}$/.test(r.doe || "") && !r.doe.startsWith("1800") ? r.doe : expiryDate;
+        if (new Date(`${doe}T00:00:00.000Z`).getTime() < startOfToday()) {
+          await drivingLicenceRepository.upsert(userId, {
+            ...base, ...provider, expiryDate: doe, holderName: r.name, status: "REJECTED",
+            failureReason: `Government records show this licence expired on ${doe}. Please renew it first.`,
+          });
+          throw ApiError.badRequest(`This driving licence expired on ${doe} as per government records. Please renew it first.`);
+        }
+        return this.saveVerified(userId, file, {
+          ...base, ...provider, holderName: r.name, expiryDate: doe, vehicleClasses: r.vehicle_classes || null,
+        });
+      }
+
+      if (check.status === "NOT_FOUND" || check.status === "UNVERIFIED") {
+        await drivingLicenceRepository.upsert(userId, {
+          ...base, ...provider, status: "REJECTED",
+          failureReason: `No driving licence ${licenceNumber} with this date of birth was found in government records. Check both and try again.`,
+        });
+        await audit(null, { userId, action: "LICENCE_REJECTED", entityType: "DrivingLicence", entityId: userId, metadata: { provider: "WAY2API" } });
+        throw ApiError.badRequest("No licence with this number and date of birth was found in government records. Check both and try again.");
+      }
+
+      logger.warn(`Way2API licence check unavailable (${check.status}: ${check.message}) - falling back to OCR for user ${userId}`);
+    }
+
     const { found } = await rcOcrService.documentContainsNumber(file, licenceNumber, "Licence");
     if (!found) {
       await drivingLicenceRepository.upsert(userId, {
@@ -59,6 +97,11 @@ export const drivingLicenceService = {
       throw ApiError.badRequest("We couldn't find this licence number on the uploaded document. Check the number and upload a clear photo of the front of your licence.");
     }
 
+    return this.saveVerified(userId, file, { ...base, dateOfBirth: dateOfBirth || null, verificationProvider: "OCR", ocrExtractedNumber: licenceNumber });
+  },
+
+  /** Stores the document (if Cloudinary is set up) and marks the licence VERIFIED. */
+  async saveVerified(userId, file, data) {
     let uploaded = { secureUrl: null, publicId: null };
     if (cloudinaryService.isConfigured()) {
       uploaded = await cloudinaryService.uploadDocument(file, `licence/${userId}`);
@@ -69,9 +112,9 @@ export const drivingLicenceService = {
     let saved;
     try {
       saved = await drivingLicenceRepository.upsert(userId, {
-        ...base,
+        ...data,
         status: "VERIFIED",
-        ocrExtractedNumber: licenceNumber,
+        failureReason: null,
         documentUrl: uploaded.secureUrl,
         documentPublicId: uploaded.publicId,
         verifiedAt: new Date(),
@@ -81,7 +124,7 @@ export const drivingLicenceService = {
       if (err.code === "23505") throw ApiError.conflict(TAKEN_MESSAGE);
       throw err;
     }
-    await audit(null, { userId, action: "LICENCE_VERIFIED", entityType: "DrivingLicence", entityId: userId });
+    await audit(null, { userId, action: "LICENCE_VERIFIED", entityType: "DrivingLicence", entityId: userId, metadata: { provider: data.verificationProvider } });
     return serialize(saved);
   },
 

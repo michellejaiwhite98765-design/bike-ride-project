@@ -30,6 +30,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       tokenStorage.clear();
     }
-    return Promise.reject(new Error(message));
+    const err = new Error(message);
+    err.status = error.response?.status;
+    return Promise.reject(err);
   }
 );

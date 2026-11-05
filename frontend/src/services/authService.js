@@ -1,5 +1,5 @@
 import { api, tokenStorage } from "./api.js";
-import { firebasePhone, firebasePhoneEnabled } from "./firebasePhone.js";
+import { firebasePhoneEnabled, sendBoth, verifyEither } from "./firebasePhone.js";
 
 export const authService = {
   // Sign-up phone verification: send a code, then verify it for a token that register() needs.
@@ -7,15 +7,15 @@ export const authService = {
   sendPhoneOtp(phone) {
     const viaServer = () => api.post("/auth/phone-otp", { phone }).then((res) => res.data);
     if (!firebasePhoneEnabled) return viaServer();
-    // If Firebase can't send real SMS yet (no billing), use the server's code instead.
-    return firebasePhone.send(phone).catch((err) => (err.fallback ? viaServer() : Promise.reject(err)));
+    return sendBoth(phone, viaServer);
   },
   async verifyPhoneOtp(phone, otp) {
-    if (firebasePhoneEnabled && firebasePhone.isPending(phone)) {
-      const firebaseIdToken = await firebasePhone.confirm(phone, otp);
-      return api.post("/auth/phone-otp/verify", { phone, firebaseIdToken }).then((res) => res.data);
-    }
-    return api.post("/auth/phone-otp/verify", { phone, otp }).then((res) => res.data);
+    return verifyEither(
+      phone,
+      otp,
+      (firebaseIdToken) => api.post("/auth/phone-otp/verify", { phone, firebaseIdToken }).then((res) => res.data),
+      () => api.post("/auth/phone-otp/verify", { phone, otp }).then((res) => res.data)
+    );
   },
   async register(payload) {
     const res = await api.post("/auth/register", payload);

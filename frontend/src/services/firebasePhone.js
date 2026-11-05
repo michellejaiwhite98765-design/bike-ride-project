@@ -99,3 +99,37 @@ export const firebasePhone = {
     }
   },
 };
+
+/**
+ * Sends the code both ways at once: a real SMS through Firebase, and the
+ * server's own code (shown on screen while OTP_DEV_MODE is on). Either code
+ * works when verifying. Fails only if neither could be sent.
+ */
+export async function sendBoth(phone, viaServer) {
+  const [sms, server] = await Promise.allSettled([firebasePhone.send(phone), viaServer()]);
+  // The server also checks e.g. "already registered" - that error must win.
+  if (server.status === "rejected" && server.reason?.status && server.reason.status < 500) throw server.reason;
+  if (sms.status === "rejected" && server.status === "rejected") throw sms.reason;
+  const serverData = server.status === "fulfilled" ? server.value : {};
+  return {
+    ...serverData,
+    smsSent: sms.status === "fulfilled" || Boolean(serverData.smsSent),
+    resendAfterSeconds: serverData.resendAfterSeconds || 30,
+  };
+}
+
+/** Tries the SMS (Firebase) code first, then the server's on-screen code. */
+export async function verifyEither(phone, otp, withFirebaseToken, withServerCode) {
+  if (firebasePhone.isPending(phone)) {
+    try {
+      return await withFirebaseToken(await firebasePhone.confirm(phone, otp));
+    } catch (smsErr) {
+      try {
+        return await withServerCode();
+      } catch {
+        throw smsErr;
+      }
+    }
+  }
+  return withServerCode();
+}

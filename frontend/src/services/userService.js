@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { firebasePhone, firebasePhoneEnabled } from "./firebasePhone.js";
+import { firebasePhoneEnabled, sendBoth, verifyEither } from "./firebasePhone.js";
 
 export const userService = {
   updateProfile(payload) {
@@ -10,15 +10,15 @@ export const userService = {
   sendOwnPhoneOtp(currentPhone) {
     const viaServer = () => api.post("/users/me/phone-otp").then((res) => res.data);
     if (!firebasePhoneEnabled) return viaServer();
-    // If Firebase can't send real SMS yet (no billing), use the server's code instead.
-    return firebasePhone.send(currentPhone).catch((err) => (err.fallback ? viaServer() : Promise.reject(err)));
+    return sendBoth(currentPhone, viaServer);
   },
   async verifyOwnPhoneOtp(otp, currentPhone) {
-    if (firebasePhoneEnabled && firebasePhone.isPending(currentPhone)) {
-      const firebaseIdToken = await firebasePhone.confirm(currentPhone, otp);
-      return api.post("/users/me/phone-otp/verify", { firebaseIdToken }).then((res) => res.data);
-    }
-    return api.post("/users/me/phone-otp/verify", { otp }).then((res) => res.data);
+    return verifyEither(
+      currentPhone,
+      otp,
+      (firebaseIdToken) => api.post("/users/me/phone-otp/verify", { firebaseIdToken }).then((res) => res.data),
+      () => api.post("/users/me/phone-otp/verify", { otp }).then((res) => res.data)
+    );
   },
   // Any picture; the server stores a small square copy. Returns the updated user.
   uploadPhoto(file) {

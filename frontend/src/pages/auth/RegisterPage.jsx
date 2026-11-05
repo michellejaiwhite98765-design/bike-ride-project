@@ -4,6 +4,7 @@ import { Form, Input, Button, Card, App, Row, Col, Steps } from "antd";
 import { MailOutlined, LockOutlined, PhoneOutlined, ArrowLeftOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { authService } from "../../services/authService.js";
+import BikeSpinner from "../../components/ui/BikeSpinner.jsx";
 import OtpCodeNotice from "../../components/OtpCodeNotice.jsx";
 
 // Indian mobile: 10 digits starting 6-9 (a +91 / 0 prefix and spaces are fine).
@@ -84,7 +85,7 @@ export default function RegisterPage() {
     try {
       await register({ ...values, phoneVerificationToken: token });
       notification.success({ title: "Welcome!", description: "Your account has been created." });
-      navigate("/dashboard", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       if (/verify your mobile/i.test(err.message)) setVerified(null);
       // Details problem (e.g. email already registered): back to step 1 to fix it.
@@ -168,7 +169,7 @@ export default function RegisterPage() {
             >
               <Input.Password prefix={<LockOutlined />} placeholder="At least 8 characters" size="large" autoComplete="new-password" />
             </Form.Item>
-            <Button type="primary" htmlType="submit" block size="large" loading={sending || submitting} style={{ background: "#0f766e", marginTop: 8 }}>
+            <Button type="primary" htmlType="submit" block size="large" loading={sending || submitting ? { icon: <BikeSpinner /> } : false} style={{ background: "#0f766e", marginTop: 8 }}>
               Continue
             </Button>
           </Form>
@@ -206,7 +207,7 @@ export default function RegisterPage() {
               block
               size="large"
               onClick={onVerify}
-              loading={submitting}
+              loading={submitting ? { icon: <BikeSpinner /> } : false}
               disabled={otp.length !== 6}
               className="rp-verify-btn"
               style={{ background: otp.length === 6 ? "#0f766e" : undefined }}

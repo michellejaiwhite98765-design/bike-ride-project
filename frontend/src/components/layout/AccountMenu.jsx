@@ -10,7 +10,6 @@ import {
   SafetyOutlined,
   SettingOutlined,
   StarOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
@@ -34,7 +33,6 @@ export default function AccountMenu() {
   }
 
   const links = [
-    { to: "/profile/edit", icon: <UserOutlined />, label: "Personal information" },
     { to: "/bookings", icon: <FileTextOutlined />, label: "My Bookings" },
     { to: "/vehicles", icon: <CarOutlined />, label: "My Vehicles" },
     { to: "/profile/licence", icon: <IdcardOutlined />, label: "Driving Licence" },

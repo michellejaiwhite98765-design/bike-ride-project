@@ -310,7 +310,8 @@ const BottomNav = styled.nav`
     right: 0;
     background: ${colors.bgPrimary};
     border-top: 1px solid ${colors.border};
-    z-index: 100;
+    /* Above the map pages' overlays (search sheet 600, banners 650); below drawers/modals (1000). */
+    z-index: 900;
     padding: 8px 0 12px;
   }
 `;
@@ -378,6 +379,9 @@ const ContentWrap = styled(Content)`
       @media (max-width: 768px) {
         padding: 0;
         height: calc(100vh - 70px);
+        /* dvh = the visible height; 100vh on phones counts the hidden address-bar
+           space, which pushed the page (and its search sheet) under the tab bar. */
+        height: calc(100dvh - 70px);
       }
     `}
 `;

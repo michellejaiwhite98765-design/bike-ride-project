@@ -165,10 +165,12 @@ const CtaLink = styled(Link)`
   height: 36px;
   padding: 0 16px;
   border-radius: 999px;
-  background: ${ACCENT};
-  color: #fff !important;
+  /* Outlined, like the search panel's "Find trip" button. */
+  background: transparent;
+  border: 1.5px solid ${ACCENT};
+  color: ${ACCENT} !important;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -176,8 +178,7 @@ const CtaLink = styled(Link)`
   transition: background 0.2s ease;
 
   &:hover {
-    background: ${ACCENT_DARK};
-    color: #fff;
+    background: rgba(45, 212, 191, 0.12);
   }
 `;
 
@@ -213,13 +214,19 @@ const UserSection = styled.div`
       gap: 6px;
       padding: 9px 14px;
       border-radius: 999px;
-      background: ${ACCENT};
-      color: #04211d;
-      font-weight: 800;
+      /* Outlined, like the search panel's "Find trip" button. */
+      background: transparent;
+      border: 1.5px solid ${ACCENT};
+      color: ${ACCENT};
+      font-weight: 700;
       font-size: 14px;
       text-decoration: none;
       white-space: nowrap;
-      box-shadow: 0 6px 16px rgba(45, 212, 191, 0.35);
+      transition: background 0.15s ease;
+    }
+    .phone-create-trip:hover,
+    .phone-create-trip:active {
+      background: rgba(45, 212, 191, 0.12);
     }
   }
 

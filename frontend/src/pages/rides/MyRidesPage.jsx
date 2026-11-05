@@ -52,8 +52,6 @@ const BOOKING_FILTERS = [
     match: (b) => b.bookingStatus === "CANCELLED" || (["COMPLETED", "CANCELLED", "EXPIRED"].includes(rideOf(b)) && !paymentDue(b)),
   },
 ];
-// Open the first filter with something in it (Current, then Upcoming...).
-const firstNonEmpty = (filters, list) => (filters.find((f) => list.some(f.match)) || filters[1]).value;
 const EMPTY_TEXT = {
   rides: { current: "No trip in progress", upcoming: "No upcoming trips", draft: "No drafts", completed: "No completed trips yet" },
   bookings: { current: "You're not on a trip right now", upcoming: "No upcoming bookings", completed: "No past bookings yet" },
@@ -382,7 +380,7 @@ export default function MyRidesPage({ mode = "rides" }) {
   const tab = mode === "bookings" ? "bookings" : "rides";
   const filters = tab === "rides" ? RIDE_FILTERS : BOOKING_FILTERS;
   const list = (tab === "rides" ? rides : bookings) || [];
-  const filter = filters.some((f) => f.value === params.get("filter")) ? params.get("filter") : firstNonEmpty(filters, list);
+  const filter = filters.some((f) => f.value === params.get("filter")) ? params.get("filter") : "current"; // Always open on Live.
   const shown = list.filter(filters.find((f) => f.value === filter).match);
 
   const setView = (next) => {

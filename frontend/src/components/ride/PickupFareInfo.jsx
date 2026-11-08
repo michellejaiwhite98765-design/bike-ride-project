@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal } from "antd";
+import { Modal, Slider } from "antd";
 import { EnvironmentOutlined, InfoCircleOutlined, RightOutlined } from "@ant-design/icons";
 import { PICKUP_ON_ROUTE_KM, DETOUR_MAX_PERCENT, DETOUR_MAX_KM, TIP_RATE_PER_KM } from "../../constants/pricing.js";
 
@@ -8,6 +8,7 @@ const fmt = (n) => (Math.round(n * 10) / 10).toString();
 /** Rider-facing summary of how passenger pickup distance and extra fare work. */
 export default function PickupFareInfo({ distanceKm, tipAmount = 0 }) {
   const [open, setOpen] = useState(false);
+  const [tryKm, setTryKm] = useState(5);
   const known = distanceKm != null && distanceKm > 0;
   const detourMax = known ? Math.min((distanceKm * DETOUR_MAX_PERCENT) / 100, DETOUR_MAX_KM) : null;
   // Same rule the server uses: the ride's own per-km rate, but never below the minimum.
@@ -16,6 +17,11 @@ export default function PickupFareInfo({ distanceKm, tipAmount = 0 }) {
   const sample = detourMax != null ? Math.min(4, Math.max(PICKUP_ON_ROUTE_KM + 0.5, detourMax / 2)) : 4;
   const sampleExtraKm = sample * 2;
   const sampleFare = Math.round(sampleExtraKm * rate);
+  const maxTry = detourMax != null ? Math.max(PICKUP_ON_ROUTE_KM + 1, Math.floor(detourMax)) : DETOUR_MAX_KM;
+  const tk = Math.min(tryKm, maxTry);
+  const tryZone = tk <= PICKUP_ON_ROUTE_KM ? "ok" : detourMax != null && tk > detourMax ? "no" : "warn";
+  const tryExtra = tk * 2;
+  const tryFare = tryZone === "warn" ? Math.round(tryExtra * rate) : 0;
 
   return (
     <>
@@ -96,6 +102,28 @@ export default function PickupFareInfo({ distanceKm, tipAmount = 0 }) {
             </div>
           </li>
         </ol>
+
+        <div className="pf-formula">
+          <div className="pf-ftitle">Learn the formula</div>
+          <div className="pf-frow"><span className="pf-fn">1</span><div><b>How far can the rider go off route?</b><code>limit = min( {DETOUR_MAX_KM} km , max( {PICKUP_ON_ROUTE_KM} km , trip km × {DETOUR_MAX_PERCENT}% ) )</code>{known && <small>Your trip: {fmt(distanceKm)} × {DETOUR_MAX_PERCENT}% = {fmt((distanceKm * DETOUR_MAX_PERCENT) / 100)} km, capped at {DETOUR_MAX_KM} km, so <b>{fmt(detourMax)} km</b>.</small>}</div></div>
+          <div className="pf-frow"><span className="pf-fn">2</span><div><b>Extra distance driven</b><code>extra km = off-route km × 2</code><small>Out to the passenger and back to the route.</small></div></div>
+          <div className="pf-frow"><span className="pf-fn">3</span><div><b>Price per km</b><code>rate = max( ₹{TIP_RATE_PER_KM} , ride tip ÷ trip km )</code><small>Your rate right now: <b>₹{fmt(rate)}/km</b>.</small></div></div>
+          <div className="pf-frow"><span className="pf-fn">4</span><div><b>Extra fare</b><code>extra fare = extra km × rate</code></div></div>
+
+          <div className="pf-try">
+            <div className="pf-try-head">Try it: passenger is <b>{tk} km</b> off your route</div>
+            <Slider min={0} max={maxTry} step={1} value={tk} onChange={setTryKm} tooltip={{ open: false }} />
+            <div className={`pf-try-out ${tryZone}`}>
+              {tryZone === "ok" && <>On your route. <b>No extra fare.</b></>}
+              {tryZone === "warn" && (
+                <>
+                  {tk} × 2 = {tryExtra} km extra × ₹{fmt(rate)} = <b>+₹{tryFare}</b>
+                </>
+              )}
+              {tryZone === "no" && <>Too far. <b>Can't join.</b></>}
+            </div>
+          </div>
+        </div>
 
         <div className="pf-note">
           You approve every request. A detour passenger sees the extra amount before they ask, and pays it with their seat.

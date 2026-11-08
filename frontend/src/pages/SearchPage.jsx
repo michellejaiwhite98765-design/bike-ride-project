@@ -65,6 +65,13 @@ export default function SearchPage() {
   useEffect(() => {
     if (location.state?.openSearch) setSheetOpen(true);
   }, [location.state]);
+  // Desktop side panel: open by default, but closing it from Create trip
+  // (state.view === "map") or with its X really hides it. A small button brings it back.
+  const [deskOpen, setDeskOpen] = useState(() => location.state?.view !== "map");
+  useEffect(() => {
+    if (location.state?.openSearch) setDeskOpen(true);
+    else if (location.state?.view === "map") setDeskOpen(false);
+  }, [location.state]);
   const [sheetHeight, setSheetHeight] = useState(64);
   const sheetRef = useRef(null);
 
@@ -309,13 +316,22 @@ export default function SearchPage() {
           <div className="sp-sheet-body">{fields}</div>
         </div>
       ) : (
-        <Drawer placement="left" open onClose={goHome} mask={false} width={380} title="Find trip" rootClassName="sp-drawer">
-          {fields}
-        </Drawer>
+        <>
+          <Drawer placement="left" open={deskOpen} onClose={() => setDeskOpen(false)} mask={false} width={380} title="Find trip" rootClassName="sp-drawer">
+            {fields}
+          </Drawer>
+          {!deskOpen && (
+            <button type="button" className="sp-reopen" onClick={() => setDeskOpen(true)}>
+              <SearchOutlined /> Find trip
+            </button>
+          )}
+        </>
       )}
 
       <style>{`
         .sp-shell{position:relative;height:100%}
+        .sp-reopen{position:absolute;top:108px;left:16px;z-index:5;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid var(--chrome-border);background:var(--bg-secondary);color:var(--text-primary);font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
+        .sp-reopen:hover{border-color:var(--color-primary)}
         .sp-map-stage{position:absolute;inset:0;z-index:1}
 
         .sp-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}

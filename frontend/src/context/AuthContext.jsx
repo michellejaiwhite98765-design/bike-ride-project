@@ -17,8 +17,10 @@ export function AuthProvider({ children }) {
     try {
       const me = await authService.me();
       setUser(me);
-    } catch {
-      tokenStorage.clear();
+    } catch (err) {
+      // Only a real "not signed in" answer drops the saved session; if the
+      // server is slow or unreachable, show the login page but keep the token.
+      if (err?.response) tokenStorage.clear();
       setUser(null);
     } finally {
       setLoading(false);

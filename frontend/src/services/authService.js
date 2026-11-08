@@ -35,7 +35,7 @@ export const authService = {
     }
   },
   async me() {
-    const res = await api.get("/auth/me");
+    const res = await api.get("/auth/me", { timeout: 8000 });
     return res.data;
   },
   forgotPassword(email) {

@@ -98,6 +98,7 @@ export default function CreateRidePage() {
   const [vehicles, setVehicles] = useState([]);
   const [openTrip, setOpenTrip] = useState(null); // the rider's current un-closed ride, if any
   const [loading, setLoading] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [submittingAction, setSubmittingAction] = useState(null); // "draft" | "publish" | null
   const [locatingMe, setLocatingMe] = useState(false);
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
@@ -357,8 +358,8 @@ export default function CreateRidePage() {
 
       <Drawer
         placement="left"
-        open
-        onClose={() => navigate("/", { state: { view: "map" } })}
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
         mask={false}
         width={420}
         title={isEdit ? "Edit trip" : "Create trip"}
@@ -598,6 +599,12 @@ export default function CreateRidePage() {
           </Form>
       </Drawer>
 
+      {!panelOpen && (
+        <button type="button" className="cr-reopen" onClick={() => setPanelOpen(true)}>
+          {isEdit ? "Edit trip" : "Create trip"}
+        </button>
+      )}
+
       <Modal title="Terms & Conditions" open={termsModal === "terms"} onCancel={() => setTermsModal(null)} footer={null}>
         <p>By publishing a ride, you agree that:</p>
         <ul>
@@ -622,6 +629,8 @@ export default function CreateRidePage() {
 
       <style>{`
         .cr-shell{position:relative;height:100%}
+        .cr-reopen{position:absolute;top:108px;left:16px;z-index:5;padding:10px 18px;border-radius:999px;border:1px solid var(--chrome-border);background:var(--bg-secondary);color:var(--text-primary);font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg)}
+        .cr-reopen:hover{border-color:var(--color-primary)}
         .cr-map-stage{position:absolute;inset:0;z-index:1}
 
         .cr-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}

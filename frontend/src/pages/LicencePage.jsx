@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Card, Form, Input, Upload, Button, App, Alert, Tag } from "antd";
+import { Card, Form, Input, Upload, Button, App, Alert, Tag, DatePicker } from "antd";
 import {
   ArrowLeftOutlined,
   CheckCircleFilled,
@@ -148,6 +148,8 @@ export default function LicencePage() {
             <Form.Item
               name="dateOfBirth"
               label="Date of birth"
+              getValueProps={(v) => ({ value: v ? dayjs(v) : null })}
+              normalize={(v) => (v ? v.format("YYYY-MM-DD") : "")}
               extra="As on your licence - checked against government RTO records."
               rules={[
                 { required: true, message: "Enter your date of birth" },
@@ -159,18 +161,34 @@ export default function LicencePage() {
                 },
               ]}
             >
-              <Input type="date" size="large" max={dayjs().subtract(16, "year").format("YYYY-MM-DD")} />
+              <DatePicker
+                size="large"
+                style={{ width: "100%" }}
+                format="DD MMM YYYY"
+                placeholder="Select date of birth"
+                defaultPickerValue={dayjs().subtract(25, "year")}
+                disabledDate={(d) => d && d.isAfter(dayjs().subtract(16, "year"))}
+                inputReadOnly
+              />
             </Form.Item>
             <Form.Item
               name="expiryDate"
               label="Valid till"
+              getValueProps={(v) => ({ value: v ? dayjs(v) : null })}
+              normalize={(v) => (v ? v.format("YYYY-MM-DD") : "")}
               rules={[
                 { required: true, message: "Enter the expiry date" },
                 { validator: (_, v) => (!v || v >= dayjs().format("YYYY-MM-DD") ? Promise.resolve() : Promise.reject(new Error("This licence has expired"))) },
               ]}
             >
-              {/* The phone's own date wheel: quicker for a date years ahead. */}
-              <Input type="date" size="large" min={dayjs().format("YYYY-MM-DD")} />
+              <DatePicker
+                size="large"
+                style={{ width: "100%" }}
+                format="DD MMM YYYY"
+                placeholder="Select expiry date"
+                disabledDate={(d) => d && d.isBefore(dayjs().startOf("day"))}
+                inputReadOnly
+              />
             </Form.Item>
             <Form.Item label="Licence photo (front)" required>
               {file ? (

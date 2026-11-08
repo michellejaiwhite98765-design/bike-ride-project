@@ -581,7 +581,7 @@ export default function CreateRidePage() {
             onClick={() => submit(false)}
             style={{ background: colors.bgSecondary }}
           >
-            Save as Draft
+            Draft
           </Button>
           <Button
             size="large"
@@ -592,7 +592,7 @@ export default function CreateRidePage() {
             style={{ background: colors.primary }}
             onClick={() => submit(true)}
           >
-            Publish Ride
+            Publish
           </Button>
         </ActionButtons>
           </Form>

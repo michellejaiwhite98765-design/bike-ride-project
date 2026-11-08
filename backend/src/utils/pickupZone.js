@@ -11,6 +11,10 @@ import { env } from "../config/env.js";
  *              for the extra km.
  *  - TOO_FAR:  beyond the detour limit - can't join.
  *
+ * Two ways a rider can set up pickups (the ride's pickupPreference):
+ *  - ON_ROUTE (flow 1):           only pickups/drops within 2.5 km of the route, never an extra fare.
+ *  - PASSENGER_LOCATION (flow 2): the rider will leave the route - the detour rules below apply.
+ *
  * Detour limit: DETOUR_MAX_PERCENT (20%) of the route length, at least the
  * on-route radius and at most DETOUR_MAX_KM (30 km).
  *   Colachel -> Tirunelveli (~100 km): limit 20 km, so a passenger in
@@ -51,14 +55,17 @@ export function detourFare(offRouteKm, routeKm, baseFare = 0) {
  * @param goesForward false when the drop comes before the pickup along the route
  * @param baseFare    the ride's tip per seat (0 for a free ride)
  */
-export function classifyPickup({ routeKm, pickupKm, dropKm = null, goesForward = true, baseFare = 0 }) {
+export function classifyPickup({ routeKm, pickupKm, dropKm = null, goesForward = true, baseFare = 0, pickupPreference = "PASSENGER_LOCATION" }) {
   const onRouteKm = env.pickupZone.onRouteKm;
-  const limitKm = detourLimitKm(routeKm);
+  const routeOnly = pickupPreference === "ON_ROUTE";
+  // Flow 1 never leaves the route, so its limit is just the on-route radius.
+  const limitKm = routeOnly ? onRouteKm : detourLimitKm(routeKm);
   const pickup = round1(pickupKm);
   const drop = dropKm == null ? null : round1(dropKm);
   const base = {
     onRouteKm,
     limitKm,
+    pickupPreference,
     routeKm: round1(routeKm),
     pickupDistanceKm: pickup,
     dropDistanceKm: drop,
@@ -71,6 +78,10 @@ export function classifyPickup({ routeKm, pickupKm, dropKm = null, goesForward =
   if (!goesForward) {
     return { ...base, zone: "TOO_FAR", reason: "WRONG_DIRECTION",
       message: "Your drop point comes before your pickup on this ride's route - this ride is going the other way." };
+  }
+  if (routeOnly && (pickup > onRouteKm || (drop != null && drop > onRouteKm))) {
+    return { ...base, zone: "TOO_FAR", reason: "ROUTE_ONLY",
+      message: `This rider only picks up along their route (within ${onRouteKm} km). Your ${pickup > onRouteKm ? "pickup" : "drop"} point is ${pickup > onRouteKm ? pickup : drop} km away.` };
   }
   if (drop != null && drop > limitKm) {
     return { ...base, zone: "TOO_FAR", reason: "DROP_TOO_FAR",

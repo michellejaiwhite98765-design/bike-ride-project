@@ -36,7 +36,7 @@ const route = { routePath: [COLACHEL, NAGERCOIL, TIRUNELVELI] };
 const rideAt = (date) => ({
   sourceName: "Colachel", sourceLatitude: COLACHEL[0], sourceLongitude: COLACHEL[1],
   destinationName: "Tirunelveli", destinationLatitude: TIRUNELVELI[0], destinationLongitude: TIRUNELVELI[1],
-  departureDate: date, ...route,
+  departureDate: date, pickupPreference: "PASSENGER_LOCATION", ...route,
 });
 const toTirunelveli = (lat, lng, name = "Pickup") => ({
   pickupName: name, pickupLatitude: lat, pickupLongitude: lng,
@@ -108,6 +108,29 @@ describe("Two-zone pickup: rider Colachel -> Tirunelveli", () => {
     const sent = await request(app).post(`/api/rides/${ride.id}/requests`).set("Authorization", `Bearer ${passenger.token}`).send(toTirunelveli(...NAGERCOIL, "Nagercoil"));
     const after = (await search(...NAGERCOIL)).body.data.find((r) => r.id === ride.id);
     expect(after.myRequest).toEqual({ id: sent.body.data.id, status: "REQUESTED" });
+  });
+});
+
+describe("Flow 1: pick up along my route only", () => {
+  it("classifies strictly: on route is free, anything farther is refused (no detour fare)", () => {
+    const flow1 = { routeKm: 100, pickupPreference: "ON_ROUTE" };
+    expect(classifyPickup({ ...flow1, pickupKm: 2.4 })).toMatchObject({ zone: "ON_ROUTE", extraTip: 0 });
+    expect(classifyPickup({ ...flow1, pickupKm: 6 })).toMatchObject({ zone: "TOO_FAR", reason: "ROUTE_ONLY" });
+    expect(classifyPickup({ ...flow1, pickupKm: 1, dropKm: 5 })).toMatchObject({ zone: "TOO_FAR", reason: "ROUTE_ONLY" });
+  });
+
+  it("a Marthandam pickup is refused on a flow 1 ride and hidden from search", async () => {
+    const date = futureDate(16);
+    const rider = await registerUser();
+    const ride = await createPublishedRide(rider.token, (await createVehicle(rider.token)).id, { ...rideAt(date), pickupPreference: "ON_ROUTE" });
+    const passenger = await registerUser();
+    const res = await request(app).post(`/api/rides/${ride.id}/requests`).set("Authorization", `Bearer ${passenger.token}`).send(toTirunelveli(...MARTHANDAM, "Marthandam"));
+    expect(res.status).toBe(400);
+    expect(res.body.errors.reason).toBe("ROUTE_ONLY");
+    const found = (await request(app).get("/api/rides/search")
+      .query({ sourceLatitude: MARTHANDAM[0], sourceLongitude: MARTHANDAM[1], destinationLatitude: TIRUNELVELI[0], destinationLongitude: TIRUNELVELI[1], date, includeFull: true })
+      .set("Authorization", `Bearer ${passenger.token}`)).body.data.find((r) => r.id === ride.id);
+    expect(found).toBeUndefined();
   });
 });
 

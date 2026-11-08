@@ -65,9 +65,9 @@ export default function SearchPage() {
   useEffect(() => {
     if (location.state?.openSearch) setSheetOpen(true);
   }, [location.state]);
-  // Desktop side panel: open by default, but closing it from Create trip
-  // (state.view === "map") or with its X really hides it. A small button brings it back.
-  const [deskOpen, setDeskOpen] = useState(() => location.state?.view !== "map");
+  // Desktop side panel: starts closed so the map is clear. A slim tab on the left edge opens it;
+  // it closes with its X, Esc, or by itself after a search.
+  const [deskOpen, setDeskOpen] = useState(() => Boolean(location.state?.openSearch));
   useEffect(() => {
     if (location.state?.openSearch) setDeskOpen(true);
     else if (location.state?.view === "map") setDeskOpen(false);
@@ -168,6 +168,7 @@ export default function SearchPage() {
       setBannerOpen(true);
       // Show the rides on the map; with no results keep the form open so they can change the search.
       if (isMobile && list.length > 0) setSheetOpen(false);
+      if (!isMobile && list.length > 0) setDeskOpen(false);
     } catch (err) {
       notification.error({ title: "Couldn't search", description: err.message });
     } finally {
@@ -236,7 +237,7 @@ export default function SearchPage() {
       </button>
 
       <div className="sp-hint">
-        Within 2.5 km of a rider&apos;s route is a normal pickup; farther away the rider can make a short detour for a higher fare.
+        Within 2.5 km of a rider&apos;s route is a normal pickup. Some riders also pick up from your place, with a detour fare shown before you ask.
       </div>
     </>
   );
@@ -319,8 +320,9 @@ export default function SearchPage() {
             {fields}
           </Drawer>
           {!deskOpen && (
-            <button type="button" className="sp-reopen" onClick={() => setDeskOpen(true)}>
-              <SearchOutlined /> Find trip
+            <button type="button" className="sp-edge" onClick={() => setDeskOpen(true)} aria-label="Open Find trip">
+              <SearchOutlined />
+              <span className="t">FIND TRIP</span>
             </button>
           )}
         </>

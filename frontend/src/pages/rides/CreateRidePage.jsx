@@ -112,6 +112,7 @@ export default function CreateRidePage() {
   const vehicleId = Form.useWatch("vehicleId", form);
   const departureDate = Form.useWatch("departureDate", form);
   const watchedTip = Form.useWatch("tipAmount", form);
+  const watchedPref = Form.useWatch("pickupPreference", form);
   const sourceLatitude = Form.useWatch("sourceLatitude", form);
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
@@ -515,7 +516,7 @@ export default function CreateRidePage() {
               placeholder={rideType === "WITH_TIP" ? "Enter tip amount" : "—"}
             />
           </Form.Item>
-          <PickupFareInfo distanceKm={distanceKm} tipAmount={Number(watchedTip) || 0} />
+          <PickupFareInfo distanceKm={distanceKm} tipAmount={Number(watchedTip) || 0} preference={watchedPref || "ON_ROUTE"} />
         </FormCard>
 
         {/* Additional Info Section */}

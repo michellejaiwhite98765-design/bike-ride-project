@@ -152,7 +152,7 @@ export const rideRepository = {
   async pickupGeometry(rideId, pickup, drop) {
     const { rows } = await pool.query(
       `WITH ride AS (
-              SELECT ${ROUTE_GEOG} AS route,
+              SELECT ${ROUTE_GEOG} AS route, r."pickup_preference" AS pref,
                      CASE WHEN r."ride_type" = 'WITH_TIP' THEN r."tip_amount" ELSE 0 END AS base_fare
               FROM "rides" r WHERE r."id" = $1
             ),
@@ -161,7 +161,7 @@ export const rideRepository = {
                      CASE WHEN $4::float8 IS NULL THEN NULL
                           ELSE ST_SetSRID(ST_MakePoint($4::float8, $5::float8), 4326)::geography END AS drop
             )
-       SELECT ST_Length(ride.route) / 1000 AS route_km, ride.base_fare,
+       SELECT ST_Length(ride.route) / 1000 AS route_km, ride.base_fare, ride.pref::text AS pref,
               ST_Distance(ride.route, pts.pickup) / 1000 AS pickup_km,
               ST_LineLocatePoint(ride.route::geometry, pts.pickup::geometry) AS pickup_frac,
               CASE WHEN pts.drop IS NULL THEN NULL ELSE ST_Distance(ride.route, pts.drop) / 1000 END AS drop_km,
@@ -174,6 +174,7 @@ export const rideRepository = {
     return {
       routeKm: Number(r.route_km),
       baseFare: Number(r.base_fare) || 0,
+      pickupPreference: r.pref,
       pickupKm: Number(r.pickup_km),
       dropKm: r.drop_km == null ? null : Number(r.drop_km),
       // Small slack so a pickup and drop that are both near the start aren't
@@ -256,8 +257,10 @@ export const rideRepository = {
       const km = ROUTE_KM;
       // Same as detourLimitKm: route % of the trip, at least the on-route
       // radius, at most the max detour.
-      return `(LEAST(${p(zones.detourMaxKm)}::float8,
-        GREATEST(${p(zones.onRouteKm)}::float8, ${km} * ${p(zones.detourPercent)}::float8 / 100)) * 1000)`;
+      // Flow 1 rides (ON_ROUTE) only match within the on-route radius.
+      return `(CASE WHEN r.pickup_preference = 'ON_ROUTE' THEN ${p(zones.onRouteKm)}::float8
+        ELSE LEAST(${p(zones.detourMaxKm)}::float8,
+        GREATEST(${p(zones.onRouteKm)}::float8, ${km} * ${p(zones.detourPercent)}::float8 / 100)) END * 1000)`;
     };
 
     const sourceDWithin = `ST_DWithin(r.source_geog, ${sourcePoint()}, ${radius(pickupRadiusM)})`;

@@ -180,7 +180,7 @@ export default function SearchPage() {
     { label: "Tomorrow", value: [dayjs().add(1, "day"), dayjs().add(1, "day")] },
     { label: "Next 3 days", value: [dayjs(), dayjs().add(2, "day")] },
     { label: "This week", value: [dayjs(), dayjs().add(6, "day")] },
-    { label: "Next 30 days", value: [dayjs(), dayjs().add(30, "day")] },
+    { label: "Next month", value: [dayjs(), dayjs().add(1, "month")] },
   ];
 
   const goHome = () => navigate("/", { state: { view: "map" } });
@@ -211,9 +211,7 @@ export default function SearchPage() {
         inputReadOnly
         placement="bottomLeft"
         separator={<span className="sp-range-sep">→</span>}
-        disabledDate={(d, info) =>
-          d.isBefore(dayjs(), "day") || (info?.from ? Math.abs(d.diff(info.from, "day")) > 30 : d.isAfter(dayjs().add(90, "day")))
-        }
+        disabledDate={(d) => d.isBefore(dayjs(), "day") || d.isAfter(dayjs().add(1, "month"), "day")}
       />
       {isMobile && (
         <div className="sp-chips">

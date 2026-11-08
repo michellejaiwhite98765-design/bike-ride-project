@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { DayStrip, TimeChips } from "../../components/ride/DayStripPicker.jsx";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, Drawer, Form, Input, InputNumber, Select, DatePicker, TimePicker, Radio, Button, App, Alert, Checkbox, Modal } from "antd";
+import { Card, Drawer, Form, Input, InputNumber, Select, Radio, Button, App, Alert, Checkbox, Modal } from "antd";
 import {
   EnvironmentOutlined,
   CarOutlined,
@@ -250,7 +251,10 @@ export default function CreateRidePage() {
       return;
     }
     try {
-      const values = await form.validateFields();
+      // Terms are only required to publish; a draft can be saved without them.
+      const fieldNames = form.getFieldsError().map((f) => f.name);
+      const toCheck = publish ? fieldNames : fieldNames.filter((n) => !["agreeTerms", "agreeSecurity"].includes(n[0]));
+      const values = await form.validateFields(toCheck);
       if (!values.sourceLatitude || !values.sourceLongitude) {
         notification.error({ title: "Error", description: "Please select a start location" });
         return;
@@ -302,7 +306,14 @@ export default function CreateRidePage() {
 
       navigate(`/rides/${ride.id}`);
     } catch (err) {
-      if (err?.errorFields) return;
+      if (err?.errorFields) {
+        const termsMissing = err.errorFields.some((f) => ["agreeTerms", "agreeSecurity"].includes(f.name[0]));
+        form.scrollToField(err.errorFields[0].name, { behavior: "smooth", block: "center" });
+        if (termsMissing) {
+          notification.warning({ title: "Accept the terms", description: "Tick the Terms & Conditions and the Security & Safety Terms to publish." });
+        }
+        return;
+      }
       notification.error({ title: "Error", description: err.message });
     } finally {
       setSubmittingAction(null);
@@ -417,28 +428,11 @@ export default function CreateRidePage() {
           Schedule
         </SectionHeader>
         <FormCard>
-          <Form.Item name="departureDate" label="Departure Date" rules={[{ required: true }]}>
-            <DatePicker size="large" style={{ width: "100%" }} disabledDate={(d) => d && d < dayjs().startOf("day")} />
+          <Form.Item name="departureDate" label="Departure date" rules={[{ required: true, message: "Pick a departure date" }]}>
+            <DayStrip />
           </Form.Item>
-          <Form.Item name="departureTime" label="Departure Time" rules={[{ required: true, message: "Pick a departure time" }]}>
-            <TimePicker
-              size="large"
-              style={{ width: "100%" }}
-              format="h:mm A"
-              // 1-minute steps, not 5 - with a coarser step the first
-              // selectable minute could round up to nearly 5 minutes past
-              // the real current time once past minutes are disabled below.
-              minuteStep={1}
-              disabledTime={() => {
-                if (!departureDate || !departureDate.isSame(dayjs(), "day")) return {};
-                const now = dayjs();
-                return {
-                  disabledHours: () => Array.from({ length: now.hour() }, (_, i) => i),
-                  disabledMinutes: (hour) =>
-                    hour === now.hour() ? Array.from({ length: now.minute() + 1 }, (_, i) => i) : [],
-                };
-              }}
-            />
+          <Form.Item name="departureTime" label="Departure time" rules={[{ required: true, message: "Pick a departure time" }]}>
+            <TimeChips date={departureDate} />
           </Form.Item>
         </FormCard>
 

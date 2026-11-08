@@ -640,3 +640,26 @@ body::-webkit-scrollbar,
   .ant-picker-dropdown .ant-picker-presets{max-width:none;min-width:0}
   .ant-picker-dropdown .ant-picker-presets ul{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
 }
+
+/* ---- Day strip + time chips (Create ride) ---- */
+.ds-wrap{width:100%;min-width:0}
+.ds-strip,.ds-times{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.ds-day{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 58px;text-align:center;padding:10px 0;border-radius:14px;background:var(--bg-tertiary);border:1px solid var(--border);scroll-snap-align:center;color:var(--text-primary);position:relative;transition:background .15s,border-color .15s,transform .1s}
+.ds-day small{display:block;font-size:10.5px;letter-spacing:.06em;color:var(--text-secondary);font-weight:600}
+.ds-day b{display:block;font-size:19px;font-weight:700;margin:2px 0}
+.ds-day:hover{border-color:var(--color-primary)}
+.ds-day:active,.ds-time:active{transform:scale(.97)}
+.ds-day.sel{background:var(--color-primary);border-color:var(--color-primary);color:var(--text-inverse)}
+.ds-day.sel small,.ds-day.sel b{color:var(--text-inverse)}
+.ds-more{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:18px;color:var(--color-primary)}
+.ds-time{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 auto;padding:9px 14px;border-radius:12px;background:var(--bg-tertiary);border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--text-primary);white-space:nowrap;position:relative;scroll-snap-align:start;transition:background .15s,border-color .15s}
+.ds-time:hover:not(:disabled){border-color:var(--color-primary)}
+.ds-time:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.ds-time.sel{background:var(--color-primary);border-color:var(--color-primary);color:var(--text-inverse)}
+.ds-other{color:var(--color-primary)}
+.ds-other.sel{color:var(--text-inverse)}
+.ds-picked{font-size:12.5px;color:var(--text-secondary);margin-top:2px;font-weight:600}
+.ds-hidden-picker{position:absolute!important;inset:0;opacity:0;pointer-events:none;width:100%;height:100%;padding:0!important;border:0!important}
+@media (min-width:760px){
+  .ds-times{flex-wrap:wrap;overflow-x:visible}
+}

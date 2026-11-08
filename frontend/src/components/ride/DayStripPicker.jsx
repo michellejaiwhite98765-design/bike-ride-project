@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { DatePicker, TimePicker } from "antd";
+import { DatePicker } from "antd";
 import { CalendarOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -59,7 +59,6 @@ export function DayStrip({ value, onChange }) {
 
 /** Time chips in 30-minute steps plus an exact-time picker. value = dayjs | undefined. */
 export function TimeChips({ value, onChange, date }) {
-  const [more, setMore] = useState(false);
   const now = dayjs();
   const isToday = date && date.isSame(now, "day");
   const isSlot = value && SLOTS.some((s) => s.hour() === value.hour() && s.minute() === value.minute());
@@ -89,28 +88,23 @@ export function TimeChips({ value, onChange, date }) {
             </button>
           );
         })}
-        <div role="button" tabIndex={0} className={`ds-time ds-other${value && !isSlot ? " sel" : ""}`} onClick={() => setMore(true)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setMore(true)}>
+        <label className={`ds-time ds-other${value && !isSlot ? " sel" : ""}`}>
           <ClockCircleOutlined /> {value && !isSlot ? value.format("h:mm A") : "Exact time"}
-          <TimePicker
-            open={more}
-            onOpenChange={setMore}
-            value={value}
-            format="h:mm A"
-            minuteStep={1}
-            use12Hours
-            showNow={false}
-            onChange={(t) => t && onChange?.(t)}
-            className="ds-hidden-picker"
-            getPopupContainer={() => document.body}
-            disabledTime={() => {
-              if (!isToday) return {};
-              return {
-                disabledHours: () => Array.from({ length: now.hour() }, (_, i) => i),
-                disabledMinutes: (h) => (h === now.hour() ? Array.from({ length: now.minute() + 1 }, (_, i) => i) : []),
-              };
+          <input
+            type="time"
+            className="ds-native"
+            value={value ? value.format("HH:mm") : ""}
+            min={isToday ? now.add(1, "minute").format("HH:mm") : undefined}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const t = dayjs(e.target.value, "HH:mm");
+              const mins = t.hour() * 60 + t.minute();
+              // Today: only a time later than now.
+              if (isToday && mins <= now.hour() * 60 + now.minute()) return;
+              onChange?.(t);
             }}
           />
-        </div>
+        </label>
       </div>
       <div className="ds-picked">{value ? `Leaving at ${value.format("h:mm A")}` : "Pick a time"}</div>
     </div>

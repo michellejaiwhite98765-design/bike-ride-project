@@ -350,7 +350,7 @@ export default function SearchPage() {
         .sp-range-popup .ant-picker-presets ul li{border-radius:999px!important;font-weight:600}
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner,
-        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner{background:linear-gradient(135deg,#2DD4BF,#8B5CF6)!important;border-radius:50%!important;color:#fff!important}
+        .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner{background:#2DD4BF!important;border-radius:50%!important;color:#fff!important}
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-in-range::before,
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start:not(.ant-picker-cell-range-start-single)::before,
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end:not(.ant-picker-cell-range-end-single)::before{background:rgba(45,212,191,.16)!important}

@@ -116,7 +116,9 @@ export default function RegisterPage() {
   }
 
   return (
+    <div className="rp-page">
     <div className="rp-wrap">
+      <Link to="/" className="rp-brand"><span className="rp-brand-dot" />BikeRide</Link>
       <Card title="Create your account" className="rp-card">
         <Steps
           size="small"
@@ -230,8 +232,15 @@ export default function RegisterPage() {
           Already have an account? <Link to="/login">Login</Link>
         </div>
       </Card>
+    </div>
       <style>{`
-        .rp-wrap{max-width:480px;margin:40px auto;padding:0 12px}
+        .rp-page{min-height:100vh;min-height:100dvh;position:relative;background:#0D1117;display:flex;justify-content:center;align-items:flex-start;padding:28px 0;overflow:hidden}
+        .rp-page::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px);background-size:26px 26px}
+        .rp-page::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(207,255,92,.12),transparent 45%),radial-gradient(circle at 75% 70%,rgba(92,225,230,.08),transparent 40%)}
+        .rp-brand{display:flex;align-items:center;gap:10px;margin-bottom:18px;font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:19px;color:#F4F5F1}
+        .rp-brand:hover{color:#F4F5F1}
+        .rp-brand-dot{width:12px;height:12px;border-radius:50%;background:#CFFF5C}
+        .rp-wrap{position:relative;z-index:1;width:100%;max-width:480px;padding:0 12px}
         .rp-foot{text-align:center;margin-top:20px}
         .rp-otp-head{text-align:center;margin-bottom:20px}
         .rp-otp-icon{font-size:40px;color:#2DD4BF}
@@ -241,7 +250,7 @@ export default function RegisterPage() {
         .rp-otp-links{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
         /* Phones: everything on one screen, no scrolling. */
         @media(max-width:768px){
-          .rp-wrap{margin:4px auto 0;padding:0}
+          .rp-page{padding:14px 0}.rp-wrap{padding:0 10px}.rp-brand{margin-bottom:10px}
           .rp-card .ant-card-head{min-height:44px;padding:0 16px}
           .rp-card .ant-card-head-title{padding:10px 0;font-size:16px}
           .rp-card .ant-card-body{padding:12px 16px 14px}

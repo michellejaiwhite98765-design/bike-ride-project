@@ -54,6 +54,9 @@ export const env = {
     // Extra fare per km the rider travels off the route (there and back).
     // Paid rides use their own per-km rate when it's higher.
     tipRatePerKm: Number(process.env.TIP_RATE_PER_KM || 5),
+    // Trips longer than this many km use the lower rate below (cheaper per km on long runs).
+    longTripKm: Number(process.env.LONG_TRIP_KM || 300),
+    tipRateLongPerKm: Number(process.env.TIP_RATE_LONG_PER_KM || 4),
   },
   // Trip lifecycle (see services/tripLifecycle.service.js).
   lifecycle: {

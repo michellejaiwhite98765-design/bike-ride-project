@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal, Slider } from "antd";
 import { EnvironmentOutlined, InfoCircleOutlined, RightOutlined } from "@ant-design/icons";
-import { PICKUP_ON_ROUTE_KM, DETOUR_MAX_PERCENT, DETOUR_MAX_KM, TIP_RATE_PER_KM } from "../../constants/pricing.js";
+import { PICKUP_ON_ROUTE_KM, DETOUR_MAX_PERCENT, DETOUR_MAX_KM, LONG_TRIP_KM, TIP_RATE_LONG_PER_KM, tipRateForKm } from "../../constants/pricing.js";
 
 const fmt = (n) => (Math.round(n * 10) / 10).toString();
 
@@ -21,7 +21,7 @@ export default function PickupFareInfo({ distanceKm, tipAmount = 0, preference =
   const detourMax = known ? Math.min((distanceKm * DETOUR_MAX_PERCENT) / 100, DETOUR_MAX_KM) : null;
   // Same rule the server uses: the ride's own per-km rate, but never below the minimum.
   const ownRate = known && tipAmount > 0 ? tipAmount / distanceKm : 0;
-  const rate = Math.max(TIP_RATE_PER_KM, ownRate);
+  const rate = Math.max(tipRateForKm(distanceKm), ownRate);
 
   const maxTry = detourMax != null ? Math.max(PICKUP_ON_ROUTE_KM + 1, Math.floor(detourMax)) : DETOUR_MAX_KM;
   const tk = Math.min(tryKm, maxTry);
@@ -165,7 +165,8 @@ export default function PickupFareInfo({ distanceKm, tipAmount = 0, preference =
                 <span className="pf-fn">3</span>
                 <div>
                   <b>Price per km</b>
-                  <code>rate = max( ₹{TIP_RATE_PER_KM} , ride tip ÷ trip km )</code>
+                  <code>rate = max( ₹{tipRateForKm(distanceKm)} , ride tip ÷ trip km )</code>
+                  <small>Minimum is ₹5/km, or ₹{TIP_RATE_LONG_PER_KM}/km on trips over {LONG_TRIP_KM} km.</small>
                   <small>
                     Right now: <b>₹{fmt(rate)}/km</b>
                   </small>

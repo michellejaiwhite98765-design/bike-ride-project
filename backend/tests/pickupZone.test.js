@@ -12,6 +12,11 @@ describe("Detour limit by trip length", () => {
     expect(detourLimitKm(routeKm)).toBeCloseTo(expected, 1);
   });
 
+  it("uses Rs 4/km instead of Rs 5/km on trips over 300 km", () => {
+    expect(classifyPickup({ routeKm: 300, pickupKm: 10 })).toMatchObject({ ratePerKm: 5, extraTip: 100 });
+    expect(classifyPickup({ routeKm: 400, pickupKm: 10 })).toMatchObject({ ratePerKm: 4, extraTip: 80 });
+  });
+
   it("classifies on-route, detour (fare goes up per extra km), and too far", () => {
     expect(classifyPickup({ routeKm: 100, pickupKm: 2.4 })).toMatchObject({ zone: "ON_ROUTE", extraTip: 0 });
     // Free ride, 15 km off a 100 km route: 30 km extra (+30%) at Rs 5/km = Rs 150

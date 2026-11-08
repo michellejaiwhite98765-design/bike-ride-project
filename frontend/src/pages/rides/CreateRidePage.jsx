@@ -25,7 +25,7 @@ import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../../utils/geo.js";
-import { TIP_RATE_PER_KM } from "../../constants/pricing.js";
+import { tipRateForKm } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 import RiderChecklist from "../../components/ride/RiderChecklist.jsx";
 import { useRiderStatus } from "../../hooks/useRiderStatus.js";
@@ -162,7 +162,7 @@ export default function CreateRidePage() {
   useEffect(() => {
     if (loading) return;
     if (rideType === "WITH_TIP" && distanceKm != null) {
-      form.setFieldValue("tipAmount", Math.round(distanceKm * TIP_RATE_PER_KM));
+      form.setFieldValue("tipAmount", Math.round(distanceKm * tipRateForKm(distanceKm)));
     } else if (rideType === "WITHOUT_TIP") {
       form.setFieldValue("tipAmount", 0);
     }
@@ -498,7 +498,7 @@ export default function CreateRidePage() {
             rules={[{ required: rideType === "WITH_TIP", type: "number", min: rideType === "WITH_TIP" ? 1 : 0, message: "Tip must be greater than 0" }]}
             extra={
               rideType === "WITH_TIP" && distanceKm != null
-                ? `Auto-calculated from distance: ${distanceKm.toFixed(1)} km × ₹${TIP_RATE_PER_KM}/km.`
+                ? `Auto-calculated from distance: ${distanceKm.toFixed(1)} km × ₹${tipRateForKm(distanceKm)}/km.`
                 : rideType !== "WITH_TIP"
                 ? 'Select "With Tip" above to set an amount.'
                 : undefined

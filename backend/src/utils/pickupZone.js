@@ -23,7 +23,8 @@ import { env } from "../config/env.js";
  * Extra fare: the rider goes off the route and comes back, so
  *   extraKm       = 2 x (pickup's distance off the route + drop's, when the drop is off the route too)
  *   detourPercent = extraKm / routeKm x 100   (how much longer the rider's trip gets)
- *   ratePerKm     = the ride's own fare per km (tip / routeKm), but never below TIP_RATE_PER_KM (Rs 5)
+ *   ratePerKm     = the ride's own fare per km (tip / routeKm), but never below the minimum rate:
+ *                   Rs 5/km, or Rs 4/km when the trip is longer than 300 km
  *   extraFare     = extraKm x ratePerKm
  *   e.g. Marthandam, 15 km off a 100 km route: 30 extra km = trip +30%, extra fare Rs 150.
  */
@@ -33,10 +34,16 @@ export function detourLimitKm(routeKm) {
   return round1(Math.min(c.detourMaxKm, Math.max(c.onRouteKm, (km * c.detourPercent) / 100)));
 }
 
+/** Minimum fare per km: Rs 5, or Rs 4 on trips longer than 300 km. */
+export function minRatePerKm(routeKm) {
+  const c = env.pickupZone;
+  return Number(routeKm) > c.longTripKm ? c.tipRateLongPerKm : c.tipRatePerKm;
+}
+
 /** Fare per km for the extra distance: the ride's own rate, or the default when that's lower (or the ride is free). */
 export function detourRatePerKm(routeKm, baseFare = 0) {
   const ownRate = Number(routeKm) > 0 ? Number(baseFare) / Number(routeKm) : 0;
-  return Math.max(env.pickupZone.tipRatePerKm, ownRate);
+  return Math.max(minRatePerKm(routeKm), ownRate);
 }
 
 /** Extra fare for a detour: off-route distance there and back, at the per-km rate. */

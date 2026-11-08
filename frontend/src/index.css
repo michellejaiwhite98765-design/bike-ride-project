@@ -663,3 +663,51 @@ body::-webkit-scrollbar,
 @media (min-width:760px){
   .ds-times{flex-wrap:wrap;overflow-x:visible}
 }
+
+/* ---- Seat stepper (Create ride) ---- */
+.seat-stepper{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.seat-stepper button{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--color-primary);font-size:16px;transition:border-color .15s,transform .1s}
+.seat-stepper button:hover:not(:disabled){border-color:var(--color-primary)}
+.seat-stepper button:active:not(:disabled){transform:scale(.95)}
+.seat-stepper button:disabled{opacity:.35;cursor:not-allowed}
+.seat-count{min-width:96px;text-align:center;line-height:1.1}
+.seat-count b{display:block;font-size:24px;color:var(--text-primary)}
+.seat-count span{font-size:12px;color:var(--text-secondary);font-weight:600}
+.seat-dots{display:flex;gap:6px;margin-left:auto}
+.seat-dots i{width:12px;height:12px;border-radius:50%;background:var(--bg-tertiary);border:1px solid var(--border)}
+.seat-dots i.on{background:var(--color-primary);border-color:var(--color-primary)}
+
+/* ---- Pickup fare info card + popup (Create ride) ---- */
+.pf-card{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg-tertiary);border:1px solid var(--border);transition:border-color .15s}
+.pf-card:hover{border-color:var(--color-primary)}
+.pf-icon{flex:0 0 38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(45,212,191,.16);color:var(--color-primary);font-size:18px}
+.pf-text{flex:1;min-width:0}
+.pf-text b{display:block;font-size:14px;color:var(--text-primary)}
+.pf-text small{display:block;font-size:12px;color:var(--text-secondary);margin-top:2px;line-height:1.45}
+.pf-go{color:var(--text-secondary);font-size:12px}
+.pf-title{font-weight:700;font-size:16px}
+.pf-title .anticon{color:var(--color-primary);margin-right:6px}
+.pf-lead{margin:0 0 14px;color:var(--text-secondary);font-size:13.5px;line-height:1.55}
+.pf-lead b{color:var(--text-primary)}
+.pf-map{position:relative;height:96px;border-radius:14px;background:var(--bg-tertiary);border:1px solid var(--border);overflow:hidden;margin-bottom:14px}
+.pf-band{position:absolute;left:0;right:0}
+.pf-band.far{top:8px;bottom:8px;background:rgba(251,191,36,.13);border-top:1px dashed rgba(251,191,36,.6);border-bottom:1px dashed rgba(251,191,36,.6)}
+.pf-band.near{top:30px;bottom:30px;background:rgba(45,212,191,.2);border-top:1px dashed rgba(45,212,191,.7);border-bottom:1px dashed rgba(45,212,191,.7)}
+.pf-line{position:absolute;left:18px;right:18px;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:var(--color-primary)}
+.pf-pin{position:absolute;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;border:3px solid var(--bg-tertiary);background:var(--color-primary)}
+.pf-pin.start{left:12px}
+.pf-pin.end{right:12px;background:var(--text-primary)}
+.pf-tag{position:absolute;right:34px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.pf-tag.t1{top:34px;color:var(--color-primary)}
+.pf-tag.t2{top:11px;color:var(--color-warning)}
+.pf-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.pf-steps li{display:flex;gap:12px;align-items:flex-start}
+.pf-steps i{flex:0 0 26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;font-size:13px}
+.pf-steps i.ok{background:rgba(45,212,191,.2);color:var(--color-primary)}
+.pf-steps i.warn{background:rgba(251,191,36,.2);color:var(--color-warning)}
+.pf-steps i.no{background:rgba(248,113,113,.2);color:var(--color-error)}
+.pf-steps b{color:var(--text-primary);font-size:14px}
+.pf-steps p{margin:2px 0 0;color:var(--text-secondary);font-size:13px;line-height:1.55}
+.pf-steps p b{font-size:13px}
+.pf-note{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(45,212,191,.1);color:var(--text-secondary);font-size:12.5px;line-height:1.5}
+@media (max-width:480px){.seat-dots{display:none}.pf-map{height:84px}.pf-band.near{top:26px;bottom:26px}.pf-tag.t1{top:30px}}

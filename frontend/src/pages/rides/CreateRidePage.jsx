@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DayStrip, TimeChips } from "../../components/ride/DayStripPicker.jsx";
+import SeatStepper from "../../components/ride/SeatStepper.jsx";
+import PickupFareInfo from "../../components/ride/PickupFareInfo.jsx";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, Drawer, Form, Input, InputNumber, Select, Radio, Button, App, Alert, Checkbox, Modal } from "antd";
 import {
@@ -108,6 +110,7 @@ export default function CreateRidePage() {
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
   const departureDate = Form.useWatch("departureDate", form);
+  const watchedTip = Form.useWatch("tipAmount", form);
   const sourceLatitude = Form.useWatch("sourceLatitude", form);
   const sourceLongitude = Form.useWatch("sourceLongitude", form);
   const destinationLatitude = Form.useWatch("destinationLatitude", form);
@@ -465,19 +468,9 @@ export default function CreateRidePage() {
             name="availableSeats"
             label="Available Seats"
             rules={[{ required: true }]}
-            extra={selectedVehicle ? `This vehicle carries up to ${maxSeats} passenger${maxSeats === 1 ? "" : "s"}.` : undefined}
+            extra={selectedVehicle ? `This vehicle carries up to ${maxSeats} passenger${maxSeats === 1 ? "" : "s"}.` : "Choose a vehicle first."}
           >
-            <InputNumber
-              size="large"
-              style={{ width: "100%" }}
-              min={1}
-              max={maxSeats}
-              precision={0}
-              // Digits only - no "e", "-", "+" or "." from the keyboard.
-              onKeyDown={(e) => {
-                if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !/\d/.test(e.key)) e.preventDefault();
-              }}
-            />
+            <SeatStepper max={maxSeats} disabled={!selectedVehicle} />
           </Form.Item>
         </FormCard>
 
@@ -521,6 +514,7 @@ export default function CreateRidePage() {
               placeholder={rideType === "WITH_TIP" ? "Enter tip amount" : "—"}
             />
           </Form.Item>
+          <PickupFareInfo distanceKm={distanceKm} tipAmount={Number(watchedTip) || 0} />
         </FormCard>
 
         {/* Additional Info Section */}

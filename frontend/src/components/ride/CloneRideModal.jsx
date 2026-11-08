@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Modal, Form, DatePicker, TimePicker, InputNumber, Button, App, Alert } from "antd";
+import { Modal, Form, InputNumber, Button, App, Alert } from "antd";
+import { DayStrip, TimeChips } from "./DayStripPicker.jsx";
 import { ArrowRightOutlined, EnvironmentOutlined, CarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { rideService } from "../../services/rideService.js";
@@ -165,10 +166,7 @@ export default function CloneRideModal({ ride, rides = [], open, onClose, onClon
             },
           ]}
         >
-          <DatePicker
-            style={{ width: "100%" }}
-            disabledDate={(d) => d && (d < dayjs().startOf("day") || d > dayjs().add(12, "week").endOf("day"))}
-          />
+          <DayStrip />
         </Form.Item>
 
         <Form.Item
@@ -188,20 +186,7 @@ export default function CloneRideModal({ ride, rides = [], open, onClose, onClon
             }),
           ]}
         >
-          <TimePicker
-            style={{ width: "100%" }}
-            format="h:mm A"
-            minuteStep={1}
-            disabledTime={() => {
-              if (!departureDate || !departureDate.isSame(dayjs(), "day")) return {};
-              const now = dayjs();
-              return {
-                disabledHours: () => Array.from({ length: now.hour() }, (_, i) => i),
-                disabledMinutes: (hour) =>
-                  hour === now.hour() ? Array.from({ length: now.minute() + 1 }, (_, i) => i) : [],
-              };
-            }}
-          />
+          <TimeChips date={departureDate} />
         </Form.Item>
 
         <Form.Item

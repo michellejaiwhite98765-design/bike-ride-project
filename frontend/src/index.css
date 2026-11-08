@@ -620,3 +620,23 @@ body::-webkit-scrollbar,
 .ant-picker-dropdown .ant-picker-ok .ant-btn{border-radius:999px;font-weight:700;background:linear-gradient(135deg,#2DD4BF,#8B5CF6)!important;border:0;color:#fff!important}
 .ant-picker-dropdown .ant-picker-time-panel-column>li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner{border-radius:10px;margin:2px 6px;width:calc(100% - 12px)}
 .ant-picker-dropdown .ant-picker-time-panel-column>li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner{background:rgba(45,212,191,.22)!important;color:#2DD4BF;font-weight:700}
+
+/* Phones: pickers open as a full-width bottom sheet instead of overflowing the screen. */
+@media (max-width:600px){
+  .ant-picker-dropdown{position:fixed!important;left:10px!important;right:10px!important;top:auto!important;bottom:10px!important;width:auto!important;max-width:none!important;z-index:2000!important;transform:none!important}
+  .ant-picker-dropdown::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:-1;pointer-events:none}
+  .ant-picker-dropdown .ant-picker-panel-container,
+  .ant-picker-dropdown .ant-picker-panel,
+  .ant-picker-dropdown .ant-picker-panels,
+  .ant-picker-dropdown .ant-picker-date-panel,
+  .ant-picker-dropdown .ant-picker-month-panel,
+  .ant-picker-dropdown .ant-picker-year-panel{width:100%!important;min-width:0!important}
+  .ant-picker-dropdown .ant-picker-panels{flex-direction:column}
+  .ant-picker-dropdown .ant-picker-content{width:100%!important;table-layout:fixed}
+  .ant-picker-dropdown .ant-picker-cell{padding:3px 0}
+  .ant-picker-dropdown .ant-picker-cell .ant-picker-cell-inner{min-width:36px;height:36px;line-height:36px}
+  .ant-picker-dropdown .ant-picker-time-panel{width:100%}
+  .ant-picker-dropdown .ant-picker-time-panel-column{flex:1;width:auto;height:240px}
+  .ant-picker-dropdown .ant-picker-presets{max-width:none;min-width:0}
+  .ant-picker-dropdown .ant-picker-presets ul{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+}

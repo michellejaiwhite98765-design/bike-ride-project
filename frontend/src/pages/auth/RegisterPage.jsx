@@ -171,7 +171,7 @@ export default function RegisterPage() {
             >
               <Input.Password prefix={<LockOutlined />} placeholder="At least 8 characters" size="large" autoComplete="new-password" />
             </Form.Item>
-            <Button type="primary" htmlType="submit" block size="large" loading={sending || submitting ? { icon: <BikeSpinner /> } : false} style={{ background: "#0f766e", marginTop: 8 }}>
+            <Button type="primary" htmlType="submit" block size="large" loading={sending || submitting ? { icon: <BikeSpinner /> } : false} style={{ marginTop: 8 }}>
               Continue
             </Button>
           </Form>
@@ -212,7 +212,6 @@ export default function RegisterPage() {
               loading={submitting ? { icon: <BikeSpinner /> } : false}
               disabled={otp.length !== 6}
               className="rp-verify-btn"
-              style={{ background: otp.length === 6 ? "#0f766e" : undefined }}
             >
               Verify & create account
             </Button>
@@ -233,6 +232,15 @@ export default function RegisterPage() {
         </div>
       </Card>
       <style>{`
+        /* Same card + lime button as the login page */
+        .rp-card.ant-card{background:#0A0D12;border-radius:22px;border:0;box-shadow:0 30px 60px -20px rgba(10,13,18,.35);color:#F4F5F1;overflow:hidden}
+        .rp-card .ant-card-head{border-bottom:1px dashed rgba(255,255,255,.14);color:#F4F5F1}
+        .rp-card .ant-btn-primary{background:#CFFF5C!important;color:#0a0d08!important;border:0;border-radius:12px;height:48px;font-weight:600;box-shadow:none}
+        .rp-card .ant-btn-primary:hover:not(:disabled){filter:brightness(1.06)}
+        .rp-card .ant-btn-primary:disabled{opacity:.45}
+        @media(max-width:920px){
+          .rp-card.ant-card{background:rgba(13,17,23,.52);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -18px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+        }
         .rp-wrap{position:relative;width:100%;max-width:400px;padding:12px}
         .rp-foot{text-align:center;margin-top:20px}
         .rp-otp-head{text-align:center;margin-bottom:20px}

@@ -164,7 +164,27 @@ export default function SearchPage() {
       });
       const list = Array.isArray(data) ? data : [];
       setResults(list);
-      setLastSearch({ ...asked, count: list.length });
+      // Nothing in the chosen dates: look further ahead (one month) so the passenger
+      // hears "there is a ride on Wed 11 Nov" instead of just "no rides".
+      let later = null;
+      if (list.length === 0) {
+        try {
+          const wider = await rideService.search({
+            sourceLatitude: Number(sourceLatitude),
+            sourceLongitude: Number(sourceLongitude),
+            destinationLatitude: Number(destinationLatitude),
+            destinationLongitude: Number(destinationLongitude),
+            date: asked.start.format("YYYY-MM-DD"),
+            toDate: dayjs().add(1, "month").format("YYYY-MM-DD"),
+            includeFull: true,
+          });
+          const dates = (Array.isArray(wider) ? wider : []).map((r) => String(r.departureDate).slice(0, 10)).sort();
+          if (dates.length) later = { count: dates.length, first: dayjs(dates[0]) };
+        } catch {
+          // The hint is optional.
+        }
+      }
+      setLastSearch({ ...asked, count: list.length, later });
       setBannerOpen(true);
       // Show the rides on the map; with no results keep the form open so they can change the search.
       if (isMobile && list.length > 0) setSheetOpen(false);
@@ -253,7 +273,9 @@ export default function SearchPage() {
         : {
             tone: "warn",
             text: `No rides from ${lastSearch.from} to ${lastSearch.to} ${when}.`,
-            hint: lastSearch.start.isSame(lastSearch.end, "day") ? "Try a wider date range." : "Try other dates or a nearby town.",
+            hint: lastSearch.later
+              ? `${lastSearch.later.count} ride${lastSearch.later.count > 1 ? "s" : ""} on this route from ${lastSearch.later.first.format("ddd, D MMM")} - pick that date.`
+              : lastSearch.start.isSame(lastSearch.end, "day") ? "Try a wider date range." : "Try other dates or a nearby town.",
           };
   }
 

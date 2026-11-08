@@ -4,7 +4,6 @@ import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import BrandLoader from "./components/ui/BrandLoader.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
-import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/auth/LoginPage.jsx";
 import RegisterPage from "./pages/auth/RegisterPage.jsx";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
@@ -29,10 +28,10 @@ import SafetyPage from "./pages/SafetyPage.jsx";
 import AdminPage from "./pages/admin/AdminPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
-// Signed-in users land on Find Ride; visitors get the public nearby-rides map.
+// Signed-in users land on Find Ride; visitors go straight to the login page.
 function HomeRoute() {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <SearchPage /> : <HomePage />;
+  return isAuthenticated ? <SearchPage /> : <Navigate to="/login" replace />;
 }
 
 export default function App() {

@@ -65,10 +65,16 @@ export function TimeChips({ value, onChange, date }) {
   const isSlot = value && SLOTS.some((s) => s.hour() === value.hour() && s.minute() === value.minute());
   const pastSlot = (s) => isToday && s.hour() * 60 + s.minute() <= now.hour() * 60 + now.minute();
 
+  // Switching to today with an earlier time already chosen: clear it so a past time can't be submitted.
+  useEffect(() => {
+    if (isToday && value && value.hour() * 60 + value.minute() <= now.hour() * 60 + now.minute()) onChange?.(undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isToday, value]);
+
   return (
     <div className="ds-wrap">
       <div className="ds-times" role="listbox" aria-label="Departure time">
-        {SLOTS.map((s) => {
+        {SLOTS.filter((s) => !pastSlot(s)).map((s) => {
           const sel = value && value.hour() === s.hour() && value.minute() === s.minute();
           return (
             <button

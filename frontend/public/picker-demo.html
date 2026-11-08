@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BikeRide date picker options</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0D1117;color:#F4F5F1;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;padding:20px 14px 60px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#8B93A0;font-size:13px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;max-width:1000px;margin:0 auto}
+.card{background:#0A0D12;border:1px solid #232a38;border-radius:20px;padding:16px}
+.card h2{font-size:16px;margin:0}
+.card p.d{font-size:12.5px;color:#8B93A0;margin:2px 0 12px}
+.field{display:flex;align-items:center;justify-content:space-between;border:1px solid #2a3140;border-radius:12px;padding:11px 14px;font-weight:600;cursor:pointer;background:#0D1117}
+.field:hover{border-color:#2DD4BF}
+.pop{margin-top:10px;background:#0D1117;border:1px solid #2a3140;border-radius:18px;padding:12px;box-shadow:0 24px 60px -18px rgba(0,0,0,.6)}
+.hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-weight:700}
+.hd button{all:unset;cursor:pointer;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;color:#8B93A0;font-size:18px}
+.hd button:hover{background:#1a212d;color:#fff}
+.wk,.cl{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.wk span{font-size:11px;letter-spacing:.06em;color:#8B93A0;padding:4px 0;font-weight:700}
+.cl button{all:unset;cursor:pointer;aspect-ratio:1;max-height:42px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#F4F5F1;margin:auto;width:100%}
+.cl button:hover:not(.x):not(.s){background:#1a212d}
+.cl button.x{color:#454d5c;cursor:not-allowed}
+.cl button.e{visibility:hidden}
+.cl button.t{box-shadow:inset 0 0 0 1.5px #2DD4BF}
+.A .cl button{border-radius:50%}
+.A .cl button.s{background:linear-gradient(135deg,#2DD4BF,#8B5CF6);color:#fff;font-weight:700}
+.B .cl button{border-radius:10px}
+.B .cl button.s{background:#CFFF5C;color:#0a0d08;font-weight:700}
+.B .cl button.t{box-shadow:inset 0 0 0 1.5px #CFFF5C}
+.C .cl button{border-radius:10px}
+.C .cl button.s{background:#8B5CF6;color:#fff;font-weight:700}
+.C .cl button.t{box-shadow:inset 0 0 0 1.5px #8B5CF6}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chips button,.tm button{all:unset;cursor:pointer;padding:7px 13px;border-radius:999px;background:#161c27;font-size:13px;font-weight:600}
+.chips button.s{background:#8B5CF6}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.strip button{all:unset;cursor:pointer;flex:0 0 58px;text-align:center;padding:10px 0;border-radius:14px;background:#161c27;scroll-snap-align:start}
+.strip button small{display:block;font-size:11px;color:#8B93A0;letter-spacing:.05em}
+.strip button b{display:block;font-size:19px;margin-top:3px}
+.strip button.s{background:#2DD4BF}
+.strip button.s small,.strip button.s b{color:#04342C}
+.lbl{font-size:11px;letter-spacing:.08em;color:#8B93A0;margin:12px 0 6px;font-weight:700}
+.tm{display:flex;gap:7px;flex-wrap:wrap}
+.tm button{border-radius:12px}
+.tm button.s{background:#CFFF5C;color:#0a0d08}
+.out{margin-top:12px;font-size:13px;color:#2DD4BF;font-weight:600}
+.ok{all:unset;cursor:pointer;display:block;text-align:center;margin-top:10px;padding:11px;border-radius:12px;background:#CFFF5C;color:#0a0d08;font-weight:700;font-size:14px}
+</style>
+</head>
+<body>
+<h1>Date picker options</h1>
+<p class="sub">Tap a field, pick a day. Works on phone and desktop. Tell me which letter you want.</p>
+<div class="grid">
+  <div class="card"><h2>A · Round days, gradient</h2><p class="d">Teal to purple selected day</p><div class="A" id="A"></div></div>
+  <div class="card"><h2>B · Lime squares</h2><p class="d">Matches the login button</p><div class="B" id="B"></div></div>
+  <div class="card"><h2>C · Quick chips + calendar</h2><p class="d">Today, Tomorrow, Weekend shortcuts</p><div class="C" id="C"></div></div>
+  <div class="card"><h2>D · Day strip + time chips</h2><p class="d">Swipe days, tap a time. Best on phones</p><div id="D"></div></div>
+</div>
+<script>
+var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+var today=new Date();today.setHours(0,0,0,0);
+var st={};['A','B','C'].forEach(function(k){st[k]={y:today.getFullYear(),m:today.getMonth(),sel:new Date(today),open:true}});
+var dsel=new Date(today),dtime='8:30 AM';
+function fmt(d){return d.getDate()+' '+MN[d.getMonth()].slice(0,3)+' '+d.getFullYear()}
+function cal(k){
+  var s=st[k],first=(new Date(s.y,s.m,1).getDay()+6)%7,n=new Date(s.y,s.m+1,0).getDate(),h='';
+  for(var i=0;i<first;i++)h+='<button class="e"></button>';
+  for(var d=1;d<=n;d++){
+    var dt=new Date(s.y,s.m,d),c=[];
+    if(dt<today)c.push('x');
+    if(+dt==+today)c.push('t');
+    if(+dt==+s.sel)c.push('s');
+    h+='<button class="'+c.join(' ')+'" data-d="'+d+'">'+d+'</button>';
+  }
+  return h;
+}
+function draw(k){
+  var s=st[k],e=document.getElementById(k),h='';
+  h+='<div class="field" data-f="1"><span>'+fmt(s.sel)+'</span><span>▾</span></div>';
+  if(s.open){
+    h+='<div class="pop">';
+    if(k=='C'){
+      var tm=new Date(today);tm.setDate(tm.getDate()+1);
+      var sat=new Date(today);sat.setDate(sat.getDate()+((6-sat.getDay()+7)%7||7));
+      h+='<div class="chips"><button data-q="0" class="'+(+s.sel==+today?'s':'')+'">Today</button><button data-q="1" class="'+(+s.sel==+tm?'s':'')+'">Tomorrow</button><button data-q="2" class="'+(+s.sel==+sat?'s':'')+'">This Saturday</button></div>';
+    }
+    h+='<div class="hd"><button data-n="-1">‹</button><span>'+MN[s.m]+' '+s.y+'</span><button data-n="1">›</button></div>';
+    h+='<div class="wk">'+DN.map(function(x){return '<span>'+x.slice(0,2).toUpperCase()+'</span>'}).join('')+'</div><div class="cl">'+cal(k)+'</div>';
+    h+='</div>';
+  }
+  e.innerHTML=h;
+}
+function drawD(){
+  var e=document.getElementById('D'),h='<div class="field"><span>'+fmt(dsel)+' · '+dtime+'</span><span>▾</span></div><div class="pop"><div class="strip">';
+  for(var i=0;i<21;i++){
+    var dt=new Date(today);dt.setDate(dt.getDate()+i);
+    h+='<button class="'+(+dt==+dsel?'s':'')+'" data-i="'+i+'"><small>'+DN[(dt.getDay()+6)%7].toUpperCase()+'</small><b>'+dt.getDate()+'</b><small>'+MN[dt.getMonth()].slice(0,3).toUpperCase()+'</small></button>';
+  }
+  h+='</div><div class="lbl">DEPARTURE TIME</div><div class="tm">';
+  ['6:30 AM','7:00 AM','8:30 AM','10:00 AM','12:30 PM','3:00 PM','6:30 PM','8:00 PM'].forEach(function(t){h+='<button class="'+(t==dtime?'s':'')+'" data-t="'+t+'">'+t+'</button>'});
+  h+='</div><button class="ok">Confirm</button></div>';
+  e.innerHTML=h;
+}
+['A','B','C'].forEach(function(k){
+  draw(k);
+  document.getElementById(k).addEventListener('click',function(ev){
+    var t=ev.target.closest('button,.field');if(!t)return;var s=st[k];
+    if(t.dataset.f){s.open=!s.open}
+    else if(t.dataset.n){s.m+=+t.dataset.n;if(s.m<0){s.m=11;s.y--}if(s.m>11){s.m=0;s.y++}}
+    else if(t.dataset.d){var d=new Date(s.y,s.m,+t.dataset.d);if(d<today)return;s.sel=d}
+    else if(t.dataset.q){var q=+t.dataset.q,d=new Date(today);if(q==1)d.setDate(d.getDate()+1);if(q==2)d.setDate(d.getDate()+((6-d.getDay()+7)%7||7));s.sel=d;s.y=d.getFullYear();s.m=d.getMonth()}
+    draw(k);
+  });
+});
+drawD();
+document.getElementById('D').addEventListener('click',function(ev){
+  var t=ev.target.closest('button');if(!t)return;
+  if(t.dataset.i!==undefined){var d=new Date(today);d.setDate(d.getDate()+ +t.dataset.i);dsel=d}
+  if(t.dataset.t)dtime=t.dataset.t;
+  var sc=document.querySelector('#D .strip'),x=sc?sc.scrollLeft:0;
+  drawD();document.querySelector('#D .strip').scrollLeft=x;
+});
+</script>
+</body>
+</html>

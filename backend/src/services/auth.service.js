@@ -46,10 +46,10 @@ export const authService = {
 
   async login({ email, password }) {
     const user = await userRepository.findByEmail(email);
-    if (!user) throw ApiError.unauthorized("Invalid email or password");
+    if (!user) throw new ApiError(401, "No account found with this email", { field: "email" });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw ApiError.unauthorized("Invalid email or password");
+    if (!valid) throw new ApiError(401, "Incorrect password", { field: "password" });
     if (!user.isActive) throw ApiError.forbidden("This account has been deactivated");
 
     return { user: serializeUser(user), token: issueToken(user) };

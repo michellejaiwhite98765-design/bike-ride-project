@@ -330,7 +330,13 @@ export default function LoginPage() {
       const redirectTo = location.state?.from?.pathname || "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      notification.error({ title: "Error", description: err.message });
+      // Wrong email / wrong password show under their own field.
+      const field = err.errors?.field;
+      if (field === "email" || field === "password") {
+        form.setFields([{ name: field, errors: [err.message] }]);
+      } else {
+        notification.error({ title: "Error", description: err.message });
+      }
     } finally {
       setSubmitting(false);
     }

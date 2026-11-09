@@ -458,6 +458,37 @@ const SecondaryBtn = styled(AntButton)`
  * always a new vehicle, no back link, and the last button calls onDone(vehicle)
  * instead of going to My Vehicles.
  */
+/**
+ * Searchable dropdown that lists every catalogue item on open, and still lets
+ * the user keep a name that is not in the list (typed text becomes an option).
+ */
+function CatalogSelect({ value, onChange, items, ...rest }) {
+  const [search, setSearch] = useState("");
+  const typed = search.trim();
+  const list = [...items];
+  if (value && !list.some((i) => i.toLowerCase() === String(value).toLowerCase())) list.unshift(value);
+  if (typed && !list.some((i) => i.toLowerCase() === typed.toLowerCase())) list.push(typed);
+  return (
+    <Select
+      showSearch
+      size="large"
+      value={value || undefined}
+      onChange={(v) => {
+        setSearch("");
+        onChange?.(v);
+      }}
+      onSearch={setSearch}
+      searchValue={search}
+      listHeight={320}
+      optionFilterProp="value"
+      filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())}
+      options={list.map((i) => ({ value: i, label: i === typed && !items.includes(i) ? `Use "${i}"` : i }))}
+      notFoundContent="Type to add your own"
+      {...rest}
+    />
+  );
+}
+
 export default function VehicleFormPage({ embedded = false, onDone }) {
   const params = useParams();
   const routeId = embedded ? undefined : params.id;
@@ -608,18 +639,21 @@ export default function VehicleFormPage({ embedded = false, onDone }) {
             <Row gutter={16}>
               <Col xs={24} sm={12}>
                 <Form.Item name="brand" label="Brand" rules={[{ required: true }]}>
-                  <AutoComplete
-                    size="large"
-                    placeholder={vehicleType ? "e.g. Honda" : "Select a vehicle type first"}
-                    options={brandOptions}
-                    filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())}
+                  <CatalogSelect
+                    placeholder={vehicleType ? "Choose a brand" : "Select a vehicle type first"}
+                    disabled={!vehicleType}
+                    items={brandOptions.map((o) => o.value)}
                     onChange={() => form.setFieldsValue({ model: undefined })}
                   />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
                 <Form.Item name="model" label="Model" rules={[{ required: true }]}>
-                  <AutoComplete size="large" placeholder="e.g. Unicorn" options={modelOptions} filterOption={(input, opt) => opt.value.toLowerCase().includes(input.toLowerCase())} />
+                  <CatalogSelect
+                    placeholder={brand ? (modelOptions.length ? `Choose a ${brand} model` : "Type the model") : "Select a brand first"}
+                    disabled={!brand}
+                    items={modelOptions.map((o) => o.value)}
+                  />
                 </Form.Item>
               </Col>
             </Row>

@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "હોમ",
+    "bookings": "બુકિંગ",
+    "rides": "રાઇડ",
+    "alerts": "સૂચનાઓ",
+    "profile": "પ્રોફાઇલ",
+    "findRides": "રાઇડ શોધો",
+    "myRides": "મારી રાઇડ",
+    "createRide": "રાઇડ બનાવો",
+    "createTrip": "ટ્રિપ બનાવો",
+    "login": "લૉગ ઇન",
+    "signup": "સાઇન અપ"
+  },
+  "menu": {
+    "vehicles": "મારાં વાહનો",
+    "licence": "ડ્રાઇવિંગ લાઇસન્સ",
+    "history": "રાઇડ ઇતિહાસ",
+    "ratings": "રેટિંગ",
+    "safety": "સલામતી",
+    "admin": "એડમિન",
+    "lightMode": "લાઇટ મોડ પર જાઓ",
+    "darkMode": "ડાર્ક મોડ પર જાઓ",
+    "logout": "લૉગ આઉટ",
+    "language": "ભાષા"
+  },
+  "lang": {
+    "choose": "તમારી ભાષા પસંદ કરો",
+    "updated": "ભાષા બદલાઈ ગઈ"
+  },
+  "reg": {
+    "title": "તમારું ખાતું બનાવો",
+    "stepDetails": "તમારી વિગતો",
+    "stepVerify": "મોબાઇલ ચકાસો",
+    "firstName": "પહેલું નામ",
+    "lastName": "અટક",
+    "mobile": "મોબાઇલ નંબર",
+    "mobileHint": "ચકાસવા માટે અમે એક વખતનો કોડ મોકલીશું.",
+    "email": "ઇમેઇલ",
+    "password": "પાસવર્ડ",
+    "passwordMin": "ઓછામાં ઓછા 8 અક્ષર",
+    "continue": "આગળ વધો",
+    "verifyTitle": "તમારો મોબાઇલ નંબર ચકાસો",
+    "codeSentTo": "{{phone}} પર મોકલેલો 6 અંકનો કોડ દાખલ કરો",
+    "verifyCreate": "ચકાસો અને ખાતું બનાવો",
+    "changeDetails": "વિગતો બદલો",
+    "resend": "કોડ ફરી મોકલો",
+    "resendIn": "{{s}} સેકન્ડમાં કોડ ફરી મોકલો",
+    "haveAccount": "પહેલેથી ખાતું છે?",
+    "required": "જરૂરી",
+    "mobileRequired": "મોબાઇલ નંબર જરૂરી છે",
+    "mobileInvalid": "સાચો 10 અંકનો મોબાઇલ નંબર દાખલ કરો",
+    "emailRequired": "ઇમેઇલ જરૂરી છે",
+    "emailInvalid": "સાચો ઇમેઇલ દાખલ કરો",
+    "passwordRequired": "પાસવર્ડ જરૂરી છે",
+    "welcome": "સ્વાગત છે!",
+    "created": "તમારું ખાતું બની ગયું છે.",
+    "language": "ઍપની ભાષા"
+  }
+}

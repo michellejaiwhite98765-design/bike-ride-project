@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { language } from "./language.js";
 
 // Indian mobile number: 10 digits starting 6-9, optionally with +91 / 91 / 0 in front.
 export const mobile = z
@@ -15,6 +16,7 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(72),
   // From POST /auth/phone-otp/verify: proves the phone number was confirmed by OTP.
   phoneVerificationToken: z.string().trim().min(1, "Verify your phone number first"),
+  language: language.optional(),
 });
 
 export const sendPhoneOtpSchema = z.object({ phone: mobile });

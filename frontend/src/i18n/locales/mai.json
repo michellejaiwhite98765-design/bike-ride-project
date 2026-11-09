@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "होम",
+    "bookings": "बुकिंग",
+    "rides": "राइड",
+    "alerts": "सूचना",
+    "profile": "प्रोफाइल",
+    "findRides": "राइड ताकू",
+    "myRides": "हमर राइड",
+    "createRide": "राइड बनाउ",
+    "createTrip": "यात्रा बनाउ",
+    "login": "लॉग इन",
+    "signup": "साइन अप"
+  },
+  "menu": {
+    "vehicles": "हमर वाहन",
+    "licence": "ड्राइविंग लाइसेंस",
+    "history": "राइड इतिहास",
+    "ratings": "रेटिंग",
+    "safety": "सुरक्षा",
+    "admin": "एडमिन",
+    "lightMode": "लाइट मोड पर जाउ",
+    "darkMode": "डार्क मोड पर जाउ",
+    "logout": "लॉग आउट",
+    "language": "भाषा"
+  },
+  "lang": {
+    "choose": "अपन भाषा चुनू",
+    "updated": "भाषा बदलि गेल"
+  },
+  "reg": {
+    "title": "अपन खाता बनाउ",
+    "stepDetails": "अहाँक विवरण",
+    "stepVerify": "मोबाइल सत्यापन",
+    "firstName": "पहिल नाम",
+    "lastName": "अंतिम नाम",
+    "mobile": "मोबाइल नंबर",
+    "mobileHint": "सत्यापनक लेल हम एक बेरक कोड पठाएब।",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "कम सँ कम 8 अक्षर",
+    "continue": "आगू बढ़ू",
+    "verifyTitle": "अपन मोबाइल नंबर सत्यापित करू",
+    "codeSentTo": "{{phone}} पर पठाओल 6 अंकक कोड लिखू",
+    "verifyCreate": "सत्यापित कए खाता बनाउ",
+    "changeDetails": "विवरण बदलू",
+    "resend": "कोड फेर पठाउ",
+    "resendIn": "{{s}} सेकेंडमे कोड फेर पठाउ",
+    "haveAccount": "पहिनहि सँ खाता अछि?",
+    "required": "आवश्यक",
+    "mobileRequired": "मोबाइल नंबर आवश्यक अछि",
+    "mobileInvalid": "सही 10 अंकक मोबाइल नंबर लिखू",
+    "emailRequired": "ईमेल आवश्यक अछि",
+    "emailInvalid": "सही ईमेल लिखू",
+    "passwordRequired": "पासवर्ड आवश्यक अछि",
+    "welcome": "स्वागत अछि!",
+    "created": "अहाँक खाता बनि गेल।",
+    "language": "ऐपक भाषा"
+  }
+}

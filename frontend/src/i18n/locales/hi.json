@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "होम",
+    "bookings": "बुकिंग",
+    "rides": "राइड",
+    "alerts": "अलर्ट",
+    "profile": "प्रोफ़ाइल",
+    "findRides": "राइड खोजें",
+    "myRides": "मेरी राइड",
+    "createRide": "राइड बनाएँ",
+    "createTrip": "ट्रिप बनाएँ",
+    "login": "लॉग इन",
+    "signup": "साइन अप"
+  },
+  "menu": {
+    "vehicles": "मेरे वाहन",
+    "licence": "ड्राइविंग लाइसेंस",
+    "history": "राइड इतिहास",
+    "ratings": "रेटिंग",
+    "safety": "सुरक्षा",
+    "admin": "एडमिन",
+    "lightMode": "लाइट मोड पर जाएँ",
+    "darkMode": "डार्क मोड पर जाएँ",
+    "logout": "लॉग आउट",
+    "language": "भाषा"
+  },
+  "lang": {
+    "choose": "अपनी भाषा चुनें",
+    "updated": "भाषा बदल दी गई"
+  },
+  "reg": {
+    "title": "अपना खाता बनाएँ",
+    "stepDetails": "आपका विवरण",
+    "stepVerify": "मोबाइल सत्यापित करें",
+    "firstName": "पहला नाम",
+    "lastName": "अंतिम नाम",
+    "mobile": "मोबाइल नंबर",
+    "mobileHint": "इसे सत्यापित करने के लिए हम एक बार का कोड भेजेंगे।",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "कम से कम 8 अक्षर",
+    "continue": "आगे बढ़ें",
+    "verifyTitle": "अपना मोबाइल नंबर सत्यापित करें",
+    "codeSentTo": "{{phone}} पर भेजा गया 6 अंकों का कोड दर्ज करें",
+    "verifyCreate": "सत्यापित करें और खाता बनाएँ",
+    "changeDetails": "विवरण बदलें",
+    "resend": "कोड फिर से भेजें",
+    "resendIn": "{{s}} सेकंड में कोड फिर से भेजें",
+    "haveAccount": "पहले से खाता है?",
+    "required": "आवश्यक",
+    "mobileRequired": "मोबाइल नंबर आवश्यक है",
+    "mobileInvalid": "सही 10 अंकों का मोबाइल नंबर दर्ज करें",
+    "emailRequired": "ईमेल आवश्यक है",
+    "emailInvalid": "सही ईमेल दर्ज करें",
+    "passwordRequired": "पासवर्ड आवश्यक है",
+    "welcome": "स्वागत है!",
+    "created": "आपका खाता बन गया है।",
+    "language": "ऐप की भाषा"
+  }
+}

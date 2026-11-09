@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "होम",
+    "bookings": "बुकिंग",
+    "rides": "राइड",
+    "alerts": "सूचना",
+    "profile": "प्रोफाइल",
+    "findRides": "राइड शोधा",
+    "myRides": "माझ्या राइड",
+    "createRide": "राइड तयार करा",
+    "createTrip": "ट्रिप तयार करा",
+    "login": "लॉग इन",
+    "signup": "साइन अप"
+  },
+  "menu": {
+    "vehicles": "माझी वाहने",
+    "licence": "ड्रायव्हिंग लायसन्स",
+    "history": "राइड इतिहास",
+    "ratings": "रेटिंग",
+    "safety": "सुरक्षा",
+    "admin": "अ‍ॅडमिन",
+    "lightMode": "लाइट मोडवर जा",
+    "darkMode": "डार्क मोडवर जा",
+    "logout": "लॉग आउट",
+    "language": "भाषा"
+  },
+  "lang": {
+    "choose": "तुमची भाषा निवडा",
+    "updated": "भाषा बदलली"
+  },
+  "reg": {
+    "title": "तुमचे खाते तयार करा",
+    "stepDetails": "तुमची माहिती",
+    "stepVerify": "मोबाइल पडताळा",
+    "firstName": "पहिले नाव",
+    "lastName": "आडनाव",
+    "mobile": "मोबाइल नंबर",
+    "mobileHint": "पडताळणीसाठी आम्ही एक-वेळ कोड पाठवू.",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "किमान 8 अक्षरे",
+    "continue": "पुढे चला",
+    "verifyTitle": "तुमचा मोबाइल नंबर पडताळा",
+    "codeSentTo": "{{phone}} वर पाठवलेला 6 अंकी कोड टाका",
+    "verifyCreate": "पडताळा आणि खाते तयार करा",
+    "changeDetails": "माहिती बदला",
+    "resend": "कोड पुन्हा पाठवा",
+    "resendIn": "{{s}} सेकंदात कोड पुन्हा पाठवा",
+    "haveAccount": "आधीच खाते आहे?",
+    "required": "आवश्यक",
+    "mobileRequired": "मोबाइल नंबर आवश्यक आहे",
+    "mobileInvalid": "योग्य 10 अंकी मोबाइल नंबर टाका",
+    "emailRequired": "ईमेल आवश्यक आहे",
+    "emailInvalid": "योग्य ईमेल टाका",
+    "passwordRequired": "पासवर्ड आवश्यक आहे",
+    "welcome": "स्वागत आहे!",
+    "created": "तुमचे खाते तयार झाले आहे.",
+    "language": "अ‍ॅपची भाषा"
+  }
+}

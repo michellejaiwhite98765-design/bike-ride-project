@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "گهر",
+    "bookings": "بڪنگون",
+    "rides": "سواريون",
+    "alerts": "اطلاع",
+    "profile": "پروفائيل",
+    "findRides": "سواري ڳوليو",
+    "myRides": "منهنجون سواريون",
+    "createRide": "سواري ٺاهيو",
+    "createTrip": "سفر ٺاهيو",
+    "login": "لاگ اِن",
+    "signup": "سائن اپ"
+  },
+  "menu": {
+    "vehicles": "منهنجون گاڏيون",
+    "licence": "ڊرائيونگ لائسنس",
+    "history": "سواري جي تاريخ",
+    "ratings": "ريٽنگ",
+    "safety": "حفاظت",
+    "admin": "ايڊمن",
+    "lightMode": "لائيٽ موڊ ڏانهن وڃو",
+    "darkMode": "ڊارڪ موڊ ڏانهن وڃو",
+    "logout": "لاگ آئوٽ",
+    "language": "ٻولي"
+  },
+  "lang": {
+    "choose": "پنهنجي ٻولي چونڊيو",
+    "updated": "ٻولي بدلجي وئي"
+  },
+  "reg": {
+    "title": "پنهنجو اڪائونٽ ٺاهيو",
+    "stepDetails": "توهان جي تفصيل",
+    "stepVerify": "موبائل تصديق",
+    "firstName": "پهريون نالو",
+    "lastName": "آخري نالو",
+    "mobile": "موبائل نمبر",
+    "mobileHint": "تصديق لاءِ اسين هڪ ڀيرو جو ڪوڊ موڪلينداسين.",
+    "email": "اي ميل",
+    "password": "پاسورڊ",
+    "passwordMin": "گهٽ ۾ گهٽ 8 اکر",
+    "continue": "جاري رکو",
+    "verifyTitle": "پنهنجي موبائل نمبر جي تصديق ڪريو",
+    "codeSentTo": "{{phone}} تي موڪليل 6 انگن جو ڪوڊ داخل ڪريو",
+    "verifyCreate": "تصديق ڪري اڪائونٽ ٺاهيو",
+    "changeDetails": "تفصيل بدلايو",
+    "resend": "ڪوڊ ٻيهر موڪليو",
+    "resendIn": "{{s}} سيڪنڊن ۾ ڪوڊ ٻيهر موڪليو",
+    "haveAccount": "اڳ ۾ ئي اڪائونٽ آهي؟",
+    "required": "ضروري",
+    "mobileRequired": "موبائل نمبر ضروري آهي",
+    "mobileInvalid": "صحيح 10 انگن جو موبائل نمبر داخل ڪريو",
+    "emailRequired": "اي ميل ضروري آهي",
+    "emailInvalid": "صحيح اي ميل داخل ڪريو",
+    "passwordRequired": "پاسورڊ ضروري آهي",
+    "welcome": "ڀلي ڪري آيا!",
+    "created": "توهان جو اڪائونٽ ٺهي ويو.",
+    "language": "ايپ جي ٻولي"
+  }
+}

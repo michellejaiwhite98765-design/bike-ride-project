@@ -7,6 +7,8 @@ import { authService } from "../../services/authService.js";
 import BikeSpinner from "../../components/ui/BikeSpinner.jsx";
 import AuthShell from "../../components/auth/AuthShell.jsx";
 import OtpCodeNotice from "../../components/OtpCodeNotice.jsx";
+import { useTranslation } from "react-i18next";
+import { LanguageSelect } from "../../components/LanguagePicker.jsx";
 
 // Indian mobile: 10 digits starting 6-9 (a +91 / 0 prefix and spaces are fine).
 const MOBILE_RE = /^(\+?91|0)?[6-9]\d{9}$/;
@@ -26,6 +28,7 @@ export default function RegisterPage() {
   const { notification } = App.useApp();
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const { t, i18n } = useTranslation();
 
   const [step, setStep] = useState(0);
   const [details, setDetails] = useState(null); // step-1 values, phone as 10 digits
@@ -85,7 +88,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await register({ ...values, phoneVerificationToken: token });
-      notification.success({ title: "Welcome!", description: "Your account has been created." });
+      notification.success({ title: t("reg.welcome"), description: t("reg.created") });
       navigate("/", { replace: true });
     } catch (err) {
       if (/verify your mobile/i.test(err.message)) setVerified(null);
@@ -100,7 +103,7 @@ export default function RegisterPage() {
   // Step 2: verify the code, then create the account.
   async function onVerify() {
     if (!/^\d{6}$/.test(otp)) {
-      notification.error({ title: "Error", description: "Enter the 6-digit code" });
+      notification.error({ title: t("reg.verifyTitle") });
       return;
     }
     setSubmitting(true);
@@ -119,39 +122,42 @@ export default function RegisterPage() {
   return (
     <AuthShell>
     <div className="rp-wrap">
-      <Card title="Create your account" className="rp-card">
+      <Card title={t("reg.title")} className="rp-card">
         <Steps
           size="small"
           current={step}
           responsive={false}
           style={{ marginBottom: 24 }}
-          items={[{ title: "Your details" }, { title: "Verify mobile" }]}
+          items={[{ title: t("reg.stepDetails") }, { title: t("reg.stepVerify") }]}
         />
 
         {/* Step 1: details. Kept mounted (hidden) so going back keeps what was typed. */}
         <div style={{ display: step === 0 ? "block" : "none" }}>
-          <Form form={form} layout="vertical" onFinish={onContinue} requiredMark={false}>
+          <Form form={form} layout="vertical" onFinish={onContinue} requiredMark={false} initialValues={{ language: i18n.language }}>
+            <Form.Item name="language" label={t("reg.language")}>
+              <LanguageSelect />
+            </Form.Item>
             <Row gutter={12}>
               <Col span={12}>
-                <Form.Item name="firstName" label="First name" rules={[{ required: true, message: "Required" }]}>
-                  <Input placeholder="First name" size="large" autoComplete="given-name" />
+                <Form.Item name="firstName" label={t("reg.firstName")} rules={[{ required: true, message: t("reg.required") }]}>
+                  <Input placeholder={t("reg.firstName")} size="large" autoComplete="given-name" />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="lastName" label="Last name" rules={[{ required: true, message: "Required" }]}>
-                  <Input placeholder="Last name" size="large" autoComplete="family-name" />
+                <Form.Item name="lastName" label={t("reg.lastName")} rules={[{ required: true, message: t("reg.required") }]}>
+                  <Input placeholder={t("reg.lastName")} size="large" autoComplete="family-name" />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item
               name="phone"
-              label="Mobile number"
-              extra="We'll send a one-time code to verify it."
+              label={t("reg.mobile")}
+              extra={t("reg.mobileHint")}
               rules={[
-                { required: true, message: "Mobile number is required" },
+                { required: true, message: t("reg.mobileRequired") },
                 {
                   validator: (_, v) =>
-                    !v || MOBILE_RE.test(cleanPhone(v)) ? Promise.resolve() : Promise.reject(new Error("Enter a valid 10-digit mobile number")),
+                    !v || MOBILE_RE.test(cleanPhone(v)) ? Promise.resolve() : Promise.reject(new Error(t("reg.mobileInvalid"))),
                 },
               ]}
             >
@@ -159,20 +165,20 @@ export default function RegisterPage() {
             </Form.Item>
             <Form.Item
               name="email"
-              label="Email"
-              rules={[{ required: true, message: "Email is required" }, { type: "email", message: "Enter a valid email" }]}
+              label={t("reg.email")}
+              rules={[{ required: true, message: t("reg.emailRequired") }, { type: "email", message: t("reg.emailInvalid") }]}
             >
               <Input prefix={<MailOutlined />} placeholder="you@example.com" size="large" autoComplete="email" />
             </Form.Item>
             <Form.Item
               name="password"
-              label="Password"
-              rules={[{ required: true, message: "Password is required" }, { min: 8, message: "At least 8 characters" }]}
+              label={t("reg.password")}
+              rules={[{ required: true, message: t("reg.passwordRequired") }, { min: 8, message: t("reg.passwordMin") }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="At least 8 characters" size="large" autoComplete="new-password" />
+              <Input.Password prefix={<LockOutlined />} placeholder={t("reg.passwordMin")} size="large" autoComplete="new-password" />
             </Form.Item>
             <Button type="primary" htmlType="submit" block size="large" loading={sending || submitting ? { icon: <BikeSpinner /> } : false} style={{ marginTop: 8 }}>
-              Continue
+              {t("reg.continue")}
             </Button>
           </Form>
         </div>
@@ -182,9 +188,9 @@ export default function RegisterPage() {
           <div>
             <div className="rp-otp-head">
               <SafetyCertificateOutlined className="rp-otp-icon" />
-              <h3>Verify your mobile number</h3>
+              <h3>{t("reg.verifyTitle")}</h3>
               <div style={{ color: "var(--text-secondary)" }}>
-                Enter the 6-digit code sent to <strong>+91 {masked(details.phone)}</strong>
+                {t("reg.codeSentTo", { phone: `+91 ${masked(details.phone)}` })}
               </div>
             </div>
 
@@ -213,22 +219,22 @@ export default function RegisterPage() {
               disabled={otp.length !== 6}
               className="rp-verify-btn"
             >
-              Verify & create account
+              {t("reg.verifyCreate")}
             </Button>
 
             <div className="rp-otp-links">
               <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setStep(0)} style={{ padding: 0 }}>
-                Change details
+                {t("reg.changeDetails")}
               </Button>
               <Button type="link" onClick={() => sendCode(details.phone)} disabled={resendIn > 0 || sending} loading={sending} style={{ padding: 0 }}>
-                {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                {resendIn > 0 ? t("reg.resendIn", { s: resendIn }) : t("reg.resend")}
               </Button>
             </div>
           </div>
         )}
 
         <div className="rp-foot">
-          Already have an account? <Link to="/login">Login</Link>
+          {t("reg.haveAccount")} <Link to="/login">{t("nav.login")}</Link>
         </div>
       </Card>
       <style>{`

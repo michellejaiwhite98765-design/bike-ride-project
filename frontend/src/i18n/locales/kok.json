@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "मुखेल",
+    "bookings": "बुकिंग",
+    "rides": "राइड",
+    "alerts": "सुचोवण्यो",
+    "profile": "प्रोफायल",
+    "findRides": "राइड सोदात",
+    "myRides": "म्हज्यो राइड",
+    "createRide": "राइड तयार करात",
+    "createTrip": "ट्रिप तयार करात",
+    "login": "लॉग इन",
+    "signup": "सायन अप"
+  },
+  "menu": {
+    "vehicles": "म्हजीं वाहनां",
+    "licence": "ड्रायव्हिंग लायसन्स",
+    "history": "राइड इतिहास",
+    "ratings": "रेटिंग",
+    "safety": "सुरक्षा",
+    "admin": "ॲडमिन",
+    "lightMode": "लायट मोडाचेर वचात",
+    "darkMode": "डार्क मोडाचेर वचात",
+    "logout": "लॉग आउट",
+    "language": "भास"
+  },
+  "lang": {
+    "choose": "तुमची भास वेंचात",
+    "updated": "भास बदलली"
+  },
+  "reg": {
+    "title": "तुमचें खातें तयार करात",
+    "stepDetails": "तुमचो तपशील",
+    "stepVerify": "मोबायल पडताळणी",
+    "firstName": "पयलें नांव",
+    "lastName": "आडनांव",
+    "mobile": "मोबायल नंबर",
+    "mobileHint": "पडताळणी खातीर आमी एक फावटीचो कोड धाडटले.",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "कमीत कमी 8 अक्षरां",
+    "continue": "फुडें वचात",
+    "verifyTitle": "तुमचो मोबायल नंबर पडताळात",
+    "codeSentTo": "{{phone}} चेर धाडिल्लो 6 अंकी कोड घालात",
+    "verifyCreate": "पडताळून खातें तयार करात",
+    "changeDetails": "तपशील बदलात",
+    "resend": "कोड परत धाडात",
+    "resendIn": "{{s}} सेकंदांनी कोड परत धाडात",
+    "haveAccount": "आदींच खातें आसा?",
+    "required": "गरजेचें",
+    "mobileRequired": "मोबायल नंबर गरजेचो",
+    "mobileInvalid": "योग्य 10 अंकी मोबायल नंबर घालात",
+    "emailRequired": "ईमेल गरजेचो",
+    "emailInvalid": "योग्य ईमेल घालात",
+    "passwordRequired": "पासवर्ड गरजेचो",
+    "welcome": "येवकार!",
+    "created": "तुमचें खातें तयार जालें.",
+    "language": "ॲपाची भास"
+  }
+}

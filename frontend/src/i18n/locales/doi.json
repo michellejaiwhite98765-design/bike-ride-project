@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "होम",
+    "bookings": "बुकिंगां",
+    "rides": "राइडां",
+    "alerts": "सूचनां",
+    "profile": "प्रोफाइल",
+    "findRides": "राइड लब्भो",
+    "myRides": "मेरियां राइडां",
+    "createRide": "राइड बनाओ",
+    "createTrip": "यात्रा बनाओ",
+    "login": "लॉग इन",
+    "signup": "साइन अप"
+  },
+  "menu": {
+    "vehicles": "मेरे वाहन",
+    "licence": "ड्राइविंग लाइसेंस",
+    "history": "राइड इतिहास",
+    "ratings": "रेटिंग",
+    "safety": "सुरक्षा",
+    "admin": "एडमिन",
+    "lightMode": "लाइट मोड पर जाओ",
+    "darkMode": "डार्क मोड पर जाओ",
+    "logout": "लॉग आउट",
+    "language": "भाशा"
+  },
+  "lang": {
+    "choose": "अपनी भाशा चुनो",
+    "updated": "भाशा बदली गेई"
+  },
+  "reg": {
+    "title": "अपना खाता बनाओ",
+    "stepDetails": "तुंदा ब्यौरा",
+    "stepVerify": "मोबाइल पुश्टी",
+    "firstName": "पैह्ला नां",
+    "lastName": "आखरी नां",
+    "mobile": "मोबाइल नंबर",
+    "mobileHint": "पुश्टी लेई अस इक बारी दा कोड भेजगे।",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "घट्टो-घट्ट 8 अक्खर",
+    "continue": "अग्गें बधो",
+    "verifyTitle": "अपने मोबाइल नंबर दी पुश्टी करो",
+    "codeSentTo": "{{phone}} पर भेजे गेदे 6 अंकें दा कोड पाओ",
+    "verifyCreate": "पुश्टी करियै खाता बनाओ",
+    "changeDetails": "ब्यौरा बदलो",
+    "resend": "कोड फ्ही भेजो",
+    "resendIn": "{{s}} सकिंटें च कोड फ्ही भेजो",
+    "haveAccount": "पैह्लें गै खाता ऐ?",
+    "required": "ज़रूरी",
+    "mobileRequired": "मोबाइल नंबर ज़रूरी ऐ",
+    "mobileInvalid": "सेही 10 अंकें दा मोबाइल नंबर पाओ",
+    "emailRequired": "ईमेल ज़रूरी ऐ",
+    "emailInvalid": "सेही ईमेल पाओ",
+    "passwordRequired": "पासवर्ड ज़रूरी ऐ",
+    "welcome": "जी आयां गी!",
+    "created": "तुंदा खाता बनी गेआ।",
+    "language": "ऐप दी भाशा"
+  }
+}

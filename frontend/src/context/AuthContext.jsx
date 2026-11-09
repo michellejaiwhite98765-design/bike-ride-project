@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authService } from "../services/authService.js";
 import { tokenStorage } from "../services/api.js";
+import { setLanguage } from "../i18n/index.js";
+
+// The signed-in user's saved language wins over this device's last choice.
+const applyUserLanguage = (u) => u?.language && setLanguage(u.language);
 
 const AuthContext = createContext(null);
 
@@ -17,6 +21,7 @@ export function AuthProvider({ children }) {
     try {
       const me = await authService.me();
       setUser(me);
+      applyUserLanguage(me);
     } catch (err) {
       // Only a real "not signed in" answer drops the saved session; if the
       // server is slow or unreachable, show the login page but keep the token.
@@ -34,6 +39,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (payload) => {
     const loggedInUser = await authService.login(payload);
     setUser(loggedInUser);
+    applyUserLanguage(loggedInUser);
     return loggedInUser;
   }, []);
 

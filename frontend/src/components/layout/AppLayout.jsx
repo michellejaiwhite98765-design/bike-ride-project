@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import CurrentRideTracker from "../ride/CurrentRideTracker.jsx";
@@ -405,6 +406,7 @@ const FooterBar = styled(Footer)`
 
 export default function AppLayout() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { notification } = AntdApp.useApp();
@@ -516,13 +518,13 @@ export default function AppLayout() {
 
   const userMenu = {
     items: [
-      { key: "profile", label: <Link to="/profile">Profile</Link> },
+      { key: "profile", label: <Link to="/profile">{t("nav.profile")}</Link> },
       { key: "photo", label: <Link to="/profile">{user?.profileImage ? "Change profile photo" : "Add profile photo"}</Link> },
       { key: "bookings", label: <Link to="/bookings">My Bookings</Link> },
-      { key: "vehicles", label: <Link to="/vehicles">My Vehicles</Link> },
-      { key: "history", label: <Link to="/history">Ride History</Link> },
-      { key: "safety", label: <Link to="/safety">Safety</Link> },
-      ...(user?.role === "ADMIN" ? [{ key: "admin", label: <Link to="/admin">Admin</Link> }] : []),
+      { key: "vehicles", label: <Link to="/vehicles">{t("menu.vehicles")}</Link> },
+      { key: "history", label: <Link to="/history">{t("menu.history")}</Link> },
+      { key: "safety", label: <Link to="/safety">{t("menu.safety")}</Link> },
+      ...(user?.role === "ADMIN" ? [{ key: "admin", label: <Link to="/admin">{t("menu.admin")}</Link> }] : []),
       {
         key: "settings",
         icon: <SettingOutlined />,
@@ -531,13 +533,13 @@ export default function AppLayout() {
           {
             key: "theme",
             icon: mode === "dark" ? <SunOutlined /> : <MoonOutlined />,
-            label: mode === "dark" ? "Switch to light mode" : "Switch to dark mode",
+            label: mode === "dark" ? t("menu.lightMode") : t("menu.darkMode"),
             onClick: toggleTheme,
           },
         ],
       },
       { type: "divider" },
-      { key: "logout", label: "Logout", onClick: handleLogout, icon: <LogoutOutlined /> },
+      { key: "logout", label: t("menu.logout"), onClick: handleLogout, icon: <LogoutOutlined /> },
     ],
   };
 
@@ -566,16 +568,16 @@ export default function AppLayout() {
                     <NavItems>
                       {!isSearchPage && (
                         <Link to="/search" className={isActive("/search")}>
-                          Find Rides
+                          {t("nav.findRides")}
                         </Link>
                       )}
                       <Link to="/rides" className={isActive("/rides")}>
-                        My rides
+                        {t("nav.myRides")}
                       </Link>
                     </NavItems>
                     {!isCreateRidePage && (
                       <CtaLink to="/rides/create">
-                        <PlusCircleOutlined /> Create ride
+                        <PlusCircleOutlined /> {t("nav.createRide")}
                       </CtaLink>
                     )}
                   </DesktopNav>
@@ -593,7 +595,7 @@ export default function AppLayout() {
                       has the account menu), so the header just offers Create trip. */}
                   {isAuthenticated && !isCreateRidePage && (
                     <Link to="/rides/create" className="phone-create-trip">
-                      <PlusCircleOutlined /> Create trip
+                      <PlusCircleOutlined /> {t("nav.createTrip")}
                     </Link>
                   )}
 
@@ -622,14 +624,14 @@ export default function AppLayout() {
                     <>
                       <Link to="/login" className="guest-actions">
                         <Button type="default" size="middle" style={{ borderRadius: 999 }}>
-                          Login
+                          {t("nav.login")}
                         </Button>
                       </Link>
                       {/* Not on the sign-up page itself - it would link to where you already are. */}
                       {location.pathname !== "/register" && (
                         <Link to="/register" className="guest-actions">
                           <Button type="primary" size="middle" style={{ background: ACCENT, borderRadius: 999, border: "none" }}>
-                            Sign up
+                            {t("nav.signup")}
                           </Button>
                         </Link>
                       )}
@@ -653,25 +655,25 @@ export default function AppLayout() {
         <BottomNav>
           <BottomNavItem to="/" $active={location.pathname === "/"}>
             <HomeOutlined />
-            Home
+            {t("nav.home")}
           </BottomNavItem>
           <BottomNavItem to="/bookings" $active={location.pathname.startsWith("/bookings")}>
             <FileTextOutlined />
-            Bookings
+            {t("nav.bookings")}
           </BottomNavItem>
           <BottomNavItem to="/rides" $active={location.pathname.startsWith("/rides")}>
             <CarOutlined />
-            Rides
+            {t("nav.rides")}
           </BottomNavItem>
           <BottomNavItem to="/notifications" $active={location.pathname === "/notifications"}>
             <AntBadge dot={unreadCount > 0} color={ACCENT} offset={[-2, 2]}>
               <BellOutlined />
             </AntBadge>
-            Alerts
+            {t("nav.alerts")}
           </BottomNavItem>
           <BottomNavItem to="/profile" $active={location.pathname.startsWith("/profile")}>
             <UserOutlined />
-            Profile
+            {t("nav.profile")}
           </BottomNavItem>
         </BottomNav>
       )}

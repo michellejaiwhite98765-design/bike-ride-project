@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { mobile } from "./auth.validator.js";
+import { language } from "./language.js";
 
 export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(1).max(50).optional(),
@@ -10,6 +11,7 @@ export const updateProfileSchema = z.object({
   phoneVerificationToken: z.string().trim().min(1).optional(),
   // From POST /users/me/phone-otp/verify: proves the user still has the current number.
   currentPhoneToken: z.string().trim().min(1).optional(),
+  language: language.optional(),
 });
 
 export const verifyOwnPhoneOtpSchema = z

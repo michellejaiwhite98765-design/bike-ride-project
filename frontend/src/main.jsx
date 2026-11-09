@@ -2,9 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { ConfigProvider, App as AntdApp } from "antd";
+import { useTranslation } from "react-i18next";
+import { RTL_LANGUAGES } from "./i18n/languages.js";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./index.css";
+import "./i18n/index.js";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider, useTheme } from "./context/ThemeContext.jsx";
@@ -16,8 +19,9 @@ const bike = <BikeSpinner />;
 
 function ThemedApp() {
   const { mode } = useTheme();
+  const { i18n } = useTranslation();
   return (
-    <ConfigProvider theme={getAntdTheme(mode)} button={{ loadingIcon: bike }} spin={{ indicator: bike }} select={{ loadingIcon: bike }}>
+    <ConfigProvider theme={getAntdTheme(mode)} direction={RTL_LANGUAGES.includes(i18n.language) ? "rtl" : "ltr"} button={{ loadingIcon: bike }} spin={{ indicator: bike }} select={{ loadingIcon: bike }}>
       <AntdApp notification={{ placement: "topRight", top: 84, duration: 4, maxCount: 3 }}>
         <BrowserRouter>
           <AuthProvider>

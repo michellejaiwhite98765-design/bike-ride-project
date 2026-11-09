@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "ہوم",
+    "bookings": "بکنگز",
+    "rides": "سواریاں",
+    "alerts": "الرٹس",
+    "profile": "پروفائل",
+    "findRides": "سواری تلاش کریں",
+    "myRides": "میری سواریاں",
+    "createRide": "سواری بنائیں",
+    "createTrip": "سفر بنائیں",
+    "login": "لاگ اِن",
+    "signup": "سائن اپ"
+  },
+  "menu": {
+    "vehicles": "میری گاڑیاں",
+    "licence": "ڈرائیونگ لائسنس",
+    "history": "سواری کی تاریخ",
+    "ratings": "ریٹنگز",
+    "safety": "حفاظت",
+    "admin": "ایڈمن",
+    "lightMode": "لائٹ موڈ پر جائیں",
+    "darkMode": "ڈارک موڈ پر جائیں",
+    "logout": "لاگ آؤٹ",
+    "language": "زبان"
+  },
+  "lang": {
+    "choose": "اپنی زبان منتخب کریں",
+    "updated": "زبان تبدیل ہو گئی"
+  },
+  "reg": {
+    "title": "اپنا اکاؤنٹ بنائیں",
+    "stepDetails": "آپ کی تفصیلات",
+    "stepVerify": "موبائل کی تصدیق",
+    "firstName": "پہلا نام",
+    "lastName": "آخری نام",
+    "mobile": "موبائل نمبر",
+    "mobileHint": "تصدیق کے لیے ہم ایک بار کا کوڈ بھیجیں گے۔",
+    "email": "ای میل",
+    "password": "پاس ورڈ",
+    "passwordMin": "کم از کم 8 حروف",
+    "continue": "جاری رکھیں",
+    "verifyTitle": "اپنے موبائل نمبر کی تصدیق کریں",
+    "codeSentTo": "{{phone}} پر بھیجا گیا 6 ہندسوں کا کوڈ درج کریں",
+    "verifyCreate": "تصدیق کریں اور اکاؤنٹ بنائیں",
+    "changeDetails": "تفصیلات بدلیں",
+    "resend": "کوڈ دوبارہ بھیجیں",
+    "resendIn": "{{s}} سیکنڈ میں کوڈ دوبارہ بھیجیں",
+    "haveAccount": "پہلے سے اکاؤنٹ ہے؟",
+    "required": "ضروری",
+    "mobileRequired": "موبائل نمبر ضروری ہے",
+    "mobileInvalid": "درست 10 ہندسوں کا موبائل نمبر درج کریں",
+    "emailRequired": "ای میل ضروری ہے",
+    "emailInvalid": "درست ای میل درج کریں",
+    "passwordRequired": "پاس ورڈ ضروری ہے",
+    "welcome": "خوش آمدید!",
+    "created": "آپ کا اکاؤنٹ بن گیا ہے۔",
+    "language": "ایپ کی زبان"
+  }
+}

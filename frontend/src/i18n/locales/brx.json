@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "न",
+    "bookings": "बुकिं",
+    "rides": "राइड",
+    "alerts": "सिगनाय",
+    "profile": "प्रफाइल",
+    "findRides": "राइड नायनानै",
+    "myRides": "आंनि राइड",
+    "createRide": "राइड सोरजि",
+    "createTrip": "ट्रिप सोरजि",
+    "login": "लग इन",
+    "signup": "साइन आप"
+  },
+  "menu": {
+    "vehicles": "आंनि गाड़ि",
+    "licence": "ड्राइभिं लाइसेन्स",
+    "history": "राइडनि जारिमिन",
+    "ratings": "रेटिं",
+    "safety": "रैखाथि",
+    "admin": "एडमिन",
+    "lightMode": "लाइट मोडआव थां",
+    "darkMode": "डार्क मोडआव थां",
+    "logout": "लग आउट",
+    "language": "राव"
+  },
+  "lang": {
+    "choose": "नोंथांनि राव सायख",
+    "updated": "राव सोलायनाय जादों"
+  },
+  "reg": {
+    "title": "नोंथांनि एकाउन्ट सोरजि",
+    "stepDetails": "नोंथांनि बिबुंथि",
+    "stepVerify": "मोबाइल सान्दाय",
+    "firstName": "गिबि मुं",
+    "lastName": "जोबथा मुं",
+    "mobile": "मोबाइल नम्बर",
+    "mobileHint": "सान्दायनो जों मोनसेथि कोड दैथायगोन।",
+    "email": "इमेल",
+    "password": "पासवर्ड",
+    "passwordMin": "खमैबो 8 हांखो",
+    "continue": "सिगाङाव थां",
+    "verifyTitle": "नोंथांनि मोबाइल नम्बर सान्दाय",
+    "codeSentTo": "{{phone}} आव दैथायनाय 6 अनजिमानि कोड हो",
+    "verifyCreate": "सान्दायना एकाउन्ट सोरजि",
+    "changeDetails": "बिबुंथि सोलाय",
+    "resend": "कोड फिन दैथाय",
+    "resendIn": "{{s}} सेकेन्डआव कोड फिन दैथाय",
+    "haveAccount": "सिगाङावनो एकाउन्ट दं?",
+    "required": "गोनांथार",
+    "mobileRequired": "मोबाइल नम्बर गोनांथार",
+    "mobileInvalid": "गेबें 10 अनजिमानि मोबाइल नम्बर हो",
+    "emailRequired": "इमेल गोनांथार",
+    "emailInvalid": "गेबें इमेल हो",
+    "passwordRequired": "पासवर्ड गोनांथार",
+    "welcome": "बरायबाय!",
+    "created": "नोंथांनि एकाउन्ट सोरजिबाय।",
+    "language": "एपनि राव"
+  }
+}

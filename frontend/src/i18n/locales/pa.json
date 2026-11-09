@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "ਹੋਮ",
+    "bookings": "ਬੁਕਿੰਗਾਂ",
+    "rides": "ਸਵਾਰੀਆਂ",
+    "alerts": "ਸੂਚਨਾਵਾਂ",
+    "profile": "ਪ੍ਰੋਫਾਈਲ",
+    "findRides": "ਸਵਾਰੀ ਲੱਭੋ",
+    "myRides": "ਮੇਰੀਆਂ ਸਵਾਰੀਆਂ",
+    "createRide": "ਸਵਾਰੀ ਬਣਾਓ",
+    "createTrip": "ਯਾਤਰਾ ਬਣਾਓ",
+    "login": "ਲੌਗ ਇਨ",
+    "signup": "ਸਾਈਨ ਅੱਪ"
+  },
+  "menu": {
+    "vehicles": "ਮੇਰੇ ਵਾਹਨ",
+    "licence": "ਡਰਾਈਵਿੰਗ ਲਾਇਸੈਂਸ",
+    "history": "ਸਵਾਰੀ ਇਤਿਹਾਸ",
+    "ratings": "ਰੇਟਿੰਗਾਂ",
+    "safety": "ਸੁਰੱਖਿਆ",
+    "admin": "ਐਡਮਿਨ",
+    "lightMode": "ਲਾਈਟ ਮੋਡ 'ਤੇ ਜਾਓ",
+    "darkMode": "ਡਾਰਕ ਮੋਡ 'ਤੇ ਜਾਓ",
+    "logout": "ਲੌਗ ਆਊਟ",
+    "language": "ਭਾਸ਼ਾ"
+  },
+  "lang": {
+    "choose": "ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ",
+    "updated": "ਭਾਸ਼ਾ ਬਦਲ ਦਿੱਤੀ ਗਈ"
+  },
+  "reg": {
+    "title": "ਆਪਣਾ ਖਾਤਾ ਬਣਾਓ",
+    "stepDetails": "ਤੁਹਾਡੇ ਵੇਰਵੇ",
+    "stepVerify": "ਮੋਬਾਈਲ ਪੁਸ਼ਟੀ",
+    "firstName": "ਪਹਿਲਾ ਨਾਮ",
+    "lastName": "ਆਖਰੀ ਨਾਮ",
+    "mobile": "ਮੋਬਾਈਲ ਨੰਬਰ",
+    "mobileHint": "ਪੁਸ਼ਟੀ ਲਈ ਅਸੀਂ ਇੱਕ ਵਾਰ ਦਾ ਕੋਡ ਭੇਜਾਂਗੇ।",
+    "email": "ਈਮੇਲ",
+    "password": "ਪਾਸਵਰਡ",
+    "passwordMin": "ਘੱਟੋ-ਘੱਟ 8 ਅੱਖਰ",
+    "continue": "ਜਾਰੀ ਰੱਖੋ",
+    "verifyTitle": "ਆਪਣੇ ਮੋਬਾਈਲ ਨੰਬਰ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ",
+    "codeSentTo": "{{phone}} 'ਤੇ ਭੇਜਿਆ 6 ਅੰਕਾਂ ਦਾ ਕੋਡ ਦਰਜ ਕਰੋ",
+    "verifyCreate": "ਪੁਸ਼ਟੀ ਕਰੋ ਅਤੇ ਖਾਤਾ ਬਣਾਓ",
+    "changeDetails": "ਵੇਰਵੇ ਬਦਲੋ",
+    "resend": "ਕੋਡ ਦੁਬਾਰਾ ਭੇਜੋ",
+    "resendIn": "{{s}} ਸਕਿੰਟਾਂ ਵਿੱਚ ਕੋਡ ਦੁਬਾਰਾ ਭੇਜੋ",
+    "haveAccount": "ਪਹਿਲਾਂ ਹੀ ਖਾਤਾ ਹੈ?",
+    "required": "ਲੋੜੀਂਦਾ",
+    "mobileRequired": "ਮੋਬਾਈਲ ਨੰਬਰ ਲੋੜੀਂਦਾ ਹੈ",
+    "mobileInvalid": "ਸਹੀ 10 ਅੰਕਾਂ ਦਾ ਮੋਬਾਈਲ ਨੰਬਰ ਦਰਜ ਕਰੋ",
+    "emailRequired": "ਈਮੇਲ ਲੋੜੀਂਦੀ ਹੈ",
+    "emailInvalid": "ਸਹੀ ਈਮੇਲ ਦਰਜ ਕਰੋ",
+    "passwordRequired": "ਪਾਸਵਰਡ ਲੋੜੀਂਦਾ ਹੈ",
+    "welcome": "ਜੀ ਆਇਆਂ ਨੂੰ!",
+    "created": "ਤੁਹਾਡਾ ਖਾਤਾ ਬਣ ਗਿਆ ਹੈ।",
+    "language": "ਐਪ ਦੀ ਭਾਸ਼ਾ"
+  }
+}

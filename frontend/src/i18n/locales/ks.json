@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "ہوم",
+    "bookings": "بُکِنگ",
+    "rides": "سواری",
+    "alerts": "اطلاع",
+    "profile": "پروفایل",
+    "findRides": "سواری ژھانڈِو",
+    "myRides": "میانہٕ سواری",
+    "createRide": "سواری بناو",
+    "createTrip": "سفر بناو",
+    "login": "لاگ اِن",
+    "signup": "سائن اَپ"
+  },
+  "menu": {
+    "vehicles": "میانہٕ گاڑِ",
+    "licence": "ڈرایوِنگ لائسنس",
+    "history": "سواری ہُند تاریخ",
+    "ratings": "ریٹِنگ",
+    "safety": "حفاظت",
+    "admin": "ایڈمن",
+    "lightMode": "لایٹ موڈس پؠٹھ گژھو",
+    "darkMode": "ڈارک موڈس پؠٹھ گژھو",
+    "logout": "لاگ آوٹ",
+    "language": "زبان"
+  },
+  "lang": {
+    "choose": "پنٕنۍ زبان ژارِو",
+    "updated": "زبان بدلیوو"
+  },
+  "reg": {
+    "title": "پنُن اکاؤنٹ بناو",
+    "stepDetails": "تُہنٛد تفصیل",
+    "stepVerify": "موبایل تصدیق",
+    "firstName": "گۄڈنیُک ناو",
+    "lastName": "آخری ناو",
+    "mobile": "موبایل نمبر",
+    "mobileHint": "تصدیق خٲطرٕ سوزو اَسۍ اکھ کوڈ۔",
+    "email": "ای میل",
+    "password": "پاس ورڈ",
+    "passwordMin": "کم از کم 8 حرف",
+    "continue": "اَگہ پَکِو",
+    "verifyTitle": "پنُن موبایل نمبر تصدیق کرِو",
+    "codeSentTo": "{{phone}} پؠٹھ سوزمُت 6 ہندسن ہُند کوڈ لیکھِو",
+    "verifyCreate": "تصدیق کٔرِتھ اکاؤنٹ بناو",
+    "changeDetails": "تفصیل بدلٲوِو",
+    "resend": "کوڈ دوبارٕ سوزِو",
+    "resendIn": "{{s}} سیکنڈن منز کوڈ دوبارٕ سوزِو",
+    "haveAccount": "گۄڈے اکاؤنٹ چھُو؟",
+    "required": "ضروری",
+    "mobileRequired": "موبایل نمبر ضروری",
+    "mobileInvalid": "صحیح 10 ہندسن ہُند موبایل نمبر لیکھِو",
+    "emailRequired": "ای میل ضروری",
+    "emailInvalid": "صحیح ای میل لیکھِو",
+    "passwordRequired": "پاس ورڈ ضروری",
+    "welcome": "خوش آمدید!",
+    "created": "تُہنٛد اکاؤنٹ بنیوو۔",
+    "language": "ایپ ہٕنز زبان"
+  }
+}

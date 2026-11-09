@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "Home",
+    "bookings": "Bookings",
+    "rides": "Rides",
+    "alerts": "Alerts",
+    "profile": "Profile",
+    "findRides": "Find Rides",
+    "myRides": "My rides",
+    "createRide": "Create ride",
+    "createTrip": "Create trip",
+    "login": "Login",
+    "signup": "Sign up"
+  },
+  "menu": {
+    "vehicles": "My Vehicles",
+    "licence": "Driving Licence",
+    "history": "Ride History",
+    "ratings": "Ratings",
+    "safety": "Safety",
+    "admin": "Admin",
+    "lightMode": "Switch to light mode",
+    "darkMode": "Switch to dark mode",
+    "logout": "Logout",
+    "language": "Language"
+  },
+  "lang": {
+    "choose": "Choose your language",
+    "updated": "Language updated"
+  },
+  "reg": {
+    "title": "Create your account",
+    "stepDetails": "Your details",
+    "stepVerify": "Verify mobile",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "mobile": "Mobile number",
+    "mobileHint": "We'll send a one-time code to verify it.",
+    "email": "Email",
+    "password": "Password",
+    "passwordMin": "At least 8 characters",
+    "continue": "Continue",
+    "verifyTitle": "Verify your mobile number",
+    "codeSentTo": "Enter the 6-digit code sent to {{phone}}",
+    "verifyCreate": "Verify & create account",
+    "changeDetails": "Change details",
+    "resend": "Resend code",
+    "resendIn": "Resend code in {{s}}s",
+    "haveAccount": "Already have an account?",
+    "required": "Required",
+    "mobileRequired": "Mobile number is required",
+    "mobileInvalid": "Enter a valid 10-digit mobile number",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Enter a valid email",
+    "passwordRequired": "Password is required",
+    "welcome": "Welcome!",
+    "created": "Your account has been created.",
+    "language": "App language"
+  }
+}

@@ -21,7 +21,7 @@ function hashToken(token) {
 }
 
 export const authService = {
-  async register({ firstName, lastName, email, phone: rawPhone, password, phoneVerificationToken }) {
+  async register({ firstName, lastName, email, phone: rawPhone, password, phoneVerificationToken, language = "en" }) {
     // Phone is stored in one normalised form so "+91 98765 43210" and
     // "9876543210" can't become two accounts.
     const phone = normalizePhone(rawPhone);
@@ -39,7 +39,7 @@ export const authService = {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const user = await userRepository.create({ firstName, lastName, email, phone, passwordHash, phoneVerifiedAt: new Date() });
+    const user = await userRepository.create({ firstName, lastName, email, phone, passwordHash, phoneVerifiedAt: new Date(), language });
 
     return { user: serializeUser(user), token: issueToken(user) };
   },

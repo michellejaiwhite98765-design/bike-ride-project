@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Form, Input, Button, App } from "antd";
@@ -316,6 +317,7 @@ const Foot = styled.div`
 /* Page                                                                    */
 /* ---------------------------------------------------------------------- */
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const { notification } = App.useApp();
   const navigate = useNavigate();
@@ -335,7 +337,7 @@ export default function LoginPage() {
       if (field === "email" || field === "password") {
         form.setFields([{ name: field, errors: [err.message] }]);
       } else {
-        notification.error({ title: "Error", description: err.message });
+        notification.error({ title: t("login.error"), description: err.message });
       }
     } finally {
       setSubmitting(false);
@@ -348,12 +350,12 @@ export default function LoginPage() {
       {/* RIGHT: ticket login */}
         <TicketCard>
           <TicketTop>
-            <Eyebrow>Welcome back</Eyebrow>
-            <TicketH2>Sign in to BikeRide</TicketH2>
-            <TicketSub>Enter your details to find or offer a ride.</TicketSub>
+            <Eyebrow>{t("login.welcomeBack")}</Eyebrow>
+            <TicketH2>{t("login.title")}</TicketH2>
+            <TicketSub>{t("login.sub")}</TicketSub>
 
             <RouteRow>
-              <Stop>Home</Stop>
+              <Stop>{t("nav.home")}</Stop>
               <RouteLineFlat />
               <Stop $dim>?</Stop>
             </RouteRow>
@@ -368,12 +370,12 @@ export default function LoginPage() {
           <TicketBottom>
             <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
               <div>
-                <FieldLabel htmlFor="login_email">Email</FieldLabel>
+                <FieldLabel htmlFor="login_email">{t("reg.email")}</FieldLabel>
                 <StyledFormItem
                   name="email"
                   rules={[
-                    { required: true, message: "Email is required" },
-                    { type: "email", message: "Enter a valid email" },
+                    { required: true, message: t("reg.emailRequired") },
+                    { type: "email", message: t("reg.emailInvalid") },
                   ]}
                 >
                   <StyledInput
@@ -386,10 +388,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <FieldLabel htmlFor="login_password">Password</FieldLabel>
+                <FieldLabel htmlFor="login_password">{t("reg.password")}</FieldLabel>
                 <StyledFormItem
                   name="password"
-                  rules={[{ required: true, message: "Password is required" }]}
+                  rules={[{ required: true, message: t("reg.passwordRequired") }]}
                 >
                   <StyledPassword
                     id="login_password"
@@ -401,18 +403,18 @@ export default function LoginPage() {
               </div>
 
               <Row>
-                <span>Keep me signed in</span>
-                <Link to="/forgot-password">Forgot password?</Link>
+                <span>{t("login.keepSignedIn")}</span>
+                <Link to="/forgot-password">{t("login.forgot")}</Link>
               </Row>
 
               <BoardButton type="primary" htmlType="submit" loading={submitting}>
-                {submitting ? "Signing in…" : "Sign in"}
+                {submitting ? t("login.signingIn") : t("login.signIn")}
                 {!submitting && <ArrowRightOutlined />}
               </BoardButton>
             </Form>
 
             <Foot>
-              New here? <Link to="/register">Create an account</Link>
+              {t("login.newHere")} <Link to="/register">{t("login.createAccount")}</Link>
             </Foot>
           </TicketBottom>
         </TicketCard>

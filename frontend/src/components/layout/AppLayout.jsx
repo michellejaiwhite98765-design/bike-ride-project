@@ -329,8 +329,20 @@ const BottomNavItem = styled(Link)`
   font-weight: 600;
   transition: color 0.2s ease;
 
+  min-width: 0;
+
   svg {
     font-size: 20px;
+  }
+
+  /* Long labels in some languages (e.g. Tamil): keep each tab to its own
+     column and cut the word with "…" instead of running into the next tab. */
+  .bn-label {
+    max-width: 100%;
+    padding: 0 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* The badge wrapper is inline-block, which pushed the "Alerts" label lower
@@ -655,25 +667,25 @@ export default function AppLayout() {
         <BottomNav>
           <BottomNavItem to="/" $active={location.pathname === "/"}>
             <HomeOutlined />
-            {t("nav.home")}
+            <span className="bn-label">{t("nav.home")}</span>
           </BottomNavItem>
           <BottomNavItem to="/bookings" $active={location.pathname.startsWith("/bookings")}>
             <FileTextOutlined />
-            {t("nav.bookings")}
+            <span className="bn-label">{t("nav.bookings")}</span>
           </BottomNavItem>
           <BottomNavItem to="/rides" $active={location.pathname.startsWith("/rides")}>
             <CarOutlined />
-            {t("nav.rides")}
+            <span className="bn-label">{t("nav.rides")}</span>
           </BottomNavItem>
           <BottomNavItem to="/notifications" $active={location.pathname === "/notifications"}>
             <AntBadge dot={unreadCount > 0} color={ACCENT} offset={[-2, 2]}>
               <BellOutlined />
             </AntBadge>
-            {t("nav.alerts")}
+            <span className="bn-label">{t("nav.alerts")}</span>
           </BottomNavItem>
           <BottomNavItem to="/profile" $active={location.pathname.startsWith("/profile")}>
             <UserOutlined />
-            {t("nav.profile")}
+            <span className="bn-label">{t("nav.profile")}</span>
           </BottomNavItem>
         </BottomNav>
       )}

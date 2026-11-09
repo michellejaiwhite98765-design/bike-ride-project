@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import BikeSpinner from "../components/ui/BikeSpinner.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -45,6 +46,7 @@ function whenText(start, end) {
 }
 
 export default function SearchPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { notification } = App.useApp();
@@ -191,18 +193,18 @@ export default function SearchPage() {
       if (isMobile && list.length > 0) setSheetOpen(false);
       if (!isMobile && list.length > 0) setDeskOpen(false);
     } catch (err) {
-      notification.error({ title: "Couldn't search", description: err.message });
+      notification.error({ title: t("search.cantSearch"), description: err.message });
     } finally {
       setLoading(false);
     }
   }
 
   const presets = [
-    { label: "Today", value: [dayjs(), dayjs()] },
-    { label: "Tomorrow", value: [dayjs().add(1, "day"), dayjs().add(1, "day")] },
-    { label: "Next 3 days", value: [dayjs(), dayjs().add(2, "day")] },
-    { label: "This week", value: [dayjs(), dayjs().add(6, "day")] },
-    { label: "Next month", value: [dayjs(), dayjs().add(1, "month")] },
+    { label: t("search.today"), value: [dayjs(), dayjs()] },
+    { label: t("search.tomorrow"), value: [dayjs().add(1, "day"), dayjs().add(1, "day")] },
+    { label: t("search.next3"), value: [dayjs(), dayjs().add(2, "day")] },
+    { label: t("search.thisWeek"), value: [dayjs(), dayjs().add(6, "day")] },
+    { label: t("search.nextMonth"), value: [dayjs(), dayjs().add(1, "month")] },
   ];
 
   const goHome = () => navigate("/", { state: { view: "map" } });
@@ -210,17 +212,17 @@ export default function SearchPage() {
   const fields = (
     <>
       <Form form={form} layout="vertical" requiredMark={false}>
-        <LocationFields prefix="source" label="Start Location" placeholder="Where do you want to be picked up?" />
+        <LocationFields prefix="source" label={t("search.start")} placeholder={t("search.startPh")} />
         <div className="sp-swap" style={{ display: "flex", justifyContent: "center", margin: "-8px 0 8px" }}>
           <Button shape="round" icon={<SwapOutlined />} onClick={swapLocations}>
-            Swap
+            {t("search.swap")}
           </Button>
         </div>
-        <LocationFields prefix="destination" label="End Location" placeholder="Where are you going?" />
+        <LocationFields prefix="destination" label={t("search.end")} placeholder={t("search.endPh")} />
       </Form>
 
       <div className="sp-date-label">
-        <CalendarOutlined /> When
+        <CalendarOutlined /> {t("search.when")}
       </div>
       <DatePicker.RangePicker
         className="sp-range"
@@ -248,17 +250,17 @@ export default function SearchPage() {
       <button type="button" className="sp-search-btn" onClick={runSearch} disabled={loading}>
         {loading ? (
           <>
-            <BikeSpinner /> Searching…
+            <BikeSpinner /> {t("search.searching")}
           </>
         ) : (
           <>
-            Find trip <ArrowRightOutlined className="sp-arrow" />
+            {t("search.findTrip")} <ArrowRightOutlined className="sp-arrow" />
           </>
         )}
       </button>
 
       <div className="sp-hint">
-        Within 2.5 km of a rider&apos;s route is a normal pickup. Some riders also pick up from your place, with a detour fare shown before you ask.
+        {t("search.hint")}
       </div>
     </>
   );
@@ -281,7 +283,7 @@ export default function SearchPage() {
   }
 
   const summary =
-    sourceName || destinationName ? `${short(sourceName, "Start")} → ${short(destinationName, "Where to?")}` : "Where to?";
+    sourceName || destinationName ? `${short(sourceName, "Start")} → ${short(destinationName, t("search.whereTo"))}` : t("search.whereTo");
 
   return (
     <div className={`sp-shell ${isMobile ? "sp-mobile" : ""}`} style={{ "--sheet-h": `${sheetHeight}px` }}>
@@ -315,7 +317,7 @@ export default function SearchPage() {
               <span className="sp-sheet-grip" />
               {sheetOpen ? (
                 <>
-                  <span className="sp-sheet-title">Find trip</span>
+                  <span className="sp-sheet-title">{t("search.findTrip")}</span>
                 </>
               ) : (
                 // Minimized: look like a search box so it's clear where to search.
@@ -323,7 +325,7 @@ export default function SearchPage() {
                   <SearchOutlined className="sp-search-icon" />
                   <span className="sp-search-text">
                     <strong>{summary}</strong>
-                    <small>Tap to search for a trip</small>
+                    <small>{t("search.tapToSearch")}</small>
                   </span>
                   <span className="sp-search-go" aria-label="Search"><ArrowRightOutlined /></span>
                 </span>
@@ -339,7 +341,7 @@ export default function SearchPage() {
         </div>
       ) : (
         <>
-          <Drawer placement="left" open={deskOpen} onClose={() => setDeskOpen(false)} mask={false} width={380} title="Find trip" rootClassName="sp-drawer">
+          <Drawer placement="left" open={deskOpen} onClose={() => setDeskOpen(false)} mask={false} width={380} title={t("search.findTrip")} rootClassName="sp-drawer">
             {fields}
           </Drawer>
           {!deskOpen && (

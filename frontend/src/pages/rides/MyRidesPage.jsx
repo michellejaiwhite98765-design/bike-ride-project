@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -34,26 +35,26 @@ import { BookingList } from "../bookings/BookingsPage.jsx";
 
 // Status filters. Trips I offer have drafts; my bookings don't.
 const RIDE_FILTERS = [
-  { value: "current", label: "Live", match: (r) => r.status === "STARTED" },
-  { value: "upcoming", label: "Upcoming", match: (r) => r.status === "PUBLISHED" },
-  { value: "draft", label: "Drafts", match: (r) => r.status === "DRAFT" },
-  { value: "completed", label: "Completed", match: (r) => ["COMPLETED", "CANCELLED", "EXPIRED"].includes(r.status) },
+  { value: "current", label: "rides.live", match: (r) => r.status === "STARTED" },
+  { value: "upcoming", label: "rides.upcoming", match: (r) => r.status === "PUBLISHED" },
+  { value: "draft", label: "rides.drafts", match: (r) => r.status === "DRAFT" },
+  { value: "completed", label: "rides.completed", match: (r) => ["COMPLETED", "CANCELLED", "EXPIRED"].includes(r.status) },
 ];
 const rideOf = (b) => b.ride?.status;
 // The trip is over but the passenger still has to pay: keep it under Current.
 const paymentDue = (b) => rideOf(b) === "COMPLETED" && b.bookingStatus === "PAYMENT_PENDING";
 const BOOKING_FILTERS = [
-  { value: "current", label: "Live", match: (b) => b.bookingStatus !== "CANCELLED" && (rideOf(b) === "STARTED" || paymentDue(b)) },
-  { value: "upcoming", label: "Upcoming", match: (b) => b.bookingStatus !== "CANCELLED" && ["PUBLISHED", "DRAFT"].includes(rideOf(b)) },
+  { value: "current", label: "rides.live", match: (b) => b.bookingStatus !== "CANCELLED" && (rideOf(b) === "STARTED" || paymentDue(b)) },
+  { value: "upcoming", label: "rides.upcoming", match: (b) => b.bookingStatus !== "CANCELLED" && ["PUBLISHED", "DRAFT"].includes(rideOf(b)) },
   {
     value: "completed",
-    label: "Completed",
+    label: "rides.completed",
     match: (b) => b.bookingStatus === "CANCELLED" || (["COMPLETED", "CANCELLED", "EXPIRED"].includes(rideOf(b)) && !paymentDue(b)),
   },
 ];
 const EMPTY_TEXT = {
-  rides: { current: "No trip in progress", upcoming: "No upcoming trips", draft: "No drafts", completed: "No completed trips yet" },
-  bookings: { current: "You're not on a trip right now", upcoming: "No upcoming bookings", completed: "No past bookings yet" },
+  rides: { current: "rides.emptyRidesCurrent", upcoming: "rides.emptyRidesUpcoming", draft: "rides.emptyRidesDraft", completed: "rides.emptyRidesCompleted" },
+  bookings: { current: "rides.emptyBookingsCurrent", upcoming: "rides.emptyBookingsUpcoming", completed: "rides.emptyBookingsCompleted" },
 };
 
 const HOME = {
@@ -355,6 +356,7 @@ function RideTrackingCard({ ride, rides, onOpenDetails, onClone }) {
 
 /** mode "rides" (/rides, trips you offer) or "bookings" (/bookings, trips you booked). */
 export default function MyRidesPage({ mode = "rides" }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const [rides, setRides] = useState(null);
@@ -394,11 +396,11 @@ export default function MyRidesPage({ mode = "rides" }) {
     <div className="my-rides-page">
       <div className="my-rides-container">
         <header className="my-rides-header">
-          <h1>{tab === "rides" ? "My Rides" : "My Bookings"}</h1>
+          <h1>{tab === "rides" ? t("rides.myRides") : t("rides.myBookings")}</h1>
         </header>
 
         {loading ? (
-          <BrandLoader variant="inline" label="Loading your trips…" />
+          <BrandLoader variant="inline" label={t("rides.loading")} />
         ) : (
           <>
 
@@ -415,12 +417,12 @@ export default function MyRidesPage({ mode = "rides" }) {
                     onClick={() => setView({ filter: f.value })}
                   >
                     {f.value === "current" && count > 0 && <span className="live-dot pulse" />}
-                    {f.label}
+                    {t(f.label)}
                   </button>
                 );
               })}
             </div>
-            <p className="my-rides-total">Total: <strong>{shown.length}</strong></p>
+            <p className="my-rides-total">{t("rides.total")} <strong>{shown.length}</strong></p>
 
             {tab === "rides" && filter === "current" && activeCount > 0 && (
               <div className="my-rides-overview single">
@@ -437,15 +439,15 @@ export default function MyRidesPage({ mode = "rides" }) {
                 <Empty
                   description={
                     list.length > 0
-                      ? EMPTY_TEXT[tab][filter]
+                      ? t(EMPTY_TEXT[tab][filter])
                       : tab === "rides"
-                        ? "You haven't created any rides yet"
-                        : "You haven't booked any rides yet"
+                        ? t("rides.noRidesCreated")
+                        : t("rides.noBookings")
                   }
                 />
                 {/* My Bookings: nudge to find a trip on empty Live/Upcoming; not on Completed. */}
                 {tab === "bookings" && filter !== "completed" && (
-                  <Link to="/" state={{ openSearch: true }}><Button type="primary" icon={<CompassOutlined />}>Find a trip</Button></Link>
+                  <Link to="/" state={{ openSearch: true }}><Button type="primary" icon={<CompassOutlined />}>{t("rides.findATrip")}</Button></Link>
                 )}
               </div>
             ) : tab === "rides" ? (

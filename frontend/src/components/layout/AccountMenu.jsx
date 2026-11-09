@@ -2,7 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   BulbOutlined,
   CarOutlined,
-  FileTextOutlined,
   HistoryOutlined,
   IdcardOutlined,
   LogoutOutlined,
@@ -33,7 +32,6 @@ export default function AccountMenu() {
   }
 
   const links = [
-    { to: "/bookings", icon: <FileTextOutlined />, label: "My Bookings" },
     { to: "/vehicles", icon: <CarOutlined />, label: "My Vehicles" },
     { to: "/profile/licence", icon: <IdcardOutlined />, label: "Driving Licence" },
     { to: "/history", icon: <HistoryOutlined />, label: "Ride History" },

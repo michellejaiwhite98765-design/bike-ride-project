@@ -452,8 +452,15 @@ const SecondaryBtn = styled(AntButton)`
 
 /* --------------------------------- component ------------------------------- */
 
-export default function VehicleFormPage() {
-  const { id: routeId } = useParams();
+/**
+ * Add / edit a vehicle: details -> RC upload -> verify.
+ * embedded: rendered inside another page (Create trip's "Add vehicle" panel) -
+ * always a new vehicle, no back link, and the last button calls onDone(vehicle)
+ * instead of going to My Vehicles.
+ */
+export default function VehicleFormPage({ embedded = false, onDone }) {
+  const params = useParams();
+  const routeId = embedded ? undefined : params.id;
   const isEdit = Boolean(routeId);
   const navigate = useNavigate();
   const { notification } = App.useApp();
@@ -545,9 +552,11 @@ export default function VehicleFormPage() {
 
   return (
     <PageWrap>
-      <BackLink to="/vehicles">
-        <ArrowLeftOutlined /> Back to vehicles
-      </BackLink>
+      {!embedded && (
+        <BackLink to="/vehicles">
+          <ArrowLeftOutlined /> Back to vehicles
+        </BackLink>
+      )}
 
       <HeaderBlock>
         <div className="icon-badge">
@@ -748,8 +757,12 @@ export default function VehicleFormPage() {
                   </RecordCard>
                 )}
 
-                <PrimaryBtn type="primary" block onClick={() => navigate("/vehicles")}>
-                  Done
+                <PrimaryBtn
+                  type="primary"
+                  block
+                  onClick={() => (embedded ? onDone?.(verifyResult?.vehicle || vehicle) : navigate("/vehicles"))}
+                >
+                  {embedded ? "Use this vehicle" : "Done"}
                 </PrimaryBtn>
               </>
             )}

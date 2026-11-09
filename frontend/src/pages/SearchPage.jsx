@@ -369,6 +369,10 @@ export default function SearchPage() {
         .sp-range-sep{color:#2DD4BF;font-weight:800}
         .sp-range.ant-picker-focused,.sp-range:hover{border-color:#2DD4BF!important;box-shadow:0 0 0 3px rgba(45,212,191,.15)!important}
         .sp-range-popup .ant-picker-panel-container{border-radius:16px!important;overflow:hidden}
+        /* One month at a time: hide the second month and give the first one the next-month arrows. */
+        .sp-range-popup .ant-picker-panels>.ant-picker-panel:nth-child(2){display:none!important}
+        .sp-range-popup .ant-picker-panels>.ant-picker-panel:first-child .ant-picker-header-next-btn,
+        .sp-range-popup .ant-picker-panels>.ant-picker-panel:first-child .ant-picker-header-super-next-btn{visibility:visible!important}
         .sp-range-popup .ant-picker-presets ul li{border-radius:999px!important;font-weight:600}
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
         .sp-range-popup .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner,

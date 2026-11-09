@@ -13,6 +13,8 @@ import {
   AimOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
+  PlusOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -28,6 +30,7 @@ import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNK
 import { tipRateForKm } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 import RiderChecklist from "../../components/ride/RiderChecklist.jsx";
+import VehicleFormPage from "../vehicles/VehicleFormPage.jsx";
 import { useRiderStatus } from "../../hooks/useRiderStatus.js";
 
 const SectionHeader = styled.div`
@@ -101,6 +104,7 @@ export default function CreateRidePage() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [submittingAction, setSubmittingAction] = useState(null); // "draft" | "publish" | null
   const [locatingMe, setLocatingMe] = useState(false);
+  const [addingVehicle, setAddingVehicle] = useState(false); // "Add vehicle" panel
   const [termsModal, setTermsModal] = useState(null); // "terms" | "security" | null
   const [selectedRoute, setSelectedRoute] = useState(null);
   // Editing: the route saved with the trip, so the map re-selects it.
@@ -213,6 +217,20 @@ export default function CreateRidePage() {
     const cap = vehicle?.seatCapacity ?? 1;
     if (form.getFieldValue("availableSeats") > cap) {
       form.setFieldValue("availableSeats", cap);
+    }
+  }
+
+  // "Add vehicle" finished: refresh the list and pick the new vehicle if it's verified.
+  async function handleVehicleAdded(added) {
+    setAddingVehicle(false);
+    const myVehicles = await vehicleService.list();
+    setVehicles(myVehicles);
+    const fresh = myVehicles.find((v) => v.id === added?.id);
+    if (fresh?.verificationStatus === "VERIFIED") {
+      form.setFieldValue("vehicleId", fresh.id);
+      const cap = fresh.seatCapacity ?? 1;
+      if ((form.getFieldValue("availableSeats") || 1) > cap) form.setFieldValue("availableSeats", cap);
+      notification.success({ title: "Vehicle added", description: `${fresh.brand} ${fresh.model} is selected for this trip.` });
     }
   }
 
@@ -404,27 +422,6 @@ export default function CreateRidePage() {
             placeholder="Where does your ride end?"
           />
 
-          <Form.Item
-            name="pickupPreference"
-            label="Passenger Pickup and Drop Preference"
-            rules={[{ required: true, message: "Please choose how you want to pick up passengers" }]}
-            extra="Choose whether you will pick passengers along your route or go to their location."
-          >
-            <Select
-              size="large"
-              placeholder="How should passenger pickup work?"
-              options={[
-                {
-                  value: "ON_ROUTE",
-                  label: "Pick up passenger along my route",
-                },
-                {
-                  value: "PASSENGER_LOCATION",
-                  label: "Pick up passenger from their location",
-                },
-              ]}
-            />
-          </Form.Item>
         </FormCard>
 
         {/* Schedule Section */}
@@ -433,10 +430,10 @@ export default function CreateRidePage() {
           Schedule
         </SectionHeader>
         <FormCard>
-          <Form.Item name="departureDate" label="Departure date" rules={[{ required: true, message: "Pick a departure date" }]}>
+          <Form.Item name="departureDate" label="Start date" rules={[{ required: true, message: "Pick a start date" }]}>
             <DayStrip />
           </Form.Item>
-          <Form.Item name="departureTime" label="Departure time" rules={[{ required: true, message: "Pick a departure time" }]}>
+          <Form.Item name="departureTime" label="Start time" rules={[{ required: true, message: "Pick a start time" }]}>
             <TimeChips date={departureDate} />
           </Form.Item>
         </FormCard>
@@ -466,6 +463,17 @@ export default function CreateRidePage() {
               }))}
             />
           </Form.Item>
+          {!isEdit && (
+            <Button
+              type="dashed"
+              block
+              icon={<PlusOutlined />}
+              style={{ marginTop: -8, marginBottom: 16 }}
+              onClick={() => setAddingVehicle(true)}
+            >
+              Add vehicle
+            </Button>
+          )}
           <Form.Item
             name="availableSeats"
             label="Available Seats"
@@ -474,6 +482,36 @@ export default function CreateRidePage() {
           >
             <SeatStepper max={maxSeats} disabled={!selectedVehicle} />
           </Form.Item>
+        </FormCard>
+
+        {/* Passenger Pickup Section: how and where passengers are picked up and dropped. */}
+        <SectionHeader>
+          <TeamOutlined className="icon" />
+          Passenger Pickup
+        </SectionHeader>
+        <FormCard>
+          <Form.Item
+            name="pickupPreference"
+            label="Pickup and drop preference"
+            rules={[{ required: true, message: "Please choose how you want to pick up passengers" }]}
+            extra="Choose whether you will pick passengers along your route or go to their location."
+          >
+            <Select
+              size="large"
+              placeholder="How should passenger pickup work?"
+              options={[
+                {
+                  value: "ON_ROUTE",
+                  label: "Along my route",
+                },
+                {
+                  value: "PASSENGER_LOCATION",
+                  label: "From the passenger's location",
+                },
+              ]}
+            />
+          </Form.Item>
+          <PickupFareInfo distanceKm={distanceKm} tipAmount={Number(watchedTip) || 0} preference={watchedPref || "ON_ROUTE"} />
         </FormCard>
 
         {/* Payment Section */}
@@ -516,7 +554,6 @@ export default function CreateRidePage() {
               placeholder={rideType === "WITH_TIP" ? "Enter tip amount" : "—"}
             />
           </Form.Item>
-          <PickupFareInfo distanceKm={distanceKm} tipAmount={Number(watchedTip) || 0} preference={watchedPref || "ON_ROUTE"} />
         </FormCard>
 
         {/* Additional Info Section */}
@@ -550,6 +587,7 @@ export default function CreateRidePage() {
         <FormCard>
           <Form.Item
             name="agreeTerms"
+            className="terms-check"
             valuePropName="checked"
             rules={[{ validator: (_, v) => (v ? Promise.resolve() : Promise.reject(new Error("You must accept the Terms & Conditions"))) }]}
           >
@@ -560,6 +598,7 @@ export default function CreateRidePage() {
           </Form.Item>
           <Form.Item
             name="agreeSecurity"
+            className="terms-check"
             valuePropName="checked"
             rules={[{ validator: (_, v) => (v ? Promise.resolve() : Promise.reject(new Error("You must accept the Security Terms"))) }]}
           >
@@ -606,6 +645,20 @@ export default function CreateRidePage() {
         </button>
       )}
 
+      {/* Add vehicle without leaving Create trip: the same steps as My Vehicles > Add. */}
+      <Drawer
+        title="Add vehicle"
+        placement={window.innerWidth <= 768 ? "bottom" : "right"}
+        size={window.innerWidth <= 768 ? "92%" : 640}
+        open={addingVehicle}
+        onClose={() => setAddingVehicle(false)}
+        destroyOnHidden
+        rootClassName="cr-add-vehicle"
+        styles={{ body: { padding: 12 } }}
+      >
+        {addingVehicle && <VehicleFormPage embedded onDone={handleVehicleAdded} />}
+      </Drawer>
+
       <Modal title="Terms & Conditions" open={termsModal === "terms"} onCancel={() => setTermsModal(null)} footer={null}>
         <p>By publishing a ride, you agree that:</p>
         <ul>
@@ -639,6 +692,8 @@ export default function CreateRidePage() {
         .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}
+        /* Phones: Reset/Draft/Publish are pinned to the bottom, so leave room for them. */
+        @media(max-width:600px){.cr-drawer .ant-drawer-body{padding-bottom:110px}}
       `}</style>
     </div>
   );

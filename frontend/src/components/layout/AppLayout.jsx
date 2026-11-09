@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import CurrentRideTracker from "../ride/CurrentRideTracker.jsx";
 import { notificationLink } from "../../services/notificationLinks.js";
-import { Layout, Dropdown, Drawer, Button, Badge as AntBadge, App as AntdApp } from "antd";
+import { Layout, Dropdown, Button, Badge as AntBadge, App as AntdApp } from "antd";
 import { css } from "styled-components";
 import {
   HomeOutlined,
-  SearchOutlined,
   PlusCircleOutlined,
   CarOutlined,
   BellOutlined,
   UserOutlined,
-  MenuOutlined,
   LogoutOutlined,
   SettingOutlined,
   FileTextOutlined,
@@ -300,11 +298,6 @@ const ThemeToggleButton = styled.button`
   }
 `;
 
-// The ☰ menu button: always shown, on every screen size.
-const MobileBar = styled.div`
-  display: flex;
-  align-items: center;
-`;
 
 const BottomNav = styled.nav`
   display: none;
@@ -415,7 +408,6 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { notification } = AntdApp.useApp();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -562,15 +554,6 @@ export default function AppLayout() {
                 exit={{ opacity: 0, y: 6 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
-                <MobileBar className={isAuthenticated ? "authed-menu" : undefined} style={{ marginRight: -20, marginLeft: -8 }}>
-                  <Button
-                    type="text"
-                    icon={<MenuOutlined />}
-                    size="large"
-                    onClick={() => setDrawerOpen(true)}
-                    style={{ color: colors.textSecondary }}
-                  />
-                </MobileBar>
                 <Link to="/" style={{ textDecoration: "none" }}>
                   <BrandContainer>
                     <LiftshareMark className="brand-logo" size={36} />
@@ -659,88 +642,6 @@ export default function AppLayout() {
         </Capsule>
       </HeaderOuter>
 
-      <Drawer title="Menu" placement="left" onClose={() => setDrawerOpen(false)} open={drawerOpen} bodyStyle={{ padding: 0 }}>
-        {isAuthenticated && (
-          <div style={{ padding: "16px 0" }}>
-            <div
-              style={{
-                padding: "16px",
-                borderBottom: `1px solid ${colors.border}`,
-                marginBottom: "16px",
-              }}
-            >
-              <div style={{ fontWeight: 600, marginBottom: "4px" }}>
-                {user?.firstName} {user?.lastName}
-              </div>
-              <div style={{ color: colors.textSecondary, fontSize: "12px" }}>{user?.email}</div>
-            </div>
-
-            <div style={{ padding: "0 16px" }}>
-              {[
-                { to: "/", icon: <SearchOutlined />, label: "Find Rides" },
-                { to: "/rides/create", icon: <PlusCircleOutlined />, label: "Create Ride" },
-                { to: "/rides", icon: <CarOutlined />, label: "My Rides" },
-                { to: "/bookings", icon: <FileTextOutlined />, label: "My Bookings" },
-                { to: "/notifications", icon: <BellOutlined />, label: "Notifications" },
-                { to: "/profile", icon: <UserOutlined />, label: "Profile" },
-                { to: "/vehicles", icon: <CarOutlined />, label: "My Vehicles" },
-                { to: "/history", icon: <FileTextOutlined />, label: "Ride History" },
-                { to: "/safety", icon: <SearchOutlined />, label: "Safety" },
-                ...(user?.role === "ADMIN" ? [{ to: "/admin", icon: <SettingOutlined />, label: "Admin" }] : []),
-              ].map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setDrawerOpen(false)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 0",
-                    borderBottom: `1px solid ${colors.bgTertiary}`,
-                    color: colors.textPrimary,
-                    textDecoration: "none",
-                    fontSize: "14px",
-                  }}
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-
-            <div style={{ padding: "16px" }}>
-              <Button
-                block
-                danger
-                onClick={() => {
-                  setDrawerOpen(false);
-                  handleLogout();
-                }}
-              >
-                Logout
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {!isAuthenticated && (
-          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <Link to="/login">
-              <Button block type="default">
-                Login
-              </Button>
-            </Link>
-            {location.pathname !== "/register" && (
-              <Link to="/register">
-                <Button block type="primary" style={{ background: ACCENT }}>
-                  Sign up
-                </Button>
-              </Link>
-            )}
-          </div>
-        )}
-      </Drawer>
 
       <ContentWrap $fullBleed={isFullBleedPage} $authPage={isAuthPage}>
         <Outlet />

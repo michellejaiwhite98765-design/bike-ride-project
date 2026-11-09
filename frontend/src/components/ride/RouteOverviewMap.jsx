@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Spin, Tag } from "antd";
-import { ClockCircleOutlined, EnvironmentOutlined, LoadingOutlined, RiseOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined, EnvironmentOutlined, RiseOutlined } from "@ant-design/icons";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { bikeIcon, endIcon } from "./mapIcons.js";
@@ -151,7 +151,7 @@ export default function RouteOverviewMap({ ride, compact = false }) {
 
         {loading && (
           <div className="ro-loading">
-            <Spin indicator={<LoadingOutlined spin />} size="small" />
+            <Spin size="small" />
             <span>Loading route…</span>
           </div>
         )}

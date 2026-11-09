@@ -9,11 +9,15 @@ import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider, useTheme } from "./context/ThemeContext.jsx";
 import { getAntdTheme } from "./theme/theme.js";
+import BikeSpinner from "./components/ui/BikeSpinner.jsx";
+
+// Every antd loading state (buttons, Spin, tables, selects) shows the bike loader.
+const bike = <BikeSpinner />;
 
 function ThemedApp() {
   const { mode } = useTheme();
   return (
-    <ConfigProvider theme={getAntdTheme(mode)}>
+    <ConfigProvider theme={getAntdTheme(mode)} button={{ loadingIcon: bike }} spin={{ indicator: bike }} select={{ loadingIcon: bike }}>
       <AntdApp notification={{ placement: "topRight", top: 84, duration: 4, maxCount: 3 }}>
         <BrowserRouter>
           <AuthProvider>

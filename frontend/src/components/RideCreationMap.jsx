@@ -1,8 +1,9 @@
+import BikeSpinner from "./ui/BikeSpinner.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Polyline, Tooltip, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { App, Button, Segmented, Spin } from "antd";
-import { AimOutlined, EnvironmentOutlined, FlagOutlined, LoadingOutlined, SwapOutlined } from "@ant-design/icons";
+import { AimOutlined, EnvironmentOutlined, FlagOutlined, SwapOutlined } from "@ant-design/icons";
 import { reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../utils/geo.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION } from "../constants/mapTiles.js";
 import { useTheme } from "../context/ThemeContext.jsx";
@@ -348,7 +349,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
 
         {mapLoading && (
           <div className="ride-map-loading">
-            <Spin indicator={<LoadingOutlined spin />} />
+            <Spin />
             <span>Finding this place…</span>
           </div>
         )}
@@ -392,7 +393,7 @@ export default function RideCreationMap({ source, destination, form, onRouteSele
         <div className="ride-creation-map-legend">
           <span><i className="legend-dot start" /> Start</span>
           <span><i className="legend-dot end" /> End</span>
-          {routeLoading && <span className="route-status"><LoadingOutlined spin /> Building route…</span>}
+          {routeLoading && <span className="route-status"><BikeSpinner size={16} /> Building route…</span>}
         </div>
       </div>
     </div>

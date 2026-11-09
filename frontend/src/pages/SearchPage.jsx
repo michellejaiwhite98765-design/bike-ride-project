@@ -1,3 +1,4 @@
+import BikeSpinner from "../components/ui/BikeSpinner.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Form, App, Drawer, Button, DatePicker } from "antd";
@@ -247,7 +248,7 @@ export default function SearchPage() {
       <button type="button" className="sp-search-btn" onClick={runSearch} disabled={loading}>
         {loading ? (
           <>
-            <span className="sp-search-icon spinning"><SearchOutlined /></span> Searching…
+            <BikeSpinner /> Searching…
           </>
         ) : (
           <>

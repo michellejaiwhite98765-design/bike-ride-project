@@ -507,7 +507,14 @@ export default function RideDetailsPage() {
       const created = await rideService.createRequest(ride.id, values);
       // Flip the button to "Requested" right away, then refresh in the background.
       setMyRequest(created);
-      notification.success({ title: "Success", description: "Request sent to the rider" });
+      notification.success(
+        created.status === "ACCEPTED"
+          ? {
+              title: "You've joined the ride",
+              description: created.booking?.paymentStatus === "PENDING" ? "Pay now to confirm your seat." : "Your seat is confirmed. The rider has been told.",
+            }
+          : { title: "Success", description: "Request sent to the rider" }
+      );
       setRequestModalOpen(false);
       requestForm.resetFields();
       load();

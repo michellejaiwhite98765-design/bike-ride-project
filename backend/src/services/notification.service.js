@@ -32,6 +32,20 @@ export const notificationService = {
     });
   },
 
+  /** Auto-accept: tell the driver a passenger has joined (no action needed). */
+  async notifyPassengerJoined(rideRequest, booking) {
+    const ride = await rideRepository.findById(rideRequest.rideId);
+    const name = [rideRequest.passenger?.firstName, rideRequest.passenger?.lastName].filter(Boolean).join(" ") || "A passenger";
+    const seats = rideRequest.seatsRequested;
+    await dispatch({
+      userId: ride.riderId,
+      type: "PASSENGER_JOINED",
+      title: "Passenger joined your ride",
+      message: `${name} joined your ride to ${ride.destinationName}${seats > 1 ? ` (${seats} seats)` : ""}. Pickup: ${rideRequest.pickupName}.${booking.paymentStatus === "PENDING" ? " Waiting for their payment." : ""}`,
+      data: { rideId: ride.id, rideRequestId: rideRequest.id, bookingId: booking.id },
+    });
+  },
+
   async notifyRequestAccepted(rideRequest) {
     await dispatch({
       userId: rideRequest.passengerId,

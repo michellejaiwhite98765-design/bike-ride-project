@@ -30,6 +30,7 @@ dayjs.extend(relativeTime);
 // tells you what kind of update each row is.
 const TYPE_META = {
   RIDE_REQUEST_CREATED: { icon: <UserAddOutlined />, color: "#3b82f6" },
+  PASSENGER_JOINED: { icon: <UserAddOutlined />, color: "#22c55e" },
   RIDE_REQUEST_ACCEPTED: { icon: <CheckCircleFilled />, color: "#22c55e" },
   RIDE_REQUEST_REJECTED: { icon: <CloseCircleFilled />, color: "#ef4444" },
   PAYMENT_REQUIRED: { icon: <DollarCircleFilled />, color: "#f59e0b" },

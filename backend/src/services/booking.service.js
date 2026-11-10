@@ -25,6 +25,15 @@ export const bookingService = {
     const rideRequest = await rideRequestRepository.findById(requestId);
     if (!rideRequest) throw ApiError.notFound("Ride request not found");
     if (rideRequest.ride.riderId !== userId) throw ApiError.forbidden("You do not own this ride");
+    return this.reserveSeat(rideRequest, { actorId: userId });
+  },
+
+  /**
+   * Accepts a request and reserves its seats. Used by the driver's Accept
+   * button and, with `auto`, straight after a passenger's join request.
+   */
+  async reserveSeat(rideRequest, { actorId, auto = false }) {
+    const requestId = rideRequest.id;
     assertRideRequestTransition(rideRequest.status, "ACCEPTED");
 
     const { booking, updatedRequest } = await withTransaction(async (tx) => {
@@ -64,8 +73,9 @@ export const bookingService = {
       return { booking: newBooking, updatedRequest: newRequest };
     });
 
-    await audit(null, { userId, action: "RIDE_REQUEST_ACCEPTED", entityType: "RideRequest", entityId: requestId });
+    await audit(null, { userId: actorId, action: auto ? "RIDE_REQUEST_AUTO_ACCEPTED" : "RIDE_REQUEST_ACCEPTED", entityType: "RideRequest", entityId: requestId });
     await notificationService.notifyRequestAccepted(updatedRequest);
+    if (auto) await notificationService.notifyPassengerJoined({ ...updatedRequest, passenger: rideRequest.passenger }, booking);
     if (booking.paymentStatus === "PENDING") {
       await notificationService.notifyPaymentRequired(booking);
     }

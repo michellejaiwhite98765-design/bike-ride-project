@@ -62,7 +62,14 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
         seatsRequested: 1,
       });
       setRequest({ id: created.id, status: created.status || "REQUESTED" });
-      notification.success({ title: "Success", description: "Request sent to the rider" });
+      notification.success(
+        created.status === "ACCEPTED"
+          ? {
+              title: "You've joined the ride",
+              description: created.booking?.paymentStatus === "PENDING" ? "Pay now to confirm your seat." : "Your seat is confirmed. The rider has been told.",
+            }
+          : { title: "Success", description: "Request sent to the rider" }
+      );
       onRequested?.(created);
     } catch (err) {
       notification.error({ title: "Error", description: err.message });

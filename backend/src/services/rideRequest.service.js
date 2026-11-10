@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { audit } from "../utils/audit.js";
 import { notificationService } from "./notification.service.js";
 import { classifyPickup } from "../utils/pickupZone.js";
+import { bookingService } from "./booking.service.js";
+import { env } from "../config/env.js";
 
 async function classifyForRide(rideId, pickup, drop) {
   const geometry = await rideRepository.pickupGeometry(rideId, pickup, drop);
@@ -41,8 +43,23 @@ export const rideRequestService = {
       extraTip: zone.extraTip,
     });
     await audit(null, { userId: passengerId, action: "RIDE_REQUEST_CREATED", entityType: "RideRequest", entityId: rideRequest.id, metadata: { pickupZone: zone.zone, extraTip: zone.extraTip } });
-    await notificationService.notifyRequestCreated(rideRequest);
-    return rideRequest;
+
+    if (!env.lifecycle.autoAcceptRequests) {
+      await notificationService.notifyRequestCreated(rideRequest);
+      return rideRequest;
+    }
+
+    // Auto-accept: reserve the seat now and tell the driver the passenger joined.
+    try {
+      const full = await rideRequestRepository.findById(rideRequest.id);
+      await bookingService.reserveSeat(full, { actorId: passengerId, auto: true });
+    } catch (err) {
+      // Seat taken by someone else a moment earlier, or the ride closed:
+      // don't leave a pending request behind.
+      await rideRequestRepository.updateStatus(rideRequest.id, "CANCELLED").catch(() => {});
+      throw err;
+    }
+    return this.getMine(passengerId, rideId);
   },
 
   /**

@@ -46,6 +46,13 @@ export const rideService = {
       throw ApiError.badRequest(OPEN_TRIP_MESSAGE);
     }
 
+    const { monthlyTripLimit, timeZone } = env.lifecycle;
+    if ((await rideRepository.countCreatedThisMonth(riderId, timeZone)) >= monthlyTripLimit) {
+      throw ApiError.tooManyRequests(
+        `Sorry, you've reached your monthly limit of ${monthlyTripLimit} trips. You can't create a new trip until next month.`
+      );
+    }
+
     const ride = await rideRepository.create(riderId, data);
     // No road route sent by the app: look it up in the background so
     // passengers along the real road can find this ride.

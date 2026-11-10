@@ -62,6 +62,8 @@ export const env = {
   lifecycle: {
     // Departure times are entered in local time.
     timeZone: process.env.RIDE_TIMEZONE || "Asia/Kolkata",
+    // A driver can create at most this many trips per calendar month.
+    monthlyTripLimit: Number(process.env.MONTHLY_TRIP_LIMIT || 50),
     // A ride that never started expires this long after its departure time.
     expireAfterHours: Number(process.env.RIDE_EXPIRE_AFTER_HOURS || 2),
     // An accepted passenger must pay within this many minutes, or the seat is released.

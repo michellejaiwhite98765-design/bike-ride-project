@@ -197,6 +197,21 @@ export const rideRepository = {
     return rows.map((r) => r.id);
   },
 
+  /**
+   * Rides this driver created in the current calendar month (in `timeZone`).
+   * Every ride counts, including drafts and cancelled ones, so the monthly
+   * limit can't be dodged by cancelling and re-creating.
+   */
+  async countCreatedThisMonth(riderId, timeZone) {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS "n" FROM "rides"
+       WHERE "rider_id" = $1
+         AND "created_at" >= date_trunc('month', now() AT TIME ZONE $2) AT TIME ZONE $2`,
+      [riderId, timeZone]
+    );
+    return rows[0].n;
+  },
+
   async findOpenByRider(riderId) {
     const { rows } = await pool.query(
       `SELECT "id", "status", "source_name" AS "sourceName", "destination_name" AS "destinationName"

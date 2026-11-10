@@ -337,7 +337,11 @@ export default function CreateRidePage() {
         }
         return;
       }
-      notification.error({ title: "Error", description: err.message });
+      notification.error({
+        title: err.status === 429 ? "Monthly trip limit reached" : "Error",
+        description: err.message,
+        duration: err.status === 429 ? 8 : undefined,
+      });
     } finally {
       setSubmittingAction(null);
     }

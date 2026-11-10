@@ -120,3 +120,61 @@ describe("Ride creation", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("Monthly trip limit", () => {
+  const ridePayload = (vehicleId) => ({
+    vehicleId,
+    sourceName: "A",
+    sourceLatitude: 13.1,
+    sourceLongitude: 80.1,
+    destinationName: "B",
+    destinationLatitude: 13.2,
+    destinationLongitude: 80.2,
+    departureDate: futureDate(),
+    departureTime: "08:00",
+    availableSeats: 1,
+    rideType: "WITHOUT_TIP",
+    tipAmount: 0,
+  });
+
+  // Copies one real ride `count` times as CANCELLED rides (no open trip in the way).
+  async function fillMonth(rideId, count, createdAt = "now()") {
+    const { pool } = await import("../src/config/db.js");
+    const { rows: cols } = await pool.query(
+      `SELECT string_agg(quote_ident(column_name), ',') AS c FROM information_schema.columns
+       WHERE table_name = 'rides' AND column_name NOT IN ('id', 'status', 'created_at', 'route_geog', 'source_geog', 'destination_geog')
+         AND is_generated = 'NEVER'`
+    );
+    const c = cols[0].c;
+    await pool.query(
+      `INSERT INTO rides (id, ${c}, status, created_at)
+       SELECT gen_random_uuid()::text, ${c}, 'CANCELLED', ${createdAt} FROM rides, generate_series(1, $2) WHERE id = $1`,
+      [rideId, count]
+    );
+    await pool.query(`UPDATE rides SET status = 'CANCELLED' WHERE id = $1`, [rideId]);
+  }
+
+  it("blocks the 51st trip in a month with a clear message", async () => {
+    const { token } = await registerUser();
+    const vehicle = await createVehicle(token);
+    await verifyVehicle(vehicle.id);
+    const first = await request(app).post("/api/rides").set("Authorization", `Bearer ${token}`).send(ridePayload(vehicle.id));
+    expect(first.status).toBe(201);
+    await fillMonth(first.body.data.id, 49); // 50 trips this month
+
+    const res = await request(app).post("/api/rides").set("Authorization", `Bearer ${token}`).send(ridePayload(vehicle.id));
+    expect(res.status).toBe(429);
+    expect(res.body.message).toMatch(/reached your monthly limit of 50 trips/);
+  });
+
+  it("does not count trips from previous months", async () => {
+    const { token } = await registerUser();
+    const vehicle = await createVehicle(token);
+    await verifyVehicle(vehicle.id);
+    const first = await request(app).post("/api/rides").set("Authorization", `Bearer ${token}`).send(ridePayload(vehicle.id));
+    await fillMonth(first.body.data.id, 60, "now() - interval '40 days'");
+
+    const res = await request(app).post("/api/rides").set("Authorization", `Bearer ${token}`).send(ridePayload(vehicle.id));
+    expect(res.status).toBe(201);
+  });
+});

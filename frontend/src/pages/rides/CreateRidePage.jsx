@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { DayStrip, TimeChips } from "../../components/ride/DayStripPicker.jsx";
+import { DayStrip, TimeChips, START_GRACE_MIN } from "../../components/ride/DayStripPicker.jsx";
 import SeatStepper from "../../components/ride/SeatStepper.jsx";
 import PickupFareInfo from "../../components/ride/PickupFareInfo.jsx";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,6 +15,7 @@ import {
   SafetyCertificateOutlined,
   PlusOutlined,
   TeamOutlined,
+  PlayCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -86,8 +87,14 @@ const ActionButtons = styled.div`
     margin: 0;
     max-width: none;
 
+    flex-wrap: wrap;
+
     button {
       flex: 1;
+    }
+    button.start-now {
+      flex-basis: 100%;
+      order: -1;
     }
   }
 `;
@@ -268,10 +275,30 @@ export default function CreateRidePage() {
     load();
   }, [id, isEdit, form]);
 
-  async function submit(publish) {
+  // action: "draft" | "publish" | "start" (publish and start the trip right away).
+  async function submit(action) {
+    const publish = action !== "draft";
     if (!isOnline) {
       notification.error({ title: "Error", description: "No Internet Connection" });
       return;
+    }
+    // Start now is only for a start time within ±5 minutes of the current time.
+    // Checked first, so a wrong time is flagged even before the rest of the form.
+    if (action === "start") {
+      const date = form.getFieldValue("departureDate");
+      const time = form.getFieldValue("departureTime");
+      const when = date && time ? dayjs(`${date.format("YYYY-MM-DD")} ${time.format("HH:mm")}`) : null;
+      if (!when || Math.abs(when.diff(dayjs(), "minute", true)) > START_GRACE_MIN) {
+        form.scrollToField("departureDate", { behavior: "smooth", block: "start" });
+        notification.error({
+          title: "Can't start this trip now",
+          description: when
+            ? `The start time is ${when.format("D MMM, h:mm A")}. To start right away, change the start time to now (${dayjs().format("h:mm A")}, within ${START_GRACE_MIN} minutes either way), or publish the trip instead.`
+            : `Pick today's date and the current time (tap "Now") to start the trip right away.`,
+          duration: 8,
+        });
+        return;
+      }
     }
     try {
       // Terms are only required to publish; a draft can be saved without them.
@@ -290,7 +317,7 @@ export default function CreateRidePage() {
         notification.error({ title: "Error", description: "Start and end locations must be in the same country" });
         return;
       }
-      setSubmittingAction(publish ? "publish" : "draft");
+      setSubmittingAction(action);
       const {
         agreeTerms: _agreeTerms,
         agreeSecurity: _agreeSecurity,
@@ -325,7 +352,12 @@ export default function CreateRidePage() {
         ride = await rideService.publish(ride.id);
       }
 
-      notification.success({ title: "Success", description: publish ? "Ride published" : "Ride saved as draft" });
+      if (action === "start") ride = await rideService.start(ride.id);
+
+      notification.success({
+        title: "Success",
+        description: action === "start" ? "Trip started" : publish ? "Ride published" : "Ride saved as draft",
+      });
 
       navigate(`/rides/${ride.id}`);
     } catch (err) {
@@ -622,8 +654,8 @@ export default function CreateRidePage() {
             size="large"
             block
             loading={submittingAction === "draft"}
-            disabled={submittingAction === "publish" || Boolean(openTrip && !isEdit)}
-            onClick={() => submit(false)}
+            disabled={Boolean(submittingAction && submittingAction !== "draft") || Boolean(openTrip && !isEdit)}
+            onClick={() => submit("draft")}
             style={{ background: colors.bgSecondary }}
           >
             Draft
@@ -633,11 +665,24 @@ export default function CreateRidePage() {
             type="primary"
             block
             loading={submittingAction === "publish"}
-            disabled={submittingAction === "draft" || Boolean(openTrip && !isEdit)}
+            disabled={Boolean(submittingAction && submittingAction !== "publish") || Boolean(openTrip && !isEdit)}
             style={{ background: colors.primary }}
-            onClick={() => submit(true)}
+            onClick={() => submit("publish")}
           >
             Publish
+          </Button>
+          <Button
+            size="large"
+            type="primary"
+            block
+            className="start-now"
+            icon={<PlayCircleOutlined />}
+            loading={submittingAction === "start"}
+            disabled={Boolean(submittingAction && submittingAction !== "start") || Boolean(openTrip && !isEdit)}
+            style={{ background: "#16a34a" }}
+            onClick={() => submit("start")}
+          >
+            Start trip
           </Button>
         </ActionButtons>
           </Form>
@@ -696,8 +741,8 @@ export default function CreateRidePage() {
         .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}
-        /* Phones: Reset/Draft/Publish are pinned to the bottom, so leave room for them. */
-        @media(max-width:600px){.cr-drawer .ant-drawer-body{padding-bottom:110px}}
+        /* Phones: Start trip + Reset/Draft/Publish are pinned to the bottom, so leave room for them. */
+        @media(max-width:600px){.cr-drawer .ant-drawer-body{padding-bottom:170px}}
       `}</style>
     </div>
   );

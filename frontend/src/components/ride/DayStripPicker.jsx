@@ -58,13 +58,18 @@ export function DayStrip({ value, onChange }) {
   );
 }
 
+// Times up to this many minutes ago can still be picked today, for "Start trip now".
+export const START_GRACE_MIN = 5;
+
 /** Time chips in 30-minute steps plus an exact-time picker. value = dayjs | undefined. */
 export function TimeChips({ value, onChange, date }) {
   const now = dayjs();
   // No day picked yet counts as today (the earliest day allowed), so past times never show.
   const isToday = !date || date.isSame(now, "day");
   const isSlot = value && SLOTS.some((s) => s.hour() === value.hour() && s.minute() === value.minute());
-  const pastSlot = (s) => isToday && s.hour() * 60 + s.minute() <= now.hour() * 60 + now.minute();
+  // Today: anything earlier than START_GRACE_MIN minutes ago is past (a trip can start a few minutes "late").
+  const earliest = now.hour() * 60 + now.minute() - START_GRACE_MIN;
+  const pastSlot = (s) => isToday && s.hour() * 60 + s.minute() < earliest;
   // Was the time chosen with "Pick time"? Then that chip shows it (even if it
   // happens to match a half-hour chip); tapping a half-hour chip resets this.
   const [fromPicker, setFromPicker] = useState(() => Boolean(value && !isSlot));
@@ -73,7 +78,7 @@ export function TimeChips({ value, onChange, date }) {
 
   // Switching to today with an earlier time already chosen: clear it so a past time can't be submitted.
   useEffect(() => {
-    if (isToday && value && value.hour() * 60 + value.minute() <= now.hour() * 60 + now.minute()) onChange?.(undefined);
+    if (isToday && value && value.hour() * 60 + value.minute() < earliest) onChange?.(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isToday, value]);
 
@@ -84,6 +89,18 @@ export function TimeChips({ value, onChange, date }) {
         <button type="button" className={`ds-time ds-other${showPicked ? " sel" : ""}`} onClick={() => setSheetOpen(true)}>
           <ClockCircleOutlined /> {showPicked ? value.format("h:mm A") : "Pick time"}
         </button>
+        {isToday && (
+          <button
+            type="button"
+            className="ds-time"
+            onClick={() => {
+              setFromPicker(true);
+              onChange?.(dayjs().second(0).millisecond(0));
+            }}
+          >
+            Now
+          </button>
+        )}
         {SLOTS.filter((s) => !pastSlot(s)).map((s) => {
           const sel = !showPicked && value && value.hour() === s.hour() && value.minute() === s.minute();
           return (
@@ -107,7 +124,7 @@ export function TimeChips({ value, onChange, date }) {
       <TimeSheet
         open={sheetOpen}
         initial={value}
-        minMinutes={isToday ? now.hour() * 60 + now.minute() + 1 : 0}
+        minMinutes={isToday ? Math.max(0, earliest) : 0}
         onClose={() => setSheetOpen(false)}
         onPick={(t) => {
           setSheetOpen(false);

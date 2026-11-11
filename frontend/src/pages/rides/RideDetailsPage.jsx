@@ -851,13 +851,23 @@ export default function RideDetailsPage() {
 
             {isOwner && (
               <>
-                {["DRAFT", "PUBLISHED"].includes(ride.status) && (
+                {/* Edit only before the trip starts and while no passenger has asked to join. */}
+                {["DRAFT", "PUBLISHED"].includes(ride.status) && (ride.canEdit === false ? (
+                  <Button
+                    size="large"
+                    block
+                    style={{ flex: 1, opacity: 0.55 }}
+                    onClick={() => notification.info({ title: "Can't edit this trip", description: ride.editBlockedReason, duration: 6 })}
+                  >
+                    Edit Ride
+                  </Button>
+                ) : (
                   <Link to={`/rides/${ride.id}/edit`} style={{ flex: 1 }}>
                     <Button size="large" block>
                       Edit Ride
                     </Button>
                   </Link>
-                )}
+                ))}
                 <Link to={`/rides/${ride.id}/requests`} style={{ flex: 1 }}>
                   <Button size="large" block>
                     View Requests

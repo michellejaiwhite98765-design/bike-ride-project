@@ -79,6 +79,16 @@ export const rideRequestRepository = {
     return rows.map((row) => nestPrefixed(row, { passenger: "passenger", booking: "booking" }));
   },
 
+  /** How many join requests on this ride are still active (waiting or accepted). */
+  async countActiveForRide(rideId) {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM "ride_requests"
+       WHERE "ride_id" = $1 AND "status" = ANY($2::"RideRequestStatus"[])`,
+      [rideId, ["REQUESTED", "ACCEPTED"]]
+    );
+    return rows[0].n;
+  },
+
   async findActiveByRideAndPassenger(rideId, passengerId) {
     const { rows } = await pool.query(
       `SELECT * FROM "ride_requests"

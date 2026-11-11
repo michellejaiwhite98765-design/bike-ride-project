@@ -14,6 +14,12 @@ export const rideController = {
 
   async getById(req, res) {
     const ride = await rideService.getById(req.params.id);
+    // The owner's app shows Edit only when the trip can still be edited.
+    if (req.user?.id === ride.riderId) {
+      const reason = await rideService.editBlockReason(ride);
+      ride.canEdit = !reason;
+      ride.editBlockedReason = reason;
+    }
     ok(res, ride);
   },
 

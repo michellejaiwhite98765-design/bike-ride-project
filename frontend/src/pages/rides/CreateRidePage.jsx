@@ -246,6 +246,12 @@ export default function CreateRidePage() {
 
       if (isEdit) {
         const ride = await rideService.getById(id);
+        // Started, or a passenger has asked to join: send the rider back with the reason.
+        if (ride.canEdit === false) {
+          notification.info({ title: "Can't edit this trip", description: ride.editBlockedReason, duration: 6 });
+          navigate(`/rides/${id}`, { replace: true });
+          return;
+        }
         setSavedPath(ride.routePath || null);
         form.setFieldsValue({
           ...ride,

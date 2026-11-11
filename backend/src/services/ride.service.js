@@ -81,12 +81,27 @@ export const rideService = {
     return rideRepository.findByRider(riderId);
   },
 
+  /**
+   * Why the rider can't edit this trip, or null if they can. A trip can be
+   * edited only before it starts and while no passenger has a join request
+   * on it (waiting or accepted) - they asked to join the trip as it was.
+   */
+  async editBlockReason(ride) {
+    if (!["DRAFT", "PUBLISHED"].includes(ride.status)) {
+      return "This trip can't be edited because it has already started or ended.";
+    }
+    const requests = await rideRequestRepository.countActiveForRide(ride.id);
+    if (requests > 0) {
+      return `This trip can't be edited because ${requests === 1 ? "a passenger has" : `${requests} passengers have`} already asked to join it.`;
+    }
+    return null;
+  },
+
   async update(userId, rideId, data) {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
-    if (!["DRAFT", "PUBLISHED"].includes(ride.status)) {
-      throw ApiError.conflict("Ride can only be edited while it is a draft or published");
-    }
+    const blocked = await this.editBlockReason(ride);
+    if (blocked) throw ApiError.conflict(blocked);
 
     const { routePath, ...fields } = data;
     const endpointsMoved = ["sourceLatitude", "sourceLongitude", "destinationLatitude", "destinationLongitude"].some(

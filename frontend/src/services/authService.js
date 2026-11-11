@@ -22,6 +22,25 @@ export const authService = {
     tokenStorage.set(res.data.token);
     return res.data.user;
   },
+  // Passwordless login: a code to the account's mobile number (Firebase SMS,
+  // plus the server's own code shown on screen while OTP_DEV_MODE is on).
+  sendLoginOtp(phone) {
+    const viaServer = () => api.post("/auth/login/otp", { phone }).then((res) => res.data);
+    if (!firebasePhoneEnabled) return viaServer();
+    return sendBoth(phone, viaServer);
+  },
+  async loginWithOtp(phone, otp) {
+    const data = await verifyEither(
+      phone,
+      otp,
+      (firebaseIdToken) => api.post("/auth/login/otp/verify", { phone, firebaseIdToken }).then((res) => res.data),
+      () => api.post("/auth/login/otp/verify", { phone, otp }).then((res) => res.data)
+    );
+    // New number: verified, but no account yet - the caller asks for their details.
+    if (data.isNewUser) return data;
+    tokenStorage.set(data.token);
+    return data.user;
+  },
   async login(payload) {
     const res = await api.post("/auth/login", payload);
     tokenStorage.set(res.data.token);

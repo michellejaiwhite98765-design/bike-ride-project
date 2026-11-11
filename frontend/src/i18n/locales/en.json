@@ -60,8 +60,8 @@
   },
   "login": {
     "welcomeBack": "Welcome back",
-    "title": "Sign in to BikeRide",
-    "sub": "Enter your details to find or offer a ride.",
+    "title": "Log in or sign up",
+    "sub": "Enter your mobile number - we'll send you an OTP.",
     "keepSignedIn": "Keep me signed in",
     "forgot": "Forgot password?",
     "signIn": "Sign in",

@@ -36,6 +36,13 @@ export function AuthProvider({ children }) {
     refreshUser();
   }, [refreshUser]);
 
+  const loginWithOtp = useCallback(async (phone, otp) => {
+    const result = await authService.loginWithOtp(phone, otp);
+    if (result?.isNewUser) return result; // sign-up continues with their details
+    setUser(result);
+    return result;
+  }, []);
+
   const login = useCallback(async (payload) => {
     const loggedInUser = await authService.login(payload);
     setUser(loggedInUser);
@@ -59,6 +66,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(user),
     loading,
     login,
+    loginWithOtp,
     register,
     logout,
     refreshUser,

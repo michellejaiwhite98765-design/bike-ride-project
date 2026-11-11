@@ -37,10 +37,15 @@ export const phoneOtpService = {
   /**
    * @param ownNumber true when a signed-in user is proving they still have
    *   their current number (changing it) - that number is registered, by them.
+   * @param forLogin true for the single login/sign-up screen: any number can
+   *   get a code (new numbers sign up after verifying); deactivated accounts can't.
    */
-  async send(rawPhone, { ownNumber = false } = {}) {
+  async send(rawPhone, { ownNumber = false, forLogin = false } = {}) {
     const phone = normalizePhone(rawPhone);
-    if (!ownNumber && (await userRepository.findByPhone(phone))) {
+    const owner = await userRepository.findByPhone(phone);
+    if (forLogin) {
+      if (owner && !owner.isActive) throw ApiError.forbidden("This account has been deactivated");
+    } else if (!ownNumber && owner) {
       throw ApiError.conflict("This phone number is already registered. Please log in instead.");
     }
 

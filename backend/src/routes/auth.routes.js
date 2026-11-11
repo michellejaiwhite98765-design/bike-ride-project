@@ -47,6 +47,27 @@ authRoutes.post("/register", authLimiter, validateBody(registerSchema), authCont
 
 /**
  * @openapi
+ * /auth/login/otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send a login code to a registered mobile number
+ *     security: []
+ *     responses:
+ *       200: { description: Code sent }
+ *       404: { description: No account with this number }
+ * /auth/login/otp/verify:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Log in with the mobile number and its code (no password)
+ *     security: []
+ *     responses:
+ *       200: { description: Logged in - returns the user and token }
+ */
+authRoutes.post("/login/otp", authLimiter, validateBody(sendPhoneOtpSchema), authController.sendLoginOtp);
+authRoutes.post("/login/otp/verify", authLimiter, validateBody(verifyPhoneOtpSchema), authController.loginWithPhone);
+
+/**
+ * @openapi
  * /auth/login:
  *   post:
  *     tags: [Auth]

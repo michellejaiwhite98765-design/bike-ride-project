@@ -13,7 +13,7 @@ export const registerSchema = z.object({
   lastName: z.string().trim().min(1).max(50),
   email: z.string().trim().toLowerCase().email(),
   phone: mobile,
-  password: z.string().min(8).max(72),
+  password: z.string().min(8).max(72).optional(),
   // From POST /auth/phone-otp/verify: proves the phone number was confirmed by OTP.
   phoneVerificationToken: z.string().trim().min(1, "Verify your phone number first"),
   language: language.optional(),

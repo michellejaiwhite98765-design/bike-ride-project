@@ -5,7 +5,6 @@ import BrandLoader from "./components/ui/BrandLoader.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
 import LoginPage from "./pages/auth/LoginPage.jsx";
-import RegisterPage from "./pages/auth/RegisterPage.jsx";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
@@ -45,7 +44,7 @@ export default function App() {
   return (
     <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomeRoute />} />
         <Route path="/login" element={<LoginPage />} />

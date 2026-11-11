@@ -13,6 +13,17 @@ export const authController = {
     ok(res, result, result.devOtp ? "Verification code generated (test mode - no SMS sent)" : "Verification code sent");
   },
 
+  // Passwordless login: OTP to a registered number, then sign in with the code.
+  async sendLoginOtp(req, res) {
+    const result = await phoneOtpService.send(req.body.phone, { forLogin: true });
+    ok(res, result, result.devOtp ? "Login code generated (test mode - no SMS sent)" : "Login code sent");
+  },
+
+  async loginWithPhone(req, res) {
+    const result = await authService.loginWithPhone(req.body);
+    ok(res, result, "Logged in");
+  },
+
   async verifyPhoneOtp(req, res) {
     const result = await phoneOtpService.verify(req.body.phone, req.body.otp, req.body.firebaseIdToken);
     ok(res, result, "Phone number verified");

@@ -1,11 +1,13 @@
 import { useForceDark } from "../../context/ThemeContext.jsx";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Form, Input, Button, App } from "antd";
-import { MailOutlined, LockOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { MobileOutlined, ArrowRightOutlined, ArrowLeftOutlined, UserOutlined, MailOutlined } from "@ant-design/icons";
+import OtpCodeNotice from "../../components/OtpCodeNotice.jsx";
 import styled, { css, keyframes } from "styled-components";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { authService } from "../../services/authService.js";
 
 /* ---------------------------------------------------------------------- */
 /* Design tokens (scoped to this page only)                               */
@@ -319,30 +321,90 @@ const Foot = styled.div`
 /* ---------------------------------------------------------------------- */
 export default function LoginPage() {
   useForceDark(); // these screens are designed dark-only
-  const { t } = useTranslation();
-  const { login } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { loginWithOtp, register } = useAuth();
+  const [detailsForm] = Form.useForm();
+  // New number: verified by OTP, now just their details (no mobile, no password).
+  const [signup, setSignup] = useState(null); // { phone, phoneVerificationToken }
+  const [creating, setCreating] = useState(false);
   const { notification } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
-  const [submitting, setSubmitting] = useState(false);
+  // Passwordless: step 0 = mobile number, step 1 = the code sent to it.
+  const [step, setStep] = useState(0);
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [devOtp, setDevOtp] = useState(null); // shown while OTP_DEV_MODE is on (testing)
+  const [smsSent, setSmsSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+  const otpInput = useRef(null);
+  const [otpError, setOtpError] = useState(""); // shown under the code box
 
-  async function onFinish(values) {
-    setSubmitting(true);
+  useEffect(() => {
+    if (resendIn <= 0) return undefined;
+    const timer = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  async function sendCode(number) {
+    setSending(true);
     try {
-      await login(values);
-      const redirectTo = location.state?.from?.pathname || "/";
-      navigate(redirectTo, { replace: true });
+      const res = await authService.sendLoginOtp(number);
+      setPhone(number);
+      setDevOtp(res?.devOtp || null);
+      setSmsSent(Boolean(res?.smsSent));
+      setResendIn(res?.resendAfterSeconds || 30);
+      setOtp("");
+      setOtpError("");
+      setStep(1);
+      setTimeout(() => otpInput.current?.focus(), 50);
     } catch (err) {
-      // Wrong email / wrong password show under their own field.
-      const field = err.errors?.field;
-      if (field === "email" || field === "password") {
-        form.setFields([{ name: field, errors: [err.message] }]);
-      } else {
-        notification.error({ title: t("login.error"), description: err.message });
-      }
+      // "No account with this number" shows under the field.
+      if (err.errors?.field === "phone" || err.status === 404) form.setFields([{ name: "phone", errors: [err.message] }]);
+      else notification.error({ title: t("login.error"), description: err.message });
     } finally {
-      setSubmitting(false);
+      setSending(false);
+    }
+  }
+
+  async function verify() {
+    if (otp.length !== 6) {
+      setOtpError("Enter the 6-digit code");
+      return;
+    }
+    setOtpError("");
+    setVerifying(true);
+    try {
+      const result = await loginWithOtp(phone, otp);
+      if (result?.isNewUser) {
+        setSignup({ phone: result.phone, phoneVerificationToken: result.phoneVerificationToken });
+        setStep(2);
+        return;
+      }
+      navigate(location.state?.from?.pathname || "/", { replace: true });
+    } catch (err) {
+      // Wrong / expired code: say so right under the box, and clear it for a fresh try.
+      setOtpError(err.message || "Incorrect code. Please try again");
+      setOtp("");
+      setTimeout(() => otpInput.current?.focus(), 50);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function createAccount(values) {
+    setCreating(true);
+    try {
+      await register({ ...values, phone: signup.phone, phoneVerificationToken: signup.phoneVerificationToken, language: i18n.language });
+      navigate("/", { replace: true });
+    } catch (err) {
+      if (/email/i.test(err.message)) detailsForm.setFields([{ name: "email", errors: [err.message] }]);
+      else notification.error({ title: t("login.error"), description: err.message });
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -352,7 +414,7 @@ export default function LoginPage() {
       {/* RIGHT: ticket login */}
         <TicketCard>
           <TicketTop>
-            <Eyebrow>{t("login.welcomeBack")}</Eyebrow>
+            <Eyebrow>{step === 2 ? "Almost there" : t("login.welcomeBack")}</Eyebrow>
             <TicketH2>{t("login.title")}</TicketH2>
             <TicketSub>{t("login.sub")}</TicketSub>
 
@@ -370,54 +432,111 @@ export default function LoginPage() {
           <Perforation />
 
           <TicketBottom>
-            <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
+            {step === 0 ? (
+              <Form form={form} layout="vertical" onFinish={(v) => sendCode(v.phone)} requiredMark={false}>
+                <div>
+                  <FieldLabel htmlFor="login_phone">Mobile number</FieldLabel>
+                  <StyledFormItem
+                    name="phone"
+                    rules={[
+                      { required: true, message: "Enter your mobile number" },
+                      {
+                        // Spaces, dashes, +91 or a leading 0 are fine: "98765 43210", "+91-9876543210".
+                        validator: (_, v) =>
+                          !v || /^[6-9]\d{9}$/.test(String(v).replace(/\D/g, "").replace(/^(91)?0?(\d{10})$/, "$2"))
+                            ? Promise.resolve()
+                            : Promise.reject(new Error("Enter a valid 10-digit mobile number")),
+                      },
+                    ]}
+                  >
+                    <StyledInput
+                      id="login_phone"
+                      variant="borderless"
+                      prefix={<><MobileOutlined /> <span style={{ opacity: 0.7 }}>+91</span></>}
+                      placeholder="98765 43210"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      maxLength={14}
+                    />
+                  </StyledFormItem>
+                </div>
+
+                <BoardButton type="primary" htmlType="submit" loading={sending}>
+                  {sending ? "Sending code…" : "Send OTP"}
+                  {!sending && <ArrowRightOutlined />}
+                </BoardButton>
+              </Form>
+            ) : step === 2 ? (
+              <Form form={detailsForm} layout="vertical" onFinish={createAccount} requiredMark={false}>
+                <FieldLabel as="div" style={{ marginBottom: 10 }}>Number verified ✓ - just a few details to finish</FieldLabel>
+                <div>
+                  <FieldLabel htmlFor="su_first">First name</FieldLabel>
+                  <StyledFormItem name="firstName" rules={[{ required: true, whitespace: true, message: "Enter your first name" }]}>
+                    <StyledInput id="su_first" variant="borderless" prefix={<UserOutlined />} placeholder="First name" autoComplete="given-name" maxLength={50} />
+                  </StyledFormItem>
+                </div>
+                <div>
+                  <FieldLabel htmlFor="su_last">Last name</FieldLabel>
+                  <StyledFormItem name="lastName" rules={[{ required: true, whitespace: true, message: "Enter your last name" }]}>
+                    <StyledInput id="su_last" variant="borderless" prefix={<UserOutlined />} placeholder="Last name" autoComplete="family-name" maxLength={50} />
+                  </StyledFormItem>
+                </div>
+                <div>
+                  <FieldLabel htmlFor="su_email">Email</FieldLabel>
+                  <StyledFormItem name="email" rules={[{ required: true, message: t("reg.emailRequired") }, { type: "email", message: t("reg.emailInvalid") }]}>
+                    <StyledInput id="su_email" variant="borderless" prefix={<MailOutlined />} placeholder="you@example.com" autoComplete="email" inputMode="email" />
+                  </StyledFormItem>
+                </div>
+                <BoardButton type="primary" htmlType="submit" loading={creating}>
+                  {creating ? "Creating account…" : "Continue"}
+                  {!creating && <ArrowRightOutlined />}
+                </BoardButton>
+              </Form>
+            ) : (
               <div>
-                <FieldLabel htmlFor="login_email">{t("reg.email")}</FieldLabel>
-                <StyledFormItem
-                  name="email"
-                  rules={[
-                    { required: true, message: t("reg.emailRequired") },
-                    { type: "email", message: t("reg.emailInvalid") },
-                  ]}
-                >
-                  <StyledInput
-                    id="login_email"
-                    variant="borderless"
-                    prefix={<MailOutlined />}
-                    placeholder="you@example.com"
-                  />
-                </StyledFormItem>
+                <FieldLabel htmlFor="login_otp">Enter the code sent to +91 {phone.replace(/\D/g, "").slice(-10).replace(/^(\d{2})\d{5}/, "$1•••••")}</FieldLabel>
+                <OtpCodeNotice code={devOtp} smsSent={smsSent} style={{ marginBottom: 12 }} />
+                <Input
+                  id="login_otp"
+                  ref={otpInput}
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                    if (otpError) setOtpError("");
+                  }}
+                  onPressEnter={verify}
+                  status={otpError ? "error" : undefined}
+                  aria-invalid={Boolean(otpError)}
+                  aria-describedby={otpError ? "login_otp_error" : undefined}
+                  placeholder="● ● ● ● ● ●"
+                  size="large"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  aria-label="6-digit code"
+                  style={{ letterSpacing: 10, fontSize: 24, fontWeight: 800, textAlign: "center", height: 56, marginBottom: otpError ? 6 : 14 }}
+                />
+                {otpError && (
+                  <div id="login_otp_error" role="alert" style={{ color: "#ff6b6b", fontSize: 13, fontWeight: 600, marginBottom: 12, textAlign: "center" }}>
+                    {otpError}
+                  </div>
+                )}
+                <BoardButton type="primary" onClick={verify} loading={verifying} disabled={otp.length !== 6}>
+                  {verifying ? t("login.signingIn") : "Verify & sign in"}
+                  {!verifying && <ArrowRightOutlined />}
+                </BoardButton>
+                <Row style={{ marginTop: 12 }}>
+                  <a onClick={() => { setStep(0); setOtp(""); }} role="button" tabIndex={0}><ArrowLeftOutlined /> Change number</a>
+                  {resendIn > 0 ? (
+                    <span>Resend in {resendIn}s</span>
+                  ) : (
+                    <a onClick={() => !sending && sendCode(phone)} role="button" tabIndex={0}>Resend code</a>
+                  )}
+                </Row>
               </div>
+            )}
 
-              <div>
-                <FieldLabel htmlFor="login_password">{t("reg.password")}</FieldLabel>
-                <StyledFormItem
-                  name="password"
-                  rules={[{ required: true, message: t("reg.passwordRequired") }]}
-                >
-                  <StyledPassword
-                    id="login_password"
-                    variant="borderless"
-                    prefix={<LockOutlined />}
-                    placeholder="••••••••"
-                  />
-                </StyledFormItem>
-              </div>
-
-              <Row>
-                <span>{t("login.keepSignedIn")}</span>
-                <Link to="/forgot-password">{t("login.forgot")}</Link>
-              </Row>
-
-              <BoardButton type="primary" htmlType="submit" loading={submitting}>
-                {submitting ? t("login.signingIn") : t("login.signIn")}
-                {!submitting && <ArrowRightOutlined />}
-              </BoardButton>
-            </Form>
-
-            <Foot>
-              {t("login.newHere")} <Link to="/register">{t("login.createAccount")}</Link>
-            </Foot>
+            <Foot>New here? Enter your number - we'll set up your account after the OTP.</Foot>
           </TicketBottom>
         </TicketCard>
     </AuthShell>

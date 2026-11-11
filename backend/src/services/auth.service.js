@@ -38,7 +38,8 @@ export const authService = {
       throw ApiError.badRequest("Please verify your mobile number with the OTP before signing up");
     }
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    // Sign-in is by mobile OTP; a password is optional (older clients may still send one).
+    const passwordHash = password ? await bcrypt.hash(password, BCRYPT_ROUNDS) : null;
     const user = await userRepository.create({ firstName, lastName, email, phone, passwordHash, phoneVerifiedAt: new Date(), language });
 
     return { user: serializeUser(user), token: issueToken(user) };
@@ -48,10 +49,30 @@ export const authService = {
     const user = await userRepository.findByEmail(email);
     if (!user) throw new ApiError(401, "No account found with this email", { field: "email" });
 
+    if (!user.passwordHash) throw new ApiError(401, "This account signs in with your mobile number and OTP", { field: "password" });
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new ApiError(401, "Incorrect password", { field: "password" });
     if (!user.isActive) throw ApiError.forbidden("This account has been deactivated");
 
+    return { user: serializeUser(user), token: issueToken(user) };
+  },
+
+  /**
+   * Passwordless login: the number was just confirmed by OTP (server code or
+   * Firebase). The verification is used up straight away, so it can't be replayed.
+   */
+  async loginWithPhone({ phone: rawPhone, otp, firebaseIdToken }) {
+    const phone = normalizePhone(rawPhone);
+    const user = await userRepository.findByPhone(phone);
+    if (user && !user.isActive) throw ApiError.forbidden("This account has been deactivated");
+
+    const { verificationToken, validForMinutes } = await phoneOtpService.verify(phone, otp, firebaseIdToken);
+    // A new number: the app asks for their details and calls /register with
+    // this token (one screen for login and sign-up, no password).
+    if (!user) return { isNewUser: true, phone, phoneVerificationToken: verificationToken, validForMinutes };
+    if (!(await phoneOtpService.consume(phone, verificationToken))) {
+      throw ApiError.badRequest("This code has already been used. Please request a new one");
+    }
     return { user: serializeUser(user), token: issueToken(user) };
   },
 

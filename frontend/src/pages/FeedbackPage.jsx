@@ -56,7 +56,8 @@ export default function FeedbackPage() {
         <div className="fb-label">How would you rate your experience? <span>(optional)</span></div>
         <Rate value={rating} onChange={setRating} style={{ fontSize: 26 }} />
         <div className="fb-label">Your message</div>
-        <Input.TextArea rows={4} maxLength={2000} showCount value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us what went well or what we can improve" />
+        <Input.TextArea rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us what went well or what we can improve" />
+        <div className="fb-count">{message.length} / 2000</div>
         <Button type="primary" block size="large" loading={busy} onClick={submit} style={{ marginTop: 14 }}>Send feedback</Button>
       </div>
 
@@ -90,6 +91,7 @@ export default function FeedbackPage() {
         .fb-card{padding:16px;border-radius:16px;border:1px solid var(--chrome-border);background:var(--bg-secondary);margin-bottom:22px}
         .fb-label{font-weight:700;margin:12px 0 8px}.fb-label:first-child{margin-top:0}
         .fb-label span{color:var(--text-secondary);font-weight:500}
+        .fb-count{text-align:right;font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1}
         .fb-chips{display:flex;flex-wrap:wrap;gap:8px}
         .fb-chip{padding:7px 14px;border-radius:999px;border:1px solid var(--chrome-border);background:transparent;color:var(--text-primary);font-weight:600;cursor:pointer}
         .fb-chip.is-on{background:#2DD4BF;border-color:#2DD4BF;color:#06201d}

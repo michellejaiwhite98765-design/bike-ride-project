@@ -72,7 +72,7 @@ export default function AdminFeedbackTab({ onCount }) {
         .afb-card{padding:12px 14px;border-radius:14px;border:1px solid var(--chrome-border);background:var(--bg-secondary)}
         .afb-card.is-done{opacity:.6}
         .afb-top{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
-        .afb-meta{color:var(--text-secondary);font-size:12px}
+        .afb-meta{color:var(--text-secondary);font-size:12px;overflow-wrap:anywhere}
         .afb-tags{display:flex;align-items:center;gap:6px;margin-top:6px}
         .afb-msg{margin:8px 0 0;white-space:pre-wrap}
         .afb-reply{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(45,212,191,.1);border-left:3px solid #2DD4BF;white-space:pre-wrap;font-size:13px}

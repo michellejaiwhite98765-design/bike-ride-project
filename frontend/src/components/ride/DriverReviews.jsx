@@ -115,7 +115,8 @@ export function RateDriverModal({ booking, open, onClose, onDone }) {
       <div style={{ textAlign: "center", margin: "8px 0 16px" }}>
         <Rate value={score} onChange={setScore} style={{ fontSize: 34 }} />
       </div>
-      <Input.TextArea rows={3} maxLength={500} showCount placeholder="How was the ride? (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
+      <Input.TextArea rows={3} maxLength={500} placeholder="How was the ride? (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
+      <div style={{ textAlign: "right", fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>{comment.length} / 500</div>
     </Modal>
   );
 }

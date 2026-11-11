@@ -536,6 +536,7 @@ export default function AppLayout() {
       { key: "vehicles", label: <Link to="/vehicles">{t("menu.vehicles")}</Link> },
       { key: "history", label: <Link to="/history">{t("menu.history")}</Link> },
       { key: "safety", label: <Link to="/safety">{t("menu.safety")}</Link> },
+      { key: "feedback", label: <Link to="/feedback">{t("menu.feedback", "Feedback")}</Link> },
       ...(user?.role === "ADMIN" ? [{ key: "admin", label: <Link to="/admin">{t("menu.admin")}</Link> }] : []),
       {
         key: "settings",

@@ -45,6 +45,7 @@
   --chrome-tint-strong: rgba(255, 255, 255, 0.12);
   --chrome-border: rgba(255, 255, 255, 0.1);
   --surface-glass: rgba(11, 15, 23, 0.85);
+  --glass-rgb: 11, 15, 23; /* frosted panels: rgba(var(--glass-rgb), opacity) */
   --map-fallback-bg: #161a1e;
   --map-top-shade: rgba(5, 7, 13, 0.55);
 }
@@ -75,6 +76,7 @@
   --chrome-tint-strong: rgba(15, 23, 42, 0.1);
   --chrome-border: rgba(15, 23, 42, 0.12);
   --surface-glass: rgba(255, 255, 255, 0.85);
+  --glass-rgb: 255, 255, 255;
   --map-fallback-bg: #dbe4ec;
   --map-top-shade: rgba(255, 255, 255, 0.65);
 }

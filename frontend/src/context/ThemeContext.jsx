@@ -14,26 +14,42 @@ function getInitialMode() {
 }
 
 export function ThemeProvider({ children }) {
-  const [mode, setMode] = useState(getInitialMode);
+  // The user's chosen theme (saved), and a page-level override: the login and
+  // register screens are designed dark-only, so they force dark while open.
+  const [preferred, setMode] = useState(getInitialMode);
+  const [forceDark, setForceDark] = useState(0);
+  const mode = forceDark > 0 ? "dark" : preferred;
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", mode);
+  }, [mode]);
+
+  useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, mode);
+      window.localStorage.setItem(STORAGE_KEY, preferred);
     } catch {
       // Ignore write failures - the toggle still works for this session.
     }
-  }, [mode]);
+  }, [preferred]);
 
   const toggleTheme = useCallback(() => {
     setMode((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
-  return <ThemeContext.Provider value={{ mode, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ mode, toggleTheme, setForceDark, forcedDark: forceDark > 0 }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within a ThemeProvider");
   return ctx;
+}
+
+/** Keep the page dark while it's open, whatever theme the user picked. */
+export function useForceDark() {
+  const { setForceDark } = useTheme();
+  useEffect(() => {
+    setForceDark((n) => n + 1);
+    return () => setForceDark((n) => n - 1);
+  }, [setForceDark]);
 }

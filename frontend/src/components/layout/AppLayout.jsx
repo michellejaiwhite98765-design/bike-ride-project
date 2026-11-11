@@ -529,7 +529,7 @@ export default function AppLayout() {
   // Create/Find ride keep the normal header but in its compact size (and without
   // the link to the page you are already on) so the map gets the room.
   const compactHeader = isCreateRidePage || isSearchPage;
-  const { mode, toggleTheme } = useTheme();
+  const { mode, toggleTheme, forcedDark } = useTheme();
 
   const userMenu = {
     items: [
@@ -601,7 +601,7 @@ export default function AppLayout() {
 
                 <UserSection>
                   {/* Signed-in users get the theme switch under Settings in the avatar menu. */}
-                  {!isAuthenticated && (
+                  {!isAuthenticated && !forcedDark && (
                     <ThemeToggleButton type="button" onClick={toggleTheme} aria-label="Toggle light/dark mode">
                       {mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
                     </ThemeToggleButton>

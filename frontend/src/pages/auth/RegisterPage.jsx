@@ -1,3 +1,4 @@
+import { useForceDark } from "../../context/ThemeContext.jsx";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Form, Input, Button, Card, App, Row, Col, Steps } from "antd";
@@ -24,6 +25,7 @@ const masked = (phone) => `${phone.slice(0, 2)}XXXXXX${phone.slice(-2)}`;
  *     phone is verified (the server enforces this too).
  */
 export default function RegisterPage() {
+  useForceDark(); // these screens are designed dark-only
   const { register } = useAuth();
   const { notification } = App.useApp();
   const navigate = useNavigate();

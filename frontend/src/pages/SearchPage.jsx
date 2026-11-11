@@ -360,7 +360,7 @@ export default function SearchPage() {
         .sp-map-stage{position:absolute;inset:0;z-index:1}
 
         .sp-drawer .ant-drawer-content-wrapper{top:92px!important;height:calc(100% - 92px)!important;box-shadow:none!important}
-        .sp-drawer .ant-drawer-section{background:rgba(11,15,23,0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
+        .sp-drawer .ant-drawer-section{background:rgba(var(--glass-rgb),0.42);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid var(--chrome-border);box-shadow:var(--shadow-lg)}
         .sp-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .sp-drawer .ant-drawer-title{color:var(--text-primary)}
         .sp-hint{margin-top:12px;font-size:12px;color:var(--text-secondary);line-height:1.5}
@@ -402,7 +402,7 @@ export default function SearchPage() {
         .sp-search-icon.spinning .anticon{animation:spSpin .8s linear infinite}
         @keyframes spSpin{to{transform:rotate(360deg)}}
 
-        .sp-banner{position:absolute;top:108px;left:50%;transform:translateX(-50%);z-index:650;display:flex;align-items:center;gap:8px;width:max-content;max-width:min(560px,calc(100% - 24px));padding:7px 8px 7px 14px;border-radius:999px;font-size:12.5px;line-height:1.35;color:var(--text-primary);background:rgba(11,15,23,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--chrome-border);box-shadow:0 8px 24px rgba(0,0,0,.25);animation:spIn .25s ease}
+        .sp-banner{position:absolute;top:108px;left:50%;transform:translateX(-50%);z-index:650;display:flex;align-items:center;gap:8px;width:max-content;max-width:min(560px,calc(100% - 24px));padding:7px 8px 7px 14px;border-radius:999px;font-size:12.5px;line-height:1.35;color:var(--text-primary);background:rgba(var(--glass-rgb),.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--chrome-border);box-shadow:0 8px 24px rgba(0,0,0,.25);animation:spIn .25s ease}
         .sp-banner-warn{border-color:rgba(245,158,11,.45)}
         .sp-banner-warn .sp-banner-icon{color:#fbbf24}
         .sp-banner-ok{border-color:rgba(45,212,191,.45)}
@@ -414,7 +414,7 @@ export default function SearchPage() {
         @keyframes spIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
         @media (min-width:769px){.sp-banner{left:calc(380px + (100% - 380px) / 2)}}
 
-        .sp-sheet{position:absolute;left:0;right:0;bottom:0;z-index:600;max-height:78%;display:flex;flex-direction:column;border-radius:20px 20px 0 0;background:rgba(11,15,23,0.72);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-top:1px solid var(--chrome-border);box-shadow:0 -10px 30px rgba(0,0,0,.3)}
+        .sp-sheet{position:absolute;left:0;right:0;bottom:0;z-index:600;max-height:78%;display:flex;flex-direction:column;border-radius:20px 20px 0 0;background:rgba(var(--glass-rgb),0.72);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-top:1px solid var(--chrome-border);box-shadow:0 -10px 30px rgba(0,0,0,.3)}
         .sp-sheet-head{display:flex;align-items:center;gap:4px;padding:6px 8px 6px 4px}
         .sp-sheet-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:10px;position:relative;border:0;background:none;cursor:pointer;padding:16px 8px 10px 12px;color:var(--text-primary);text-align:left}
         .sp-sheet-grip{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:4px;background:var(--chrome-border)}

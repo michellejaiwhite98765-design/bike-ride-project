@@ -1,3 +1,4 @@
+import { useForceDark } from "../../context/ThemeContext.jsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Form, Input, Button, Card, App, Result } from "antd";
@@ -5,6 +6,7 @@ import { MailOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService.js";
 
 export default function ForgotPasswordPage() {
+  useForceDark(); // auth screens are designed dark-only
   const { notification } = App.useApp();
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);

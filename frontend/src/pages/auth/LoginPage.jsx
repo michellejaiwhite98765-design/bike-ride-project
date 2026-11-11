@@ -1,3 +1,4 @@
+import { useForceDark } from "../../context/ThemeContext.jsx";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -317,6 +318,7 @@ const Foot = styled.div`
 /* Page                                                                    */
 /* ---------------------------------------------------------------------- */
 export default function LoginPage() {
+  useForceDark(); // these screens are designed dark-only
   const { t } = useTranslation();
   const { login } = useAuth();
   const { notification } = App.useApp();

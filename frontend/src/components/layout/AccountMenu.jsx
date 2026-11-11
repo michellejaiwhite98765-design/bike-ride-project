@@ -8,6 +8,7 @@ import {
   HistoryOutlined,
   IdcardOutlined,
   LogoutOutlined,
+  MessageOutlined,
   RightOutlined,
   SafetyOutlined,
   SettingOutlined,
@@ -45,6 +46,7 @@ export default function AccountMenu() {
     { to: "/history", icon: <HistoryOutlined />, label: t("menu.history") },
     { to: "/ratings", icon: <StarOutlined />, label: t("menu.ratings") },
     { to: "/safety", icon: <SafetyOutlined />, label: t("menu.safety") },
+    { to: "/feedback", icon: <MessageOutlined />, label: t("menu.feedback", "Feedback") },
     ...(user?.role === "ADMIN" ? [{ to: "/admin", icon: <SettingOutlined />, label: t("menu.admin") }] : []),
   ];
 

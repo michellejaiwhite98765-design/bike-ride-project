@@ -4,6 +4,7 @@
 // opens the ride. Returns null when there's nowhere useful to go.
 export function notificationLink(n) {
   const data = n?.data || {};
+  if (data.feedbackId) return { to: "/feedback" };
   if (data.bookingId) {
     return { to: `/bookings/${data.bookingId}`, state: n.type === "PAYMENT_REQUIRED" ? { pay: true } : n.type === "RATE_DRIVER" ? { rate: true } : undefined };
   }

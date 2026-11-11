@@ -49,6 +49,7 @@ const TYPE_META = {
   PAYOUT_RECEIVED: { icon: <DollarCircleFilled />, color: "#22c55e" },
   NEW_RATING: { icon: <StarFilled />, color: "#eab308" },
   RATE_DRIVER: { icon: <StarFilled />, color: "#eab308" },
+  FEEDBACK_UPDATED: { icon: <BellOutlined />, color: "#2DD4BF" },
   SAFETY_REPORT_UPDATED: { icon: <SafetyCertificateFilled />, color: "#f97316" },
 };
 const DEFAULT_META = { icon: <BellOutlined />, color: "#2DD4BF" };

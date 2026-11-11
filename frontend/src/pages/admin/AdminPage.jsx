@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { adminService } from "../../services/adminService.js";
 import StatusTag from "../../components/StatusTag.jsx";
+import AdminFeedbackTab from "./AdminFeedbackTab.jsx";
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ export default function AdminPage() {
   const [payments, setPayments] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openFeedback, setOpenFeedback] = useState(null);
 
   async function loadAll() {
     setLoading(true);
@@ -197,6 +199,11 @@ export default function AdminPage() {
                 ]}
               />
             ),
+          },
+          {
+            key: "feedback",
+            label: `Feedback${openFeedback ? ` (${openFeedback} open)` : ""}`,
+            children: <AdminFeedbackTab onCount={setOpenFeedback} />,
           },
         ]}
       />

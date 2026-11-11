@@ -9,6 +9,7 @@ import { paymentRoutes } from "./payment.routes.js";
 import { notificationRoutes } from "./notification.routes.js";
 import { ratingRoutes } from "./rating.routes.js";
 import { safetyReportRoutes } from "./safetyReport.routes.js";
+import { feedbackRoutes } from "./feedback.routes.js";
 import { adminRoutes } from "./admin.routes.js";
 import { locationRoutes } from "./location.routes.js";
 
@@ -24,5 +25,6 @@ apiRouter.use("/payments", paymentRoutes);
 apiRouter.use("/notifications", notificationRoutes);
 apiRouter.use("/ratings", ratingRoutes);
 apiRouter.use("/safety-reports", safetyReportRoutes);
+apiRouter.use("/feedback", feedbackRoutes);
 apiRouter.use("/admin", adminRoutes);
 apiRouter.use("/locations", locationRoutes);

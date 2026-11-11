@@ -5,6 +5,8 @@ import { validateBody, validateParams } from "../middleware/validate.js";
 import { idParamSchema } from "../validators/common.validator.js";
 import { updateUserStatusSchema, verifyVehicleSchema } from "../validators/admin.validator.js";
 import { updateSafetyReportSchema } from "../validators/safetyReport.validator.js";
+import { updateFeedbackSchema } from "../validators/feedback.validator.js";
+import { feedbackController } from "../controllers/feedback.controller.js";
 
 export const adminRoutes = Router();
 
@@ -88,3 +90,6 @@ adminRoutes.get("/reports", adminController.listReports);
 adminRoutes.put("/users/:id/status", validateParams(idParamSchema), validateBody(updateUserStatusSchema), adminController.setUserStatus);
 adminRoutes.put("/vehicles/:id/verify", validateParams(idParamSchema), validateBody(verifyVehicleSchema), adminController.verifyVehicle);
 adminRoutes.put("/reports/:id", validateParams(idParamSchema), validateBody(updateSafetyReportSchema), adminController.updateReport);
+
+adminRoutes.get("/feedback", feedbackController.listAll);
+adminRoutes.put("/feedback/:id", validateParams(idParamSchema), validateBody(updateFeedbackSchema), feedbackController.update);

@@ -24,6 +24,7 @@ import BookingDetailsPage from "./pages/bookings/BookingDetailsPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import HistoryPage from "./pages/HistoryPage.jsx";
 import RatingsPage from "./pages/RatingsPage.jsx";
+import FeedbackPage from "./pages/FeedbackPage.jsx";
 import SafetyPage from "./pages/SafetyPage.jsx";
 import AdminPage from "./pages/admin/AdminPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/ratings" element={<RatingsPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/safety" element={<SafetyPage />} />
 
           <Route path="/admin" element={<AdminPage />} />

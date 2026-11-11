@@ -1,3 +1,4 @@
+import { locationService } from "./locationService.js";
 import { api } from "./api.js";
 import { notifyTripChanged } from "./tripEvents.js";
 
@@ -14,8 +15,17 @@ export const rideService = {
   cancel(id, reason) {
     return api.post(`/rides/${id}/cancel`, { reason }).then((res) => notifyTripChanged(res.data));
   },
-  start(id) {
-    return api.post(`/rides/${id}/start`).then((res) => notifyTripChanged(res.data));
+  /**
+   * Starts the trip. Sends the rider's current location: the server only
+   * lets them start within 500 m of the trip's starting point.
+   */
+  async start(id) {
+    const here = await locationService.requestPermission().catch((err) => {
+      throw new Error(`${err.message} We need your location to check you're at the starting point.`);
+    });
+    return api
+      .post(`/rides/${id}/start`, { latitude: here.latitude, longitude: here.longitude })
+      .then((res) => notifyTripChanged(res.data));
   },
   complete(id) {
     return api.post(`/rides/${id}/complete`).then((res) => notifyTripChanged(res.data));

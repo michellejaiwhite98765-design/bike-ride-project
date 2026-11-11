@@ -117,3 +117,9 @@ export const exploreRideSchema = z.object({
   latitude: latitude.optional(),
   longitude: longitude.optional(),
 });
+
+// Start trip: the rider's current location, checked against the trip's start.
+export const startRideSchema = z.object({
+  latitude: latitude.optional(),
+  longitude: longitude.optional(),
+}).default({});

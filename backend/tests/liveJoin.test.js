@@ -46,10 +46,10 @@ describe("Joining a trip that has started", () => {
   beforeAll(() => { env.lifecycle.autoAcceptRequests = true; });
   afterAll(() => { env.lifecycle.autoAcceptRequests = false; });
 
-  async function startedRide() {
+  async function startedRide(overrides = {}) {
     const rider = await registerUser();
     const vehicle = await createVehicle(rider.token);
-    const ride = await createPublishedRide(rider.token, vehicle.id, { availableSeats: 1, rideType: "WITHOUT_TIP", tipAmount: 0 });
+    const ride = await createPublishedRide(rider.token, vehicle.id, { availableSeats: 1, rideType: "WITHOUT_TIP", tipAmount: 0, ...overrides });
     const res = await request(app).post(`/api/rides/${ride.id}/start`).set("Authorization", `Bearer ${rider.token}`);
     expect(res.status).toBe(200);
     return { rider, ride };
@@ -129,21 +129,30 @@ describe("Joining a trip that has started", () => {
   });
 
   it("shows a started trip in search only while it can still be joined", async () => {
-    const { rider, ride } = await startedRide();
+    // A route of its own, so rides left by other tests at the same spot
+    // can't push this one out of the top search results.
+    const from = { latitude: 12.5 + Math.random() * 0.3, longitude: 79.0 + Math.random() * 0.3 };
+    const to = { latitude: from.latitude - 0.032, longitude: from.longitude + 0.1707 };
+    const along = (f) => ({ latitude: from.latitude + (to.latitude - from.latitude) * f, longitude: from.longitude + (to.longitude - from.longitude) * f });
+    const { rider, ride } = await startedRide({
+      sourceLatitude: from.latitude, sourceLongitude: from.longitude,
+      destinationLatitude: to.latitude, destinationLongitude: to.longitude,
+    });
     const searcher = await registerUser();
-    const pickup = at(0.7);
+    const pickup = along(0.7);
     const search = () => request(app).get("/api/rides/search").set("Authorization", `Bearer ${searcher.token}`).query({
       sourceLatitude: pickup.latitude, sourceLongitude: pickup.longitude,
-      destinationLatitude: 13.0827, destinationLongitude: 80.2707,
+      destinationLatitude: to.latitude, destinationLongitude: to.longitude,
       date: String(ride.departureDate).slice(0, 10), seats: 1,
     });
+    const riderAlong = (f) => locationStore.set(ride.id, rider.user.id, { ...along(f), userType: "rider", updatedAt: new Date().toISOString() });
 
-    riderAt(ride, rider.user.id, 0.2);
+    riderAlong(0.2);
     const open = (await search()).body.data.find((r) => r.id === ride.id);
     expect(open).toBeDefined();
     expect(open.live).toMatchObject({ allowed: true, progressPercent: 20 });
 
-    riderAt(ride, rider.user.id, 0.55);
+    riderAlong(0.55);
     const closed = (await search()).body.data.find((r) => r.id === ride.id);
     expect(closed).toBeUndefined();
   });

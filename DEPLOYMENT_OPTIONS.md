@@ -85,5 +85,6 @@ server's `deploy/.env` to change them. See `backend/.env.example`.
 | `TIP_RATE_PER_KM` | 5 | Extra fare per detour km (₹) |
 | `RIDE_START_GRACE_MINUTES` | 15 | Trips not started this many minutes after their start time are cancelled automatically |
 | `RIDE_START_REMINDER_MINUTES` | 10 | The rider is warned this many minutes after the start time |
+| `RIDE_START_MAX_DISTANCE_M` | 500 | The rider must be within this many metres of the starting point to start the trip (0 turns the check off) |
 | `PAYMENT_DEADLINE_MINUTES` | 30 | Accepted passengers must pay within this time |
 | `CLOUDINARY_*`, `WAY2API_API_KEY` | - | Vehicle photos and RC check |

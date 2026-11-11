@@ -26,11 +26,15 @@ import { ErrorState } from "../../components/ui/index.js";
 import useOnlineStatus from "../../hooks/useOnlineStatus.js";
 import useAutoCurrentLocation from "../../hooks/useAutoCurrentLocation.js";
 import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNKNOWN_LOCATION_MESSAGE } from "../../utils/geo.js";
+import { locationService } from "../../services/locationService.js";
 import { tipRateForKm } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 import RiderChecklist from "../../components/ride/RiderChecklist.jsx";
 import VehicleFormPage from "../vehicles/VehicleFormPage.jsx";
 import { useRiderStatus } from "../../hooks/useRiderStatus.js";
+
+// Start trip: the rider must be within this distance of the starting point (the server checks the same).
+const START_MAX_DISTANCE_M = 500;
 
 const SectionHeader = styled.div`
   display: flex;
@@ -303,6 +307,27 @@ export default function CreateRidePage() {
         notification.error({ title: "Error", description: "Please select an end location" });
         return;
       }
+      // Start trip: the rider must be at the starting point (the server checks
+      // too). Checked before anything is saved, so a refusal leaves no trip behind.
+      if (action === "start") {
+        let here;
+        try {
+          here = await locationService.requestPermission();
+        } catch (locErr) {
+          notification.error({ title: "Can't start this trip now", description: `${locErr.message} We need your location to check you're at the starting point.`, duration: 8 });
+          return;
+        }
+        const awayM = Math.round(haversineKm(here.latitude, here.longitude, Number(values.sourceLatitude), Number(values.sourceLongitude)) * 1000);
+        if (awayM > START_MAX_DISTANCE_M) {
+          const away = awayM >= 1000 ? `${(awayM / 1000).toFixed(1)} km` : `${awayM} m`;
+          notification.error({
+            title: "You're not at the starting point",
+            description: `You're ${away} from ${values.sourceName || "the start location"}. Go within ${START_MAX_DISTANCE_M} m of it to start the trip, or publish the trip instead.`,
+            duration: 8,
+          });
+          return;
+        }
+      }
       if (values.sourceCountry && values.destinationCountry && values.sourceCountry !== values.destinationCountry) {
         notification.error({ title: "Error", description: "Start and end locations must be in the same country" });
         return;
@@ -342,7 +367,17 @@ export default function CreateRidePage() {
         ride = await rideService.publish(ride.id);
       }
 
-      if (action === "start") ride = await rideService.start(ride.id);
+      if (action === "start") {
+        try {
+          ride = await rideService.start(ride.id);
+        } catch (startErr) {
+          // The trip is saved and published; it just couldn't start. Open it
+          // so the rider can start it from there instead of creating it again.
+          notification.warning({ title: "Trip published, not started", description: startErr.message, duration: 8 });
+          navigate(`/rides/${ride.id}`);
+          return;
+        }
+      }
 
       notification.success({
         title: "Success",

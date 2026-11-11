@@ -38,7 +38,7 @@ export const rideController = {
   },
 
   async start(req, res) {
-    const ride = await rideService.start(req.user.id, req.params.id);
+    const ride = await rideService.start(req.user.id, req.params.id, req.body);
     ok(res, ride, "Ride started");
   },
 

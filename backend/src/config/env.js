@@ -71,6 +71,8 @@ export const env = {
     // A trip not started this many minutes after its start time is cancelled automatically...
     startGraceMinutes: Number(process.env.RIDE_START_GRACE_MINUTES || 15),
     // ...and the rider is warned this many minutes after the start time.
+    // The rider must be within this many metres of the trip's start to start it (0 = no check).
+    startMaxDistanceM: Number(process.env.RIDE_START_MAX_DISTANCE_M ?? 500),
     startReminderMinutes: Number(process.env.RIDE_START_REMINDER_MINUTES || 10),
     // An accepted passenger must pay within this many minutes, or the seat is released.
     paymentDeadlineMinutes: Number(process.env.PAYMENT_DEADLINE_MINUTES || 30),

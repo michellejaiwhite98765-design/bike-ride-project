@@ -1,4 +1,5 @@
 import { drivingLicenceService } from "./drivingLicence.service.js";
+import { haversineKm } from "../utils/geo.js";
 import { liveJoinService } from "./liveJoin.service.js";
 import { tripLifecycleService } from "./tripLifecycle.service.js";
 import { rideRepository } from "../repositories/ride.repository.js";
@@ -136,10 +137,22 @@ export const rideService = {
     return updated;
   },
 
-  async start(userId, rideId) {
+  async start(userId, rideId, { latitude, longitude } = {}) {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "STARTED");
+    // The rider has to be at the trip's start (within 500 m) to start it.
+    const maxM = env.lifecycle.startMaxDistanceM;
+    if (maxM > 0) {
+      if (latitude == null || longitude == null) {
+        throw ApiError.badRequest("Turn on location to start the trip. We need to check you're at the starting point.");
+      }
+      const awayM = Math.round(haversineKm(latitude, longitude, Number(ride.sourceLatitude), Number(ride.sourceLongitude)) * 1000);
+      if (awayM > maxM) {
+        const away = awayM >= 1000 ? `${(awayM / 1000).toFixed(1)} km` : `${awayM} m`;
+        throw ApiError.badRequest(`You're ${away} from the starting point (${ride.sourceName}). Go within ${maxM} m of it to start the trip.`);
+      }
+    }
     const updated = await rideRepository.update(rideId, { status: "STARTED", startedAt: new Date() });
     // Passengers who were accepted but never paid don't come along: release
     // their bookings (they're told why). Done after the status change so no

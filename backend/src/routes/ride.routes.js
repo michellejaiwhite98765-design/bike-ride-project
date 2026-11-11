@@ -2,7 +2,7 @@ import { Router } from "express";
 import { rideController } from "../controllers/ride.controller.js";
 import { authenticate } from "../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.js";
-import { createRideSchema, updateRideSchema, searchRideSchema, exploreRideSchema } from "../validators/ride.validator.js";
+import { createRideSchema, updateRideSchema, searchRideSchema, exploreRideSchema, startRideSchema } from "../validators/ride.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
 import { rideRequestRoutes } from "./rideRequest.routes.js";
 
@@ -138,7 +138,7 @@ rideRoutes.put("/:id", validateParams(idParamSchema), validateBody(updateRideSch
  */
 rideRoutes.post("/:id/publish", validateParams(idParamSchema), rideController.publish);
 rideRoutes.post("/:id/cancel", validateParams(idParamSchema), rideController.cancel);
-rideRoutes.post("/:id/start", validateParams(idParamSchema), rideController.start);
+rideRoutes.post("/:id/start", validateParams(idParamSchema), validateBody(startRideSchema), rideController.start);
 rideRoutes.post("/:id/complete", validateParams(idParamSchema), rideController.complete);
 
 rideRoutes.use("/:rideId/requests", rideRequestRoutes);

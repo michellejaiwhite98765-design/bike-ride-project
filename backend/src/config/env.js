@@ -68,8 +68,10 @@ export const env = {
     // the driver is told the passenger joined. Set to "false" to go back to
     // the driver accepting each request by hand.
     autoAcceptRequests: process.env.AUTO_ACCEPT_REQUESTS !== "false",
-    // A ride that never started expires this long after its departure time.
-    expireAfterHours: Number(process.env.RIDE_EXPIRE_AFTER_HOURS || 2),
+    // A trip not started this many minutes after its start time is cancelled automatically...
+    startGraceMinutes: Number(process.env.RIDE_START_GRACE_MINUTES || 15),
+    // ...and the rider is warned this many minutes after the start time.
+    startReminderMinutes: Number(process.env.RIDE_START_REMINDER_MINUTES || 10),
     // An accepted passenger must pay within this many minutes, or the seat is released.
     paymentDeadlineMinutes: Number(process.env.PAYMENT_DEADLINE_MINUTES || 30),
     sweepIntervalMs: Number(process.env.LIFECYCLE_SWEEP_INTERVAL_MS || 60 * 1000),

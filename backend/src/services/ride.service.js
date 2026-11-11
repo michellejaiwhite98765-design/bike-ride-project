@@ -91,6 +91,9 @@ export const rideService = {
     const endpointsMoved = ["sourceLatitude", "sourceLongitude", "destinationLatitude", "destinationLongitude"].some(
       (key) => fields[key] !== undefined && Number(fields[key]) !== Number(ride[key])
     );
+    // A new start time gets a fresh "start your trip" warning.
+    const timeMoved = ["departureDate", "departureTime"].some((key) => fields[key] !== undefined && String(fields[key]) !== String(ride[key]));
+    if (timeMoved) await rideRepository.clearStartReminder(rideId);
     let updated = await rideRepository.update(rideId, fields);
     // Keep the saved road route in step with the start/end.
     if (routePath || endpointsMoved) {

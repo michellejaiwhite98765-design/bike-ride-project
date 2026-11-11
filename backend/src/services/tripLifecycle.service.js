@@ -12,8 +12,9 @@ import { paymentService } from "./payment.service.js";
  * Shared clean-up for the ways a ride or a seat ends without the trip
  * happening, so seats, requests, bookings and refunds always line up:
  *
- *  - closeRide: the rider cancels, or the ride expires (never started
- *    RIDE_EXPIRE_AFTER_HOURS after departure). Every booking is cancelled,
+ *  - closeRide: the rider cancels, or the trip is cancelled automatically
+ *    because it wasn't started RIDE_START_GRACE_MINUTES (15) after its start
+ *    time. The rider is warned at RIDE_START_REMINDER_MINUTES (10). Every booking is cancelled,
  *    paid ones refunded, every open request closed, and everyone affected
  *    (booked passengers and those still waiting) is told.
  *  - dropUnpaidBookings: an accepted passenger didn't pay - by the payment
@@ -21,8 +22,11 @@ import { paymentService } from "./payment.service.js";
  *  - sweep: runs both on a timer (server.js).
  */
 export const tripLifecycleService = {
-  /** @param status "CANCELLED" (by the rider) or "EXPIRED" */
-  async closeRide(rideId, { status, reason, userId = null }) {
+  /**
+   * @param status "CANCELLED" or "EXPIRED"
+   * @param notStarted true when the system cancels a trip the rider didn't start on time
+   */
+  async closeRide(rideId, { status, reason, userId = null, notStarted = false }) {
     const { bookings, closedRequests, ride } = await withTransaction(async (tx) => {
       const locked = await rideRepository.lockForSeatUpdate(tx, rideId);
       if (!locked || !["DRAFT", "PUBLISHED"].includes(locked.status)) return { bookings: [], closedRequests: [], ride: null };
@@ -50,9 +54,10 @@ export const tripLifecycleService = {
       action: status === "EXPIRED" ? "RIDE_EXPIRED" : "RIDE_CANCELLED",
       entityType: "Ride",
       entityId: rideId,
-      metadata: { reason, bookingsCancelled: bookings.length, refunds: refunded.length },
+      metadata: { reason, notStarted, bookingsCancelled: bookings.length, refunds: refunded.length },
     });
-    if (status === "EXPIRED") await notificationService.notifyRideExpired(rideId, passengerIds, { refunded });
+    if (notStarted) await notificationService.notifyRideNotStarted(rideId, passengerIds, { refunded });
+    else if (status === "EXPIRED") await notificationService.notifyRideExpired(rideId, passengerIds, { refunded });
     else await notificationService.notifyRideCancelled(rideId, passengerIds, { refunded });
     return ride;
   },
@@ -79,13 +84,22 @@ export const tripLifecycleService = {
     return dropped;
   },
 
-  /** Expires overdue rides and releases seats whose payment deadline passed. Never throws. */
+  /** Warns about and cancels trips not started on time, and releases seats whose payment deadline passed. Never throws. */
   async sweep() {
     const c = env.lifecycle;
-    const result = { expired: 0, unpaidReleased: 0 };
+    const result = { cancelled: 0, reminded: 0, unpaidReleased: 0 };
     try {
-      for (const rideId of await rideRepository.findOverdue(c.expireAfterHours, c.timeZone)) {
-        if (await this.closeRide(rideId, { status: "EXPIRED", reason: "Ride never started" })) result.expired += 1;
+      // Not started 15 minutes after the start time: cancel the trip.
+      for (const rideId of await rideRepository.findOverdue(c.startGraceMinutes, c.timeZone)) {
+        const reason = `Trip not started within ${c.startGraceMinutes} minutes of its start time`;
+        if (await this.closeRide(rideId, { status: "CANCELLED", reason, notStarted: true })) result.cancelled += 1;
+      }
+      // 10 minutes late: warn the rider (once) that it's cancelled in 5 more.
+      for (const rideId of await rideRepository.findStartReminderDue(c.startReminderMinutes, c.timeZone)) {
+        if (await rideRepository.markStartReminderSent(rideId)) {
+          await notificationService.notifyStartReminder(rideId, c.startGraceMinutes - c.startReminderMinutes);
+          result.reminded += 1;
+        }
       }
       const live = env.liveJoin.enabled ? env.liveJoin.paymentDeadlineMinutes : null;
       const overdue = await bookingRepository.findPaymentOverdue(c.paymentDeadlineMinutes, live);

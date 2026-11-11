@@ -83,6 +83,7 @@ server's `deploy/.env` to change them. See `backend/.env.example`.
 | `PICKUP_ON_ROUTE_KM` | 2.5 | Normal pickup within this distance of the rider's route |
 | `DETOUR_MAX_PERCENT` / `DETOUR_MAX_KM` | 20 / 30 | How far the rider may detour |
 | `TIP_RATE_PER_KM` | 5 | Extra fare per detour km (₹) |
-| `RIDE_EXPIRE_AFTER_HOURS` | 2 | Unstarted rides expire this long after departure |
+| `RIDE_START_GRACE_MINUTES` | 15 | Trips not started this many minutes after their start time are cancelled automatically |
+| `RIDE_START_REMINDER_MINUTES` | 10 | The rider is warned this many minutes after the start time |
 | `PAYMENT_DEADLINE_MINUTES` | 30 | Accepted passengers must pay within this time |
 | `CLOUDINARY_*`, `WAY2API_API_KEY` | - | Vehicle photos and RC check |

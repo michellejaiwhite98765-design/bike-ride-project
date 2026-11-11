@@ -41,6 +41,7 @@ const TYPE_META = {
   RIDE_REQUEST_CANCELLED: { icon: <CloseCircleFilled />, color: "#f59e0b" },
   BOOKING_CANCELLED: { icon: <StopFilled />, color: "#ef4444" },
   RIDE_EXPIRED: { icon: <ClockCircleFilled />, color: "#94a3b8" },
+  RIDE_START_REMINDER: { icon: <ClockCircleFilled />, color: "#f59e0b" },
   PICKUP_OTP: { icon: <KeyOutlined />, color: "#3b82f6" },
   DROP_OTP: { icon: <KeyOutlined />, color: "#8b5cf6" },
   PASSENGER_BOARDED: { icon: <LoginOutlined />, color: "#22c55e" },

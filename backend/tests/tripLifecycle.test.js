@@ -27,6 +27,19 @@ async function requestJoin(ride, passenger) {
 const accept = (rider, requestId) => request(app).put(`/api/ride-requests/${requestId}/accept`).set(auth(rider));
 const getRide = async (user, rideId) => (await request(app).get(`/api/rides/${rideId}`).set(auth(user))).body.data;
 const getBooking = async (user, bookingId) => (await request(app).get(`/api/bookings/${bookingId}`).set(auth(user))).body.data;
+// Moves a ride's start time to `minutes` ago (in India time, like the app).
+async function startTimeAgo(rideId, minutes) {
+  await pool.query(
+    `UPDATE "rides" SET "departure_date" = ((now() - make_interval(mins => $2::int)) AT TIME ZONE 'Asia/Kolkata')::date,
+                        "departure_time" = to_char((now() - make_interval(mins => $2::int)) AT TIME ZONE 'Asia/Kolkata', 'HH24:MI')
+     WHERE "id" = $1`,
+    [rideId, minutes]
+  );
+}
+async function notifications(user) {
+  const data = (await request(app).get("/api/notifications").set(auth(user))).body.data;
+  return data.items ?? data;
+}
 async function notificationTypes(user) {
   const data = (await request(app).get("/api/notifications").set(auth(user))).body.data;
   return (data.items ?? data).map((n) => n.type);
@@ -130,29 +143,59 @@ describe("Gap 3 - starting with an unpaid passenger", () => {
 });
 
 describe("Gap 4 - expiry and payment deadline sweep", () => {
-  it("expires a ride that never started, refunding and closing everything", async () => {
+  it("cancels a trip not started 15 minutes after its start time, refunding and closing everything", async () => {
     const { rider, ride } = await rideWith({ availableSeats: 2, rideType: "WITH_TIP", tipAmount: 50 });
     const paidPassenger = await registerUser();
     const waitingPassenger = await registerUser();
     const booking = (await accept(rider, (await requestJoin(ride, paidPassenger)).id)).body.data;
     await pay(paidPassenger, booking.id);
     const pending = await requestJoin(ride, waitingPassenger);
-    // Departure was yesterday.
-    await pool.query(`UPDATE "rides" SET "departure_date" = CURRENT_DATE - 1 WHERE "id" = $1`, [ride.id]);
+    await startTimeAgo(ride.id, 16);
 
     await tripLifecycleService.sweep();
 
-    expect((await getRide(rider, ride.id)).status).toBe("EXPIRED");
+    expect((await getRide(rider, ride.id)).status).toBe("CANCELLED");
     const after = await getBooking(paidPassenger, booking.id);
     expect(after.bookingStatus).toBe("CANCELLED");
     expect(after.paymentStatus).toBe("REFUNDED");
     const { rows } = await pool.query('SELECT "status" FROM "ride_requests" WHERE "id" = $1', [pending.id]);
-    expect(rows[0].status).toBe("EXPIRED");
-    expect(await notificationTypes(rider)).toContain("RIDE_EXPIRED");
-    expect(await notificationTypes(waitingPassenger)).toContain("RIDE_EXPIRED");
+    expect(rows[0].status).toBe("CANCELLED");
+    const riderNote = (await notifications(rider)).find((n) => n.type === "RIDE_CANCELLED");
+    expect(riderNote.message).toMatch(/cancelled automatically because it wasn't started within 15 minutes/);
+    const passengerNote = (await notifications(waitingPassenger)).find((n) => n.type === "RIDE_CANCELLED");
+    expect(passengerNote.message).toMatch(/rider didn't start it on time/);
 
-    // An expired ride can't be published again.
+    // A cancelled trip can't be published again.
     expect((await request(app).post(`/api/rides/${ride.id}/publish`).set(auth(rider))).status).toBe(409);
+  });
+
+  it("warns the rider once at 10 minutes late, then cancels at 15", async () => {
+    const { rider, ride } = await rideWith();
+    await startTimeAgo(ride.id, 11);
+
+    await tripLifecycleService.sweep();
+    await tripLifecycleService.sweep();
+    expect((await getRide(rider, ride.id)).status).toBe("PUBLISHED");
+    const reminders = (await notifications(rider)).filter((n) => n.type === "RIDE_START_REMINDER");
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0].message).toMatch(/cancelled automatically in 5 minutes if you don't start it/);
+
+    await startTimeAgo(ride.id, 16);
+    await tripLifecycleService.sweep();
+    expect((await getRide(rider, ride.id)).status).toBe("CANCELLED");
+  });
+
+  it("does nothing before 10 minutes, and a started trip is never cancelled", async () => {
+    const { rider, ride } = await rideWith();
+    await startTimeAgo(ride.id, 8);
+    await tripLifecycleService.sweep();
+    expect((await getRide(rider, ride.id)).status).toBe("PUBLISHED");
+    expect(await notificationTypes(rider)).not.toContain("RIDE_START_REMINDER");
+
+    await request(app).post(`/api/rides/${ride.id}/start`).set(auth(rider));
+    await startTimeAgo(ride.id, 30);
+    await tripLifecycleService.sweep();
+    expect((await getRide(rider, ride.id)).status).toBe("STARTED");
   });
 
   it("leaves rides that haven't departed yet alone", async () => {

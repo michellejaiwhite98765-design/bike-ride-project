@@ -208,17 +208,44 @@ export const rideRepository = {
   },
 
   /**
-   * Draft / published rides whose departure (local time in `timeZone`) was
-   * more than `hours` ago - they never started and should expire.
+   * Draft / published rides whose start time (local time in `timeZone`) was
+   * more than `minutes` ago - they were never started and get cancelled.
    */
-  async findOverdue(hours, timeZone) {
+  async findOverdue(minutes, timeZone) {
     const { rows } = await pool.query(
       `SELECT "id" FROM "rides"
        WHERE "status" IN ('DRAFT', 'PUBLISHED')
-         AND (("departure_date" + "departure_time"::time) AT TIME ZONE $2) < now() - make_interval(hours => $1::int)`,
-      [hours, timeZone]
+         AND (("departure_date" + "departure_time"::time) AT TIME ZONE $2) < now() - make_interval(mins => $1::int)`,
+      [minutes, timeZone]
     );
     return rows.map((r) => r.id);
+  },
+
+  /**
+   * Draft / published rides more than `minutes` past their start time that
+   * haven't had the "start your trip" warning yet.
+   */
+  async findStartReminderDue(minutes, timeZone) {
+    const { rows } = await pool.query(
+      `SELECT "id" FROM "rides"
+       WHERE "status" IN ('DRAFT', 'PUBLISHED') AND "start_reminder_sent_at" IS NULL
+         AND (("departure_date" + "departure_time"::time) AT TIME ZONE $2) < now() - make_interval(mins => $1::int)`,
+      [minutes, timeZone]
+    );
+    return rows.map((r) => r.id);
+  },
+
+  async clearStartReminder(rideId) {
+    await pool.query('UPDATE "rides" SET "start_reminder_sent_at" = NULL WHERE "id" = $1', [rideId]);
+  },
+
+  /** Marks the warning as sent. False if another sweep got there first. */
+  async markStartReminderSent(rideId) {
+    const { rowCount } = await pool.query(
+      'UPDATE "rides" SET "start_reminder_sent_at" = now() WHERE "id" = $1 AND "start_reminder_sent_at" IS NULL',
+      [rideId]
+    );
+    return rowCount > 0;
   },
 
   /**

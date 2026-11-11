@@ -2,6 +2,7 @@ import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
 import { notificationRepository } from "../repositories/notification.repository.js";
 import { logger } from "../config/logger.js";
+import { env } from "../config/env.js";
 import { emitToUser } from "../realtime/io.js";
 
 // Single fan-in point for every notification. In-app only for this MVP; email/push
@@ -141,6 +142,39 @@ export const notificationService = {
         type: "RIDE_CANCELLED",
         title: "Ride cancelled",
         message: `The ride to ${ride.destinationName} was cancelled by the rider${refunded.includes(passengerId) ? ". Your payment is being refunded" : ""}`,
+        data: { rideId },
+      });
+    }
+  },
+
+  /** The rider hasn't started the trip 10 minutes after its start time. */
+  async notifyStartReminder(rideId, minutesLeft) {
+    const ride = await rideRepository.findById(rideId);
+    await dispatch({
+      userId: ride.riderId,
+      type: "RIDE_START_REMINDER",
+      title: "Start your trip",
+      message: `Your trip to ${ride.destinationName} was due to start at ${ride.departureTime} and hasn't started yet. It will be cancelled automatically in ${minutesLeft} minutes if you don't start it.`,
+      data: { rideId },
+    });
+  },
+
+  /** The system cancelled a trip the rider didn't start on time. */
+  async notifyRideNotStarted(rideId, passengerIds, { refunded = [] } = {}) {
+    const ride = await rideRepository.findById(rideId);
+    await dispatch({
+      userId: ride.riderId,
+      type: "RIDE_CANCELLED",
+      title: "Trip cancelled",
+      message: `Your trip to ${ride.destinationName} was cancelled automatically because it wasn't started within ${env.lifecycle.startGraceMinutes} minutes of its start time.`,
+      data: { rideId },
+    });
+    for (const passengerId of new Set(passengerIds)) {
+      await dispatch({
+        userId: passengerId,
+        type: "RIDE_CANCELLED",
+        title: "Ride cancelled",
+        message: `The ride to ${ride.destinationName} was cancelled because the rider didn't start it on time${refunded.includes(passengerId) ? ". Your payment is being refunded" : ""}`,
         data: { rideId },
       });
     }

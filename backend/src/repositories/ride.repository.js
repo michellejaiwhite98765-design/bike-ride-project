@@ -184,6 +184,30 @@ export const rideRepository = {
   },
 
   /**
+   * Where the rider and a pickup sit along the ride's road route, as fractions
+   * from 0 (start) to 1 (end), plus the route length. Used to decide whether a
+   * passenger can still join a trip that is under way.
+   */
+  async routeProgress(rideId, riderPoint, pickupPoint) {
+    const { rows } = await pool.query(
+      `WITH ride AS (SELECT ${ROUTE_GEOG} AS route FROM "rides" r WHERE r."id" = $1)
+       SELECT ST_Length(ride.route) / 1000 AS route_km,
+              ST_LineLocatePoint(ride.route::geometry, ST_SetSRID(ST_MakePoint($2::float8, $3::float8), 4326)) AS rider_frac,
+              CASE WHEN $4::float8 IS NULL THEN NULL
+                   ELSE ST_LineLocatePoint(ride.route::geometry, ST_SetSRID(ST_MakePoint($4::float8, $5::float8), 4326)) END AS pickup_frac
+       FROM ride`,
+      [rideId, riderPoint.longitude, riderPoint.latitude, pickupPoint?.longitude ?? null, pickupPoint?.latitude ?? null]
+    );
+    const r = rows[0];
+    if (!r || r.route_km == null) return null;
+    return {
+      routeKm: Number(r.route_km),
+      riderFraction: Number(r.rider_frac),
+      pickupFraction: r.pickup_frac == null ? null : Number(r.pickup_frac),
+    };
+  },
+
+  /**
    * Draft / published rides whose departure (local time in `timeZone`) was
    * more than `hours` ago - they never started and should expire.
    */
@@ -230,7 +254,7 @@ export const rideRepository = {
    * Returns candidate ride ids with their pickup/destination distances in meters
    * so the matching service can score and rank them.
    */
-  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, toDate = null, time, seats, rideType, pickupRadiusM, destinationRadiusM, zones = null, timeWindowMinutes = 30, includeFull = false }) {
+  async searchCandidates({ sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude, date, toDate = null, time, seats, rideType, pickupRadiusM, destinationRadiusM, zones = null, timeWindowMinutes = 30, includeFull = false, includeStarted = false }) {
     const params = [];
     const p = (v) => {
       params.push(v);
@@ -253,7 +277,9 @@ export const rideRepository = {
       const targetMinutes = hours * 60 + minutes;
       const timeParam = p(targetMinutes);
       const windowParam = p(timeWindowMinutes);
-      timeClause = `AND LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam}`;
+      // A trip already under way left earlier than the passenger's time;
+      // whether they can still catch it is decided from its live position.
+      timeClause = `AND (${includeStarted ? "r.status = 'STARTED' OR " : ""}LEAST(ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam}), 1440 - ABS(((split_part(r.departure_time, ':', 1)::int * 60) + split_part(r.departure_time, ':', 2)::int) - ${timeParam})) <= ${windowParam})`;
     }
 
     // Match against the ride's road route (straight start-end line when the
@@ -291,15 +317,15 @@ export const rideRepository = {
     const directionOk = `${sourceFraction} <= ${destinationFraction} + 0.05`;
 
     const { rows } = await pool.query(
-      `SELECT id, source_distance_m, destination_distance_m
+      `SELECT id, status, source_distance_m, destination_distance_m
        FROM (
          SELECT
-           r.id,
+           r.id, r.status,
            ${sourceDistanceExpr},
            ${destinationDistanceExpr}
          FROM rides r
          JOIN vehicles v ON v.id = r.vehicle_id
-         WHERE r.status = 'PUBLISHED'
+         WHERE r.status IN ('PUBLISHED'${includeStarted ? ", 'STARTED'" : ""})
            AND v.verification_status = 'VERIFIED'
            AND v.is_active = true
            AND r.departure_date BETWEEN ${dateParam}::date AND ${toDateParam}::date
@@ -315,6 +341,7 @@ export const rideRepository = {
     );
     return rows.map((r) => ({
       id: r.id,
+      status: r.status,
       sourceDistanceKm: Number(r.source_distance_m) / 1000,
       destinationDistanceKm: Number(r.destination_distance_m) / 1000,
     }));

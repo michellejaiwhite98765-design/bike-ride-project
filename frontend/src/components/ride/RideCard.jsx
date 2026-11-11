@@ -51,6 +51,12 @@ export default function RideCard({ ride, showMatch = false, pickup, drop }) {
           </div>
         )}
         {ride.pickupZone?.zone === "ON_ROUTE" && <div className="rc-zone rc-zone-on">On the rider&apos;s route</div>}
+        {ride.live?.allowed && (
+          <div className="rc-zone rc-zone-live">
+            On the way · {ride.live.progressPercent}% done
+            {ride.live.pickupAheadKm != null && <> · your pickup is {ride.live.pickupAheadKm} km ahead</>}
+          </div>
+        )}
 
         <div className="rc-route">
           <EnvironmentOutlined />
@@ -129,6 +135,7 @@ export default function RideCard({ ride, showMatch = false, pickup, drop }) {
         .rc-zone{align-self:flex-start;font-size:11.5px;font-weight:650;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b}
         .rc-zone strong{color:#fbbf24}
         .rc-zone-on{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.3);color:#2DD4BF}
+        .rc-zone-live{background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.4);color:#60a5fa}
         .rc-actions{display:flex;align-items:center;gap:10px}
         .rc-view-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:#2DD4BF;white-space:nowrap}
         .rc-view-link:hover{color:#5EEAD4;text-decoration:underline}

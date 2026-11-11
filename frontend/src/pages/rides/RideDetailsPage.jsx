@@ -439,7 +439,7 @@ export default function RideDetailsPage() {
           .then((mine) => {
             setMyRequest(mine);
             // Came from a ride card's "Request to join": open the form straight away.
-            if (!mine && openRequestOnLoad && loadedRide.status === "PUBLISHED") setRequestModalOpen(true);
+            if (!mine && openRequestOnLoad && ["PUBLISHED", "STARTED"].includes(loadedRide.status)) setRequestModalOpen(true);
           })
           .catch(() => setMyRequest(null));
       } else {
@@ -513,7 +513,9 @@ export default function RideDetailsPage() {
               title: "You've joined the ride",
               description: created.booking?.paymentStatus === "PENDING" ? "Pay now to confirm your seat." : "Your seat is confirmed. The rider has been told.",
             }
-          : { title: "Success", description: "Request sent to the rider" }
+          : ride.status === "STARTED"
+            ? { title: "Request sent", description: "The rider is on the way. They'll accept when it's safe to stop." }
+            : { title: "Success", description: "Request sent to the rider" }
       );
       setRequestModalOpen(false);
       requestForm.resetFields();
@@ -779,7 +781,7 @@ export default function RideDetailsPage() {
 
           {/* Action Buttons */}
           <ActionButtons>
-            {!isOwner && ride.status === "PUBLISHED" && !myRequest && (
+            {!isOwner && ["PUBLISHED", "STARTED"].includes(ride.status) && !myRequest && (
               <Button
                 type="primary"
                 size="large"

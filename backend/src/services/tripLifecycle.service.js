@@ -87,11 +87,15 @@ export const tripLifecycleService = {
       for (const rideId of await rideRepository.findOverdue(c.expireAfterHours, c.timeZone)) {
         if (await this.closeRide(rideId, { status: "EXPIRED", reason: "Ride never started" })) result.expired += 1;
       }
-      const overdue = await bookingRepository.findPaymentOverdue(c.paymentDeadlineMinutes);
-      result.unpaidReleased = await this.dropUnpaidBookings(
-        overdue,
-        `payment wasn't completed within ${c.paymentDeadlineMinutes} minutes`
-      );
+      const live = env.liveJoin.enabled ? env.liveJoin.paymentDeadlineMinutes : null;
+      const overdue = await bookingRepository.findPaymentOverdue(c.paymentDeadlineMinutes, live);
+      // Passengers who joined a moving trip have a shorter deadline.
+      const pending = overdue.filter((b) => b.rideStatus !== "STARTED");
+      const moving = overdue.filter((b) => b.rideStatus === "STARTED");
+      result.unpaidReleased = await this.dropUnpaidBookings(pending, `payment wasn't completed within ${c.paymentDeadlineMinutes} minutes`);
+      if (moving.length) {
+        result.unpaidReleased += await this.dropUnpaidBookings(moving, `payment wasn't completed within ${live} minutes`);
+      }
     } catch (err) {
       logger.warn(`Trip lifecycle sweep failed: ${err.message}`);
     }

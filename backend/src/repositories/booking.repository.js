@@ -237,15 +237,21 @@ export const bookingRepository = {
     return rows;
   },
 
-  /** Unpaid bookings older than the payment deadline, on rides that haven't left yet. */
-  async findPaymentOverdue(minutes) {
+  /**
+   * Unpaid bookings older than the payment deadline: `minutes` on rides that
+   * haven't left yet, `startedMinutes` (shorter) for passengers who joined a
+   * trip already under way.
+   */
+  async findPaymentOverdue(minutes, startedMinutes = null) {
     const { rows } = await pool.query(
       `SELECT b."id", b."passenger_id" AS "passengerId", b."ride_id" AS "rideId", b."ride_request_id" AS "rideRequestId",
-              b."seats", b."booking_status" AS "bookingStatus", b."payment_status" AS "paymentStatus"
+              b."seats", b."booking_status" AS "bookingStatus", b."payment_status" AS "paymentStatus",
+              r."status" AS "rideStatus"
        FROM "bookings" b JOIN "rides" r ON r."id" = b."ride_id"
-       WHERE b."booking_status" = 'PAYMENT_PENDING' AND r."status" = 'PUBLISHED'
-         AND b."created_at" < now() - make_interval(mins => $1::int)`,
-      [minutes]
+       WHERE b."booking_status" = 'PAYMENT_PENDING'
+         AND ((r."status" = 'PUBLISHED' AND b."created_at" < now() - make_interval(mins => $1::int))
+           OR ($2::int IS NOT NULL AND r."status" = 'STARTED' AND b."created_at" < now() - make_interval(mins => $2::int)))`,
+      [minutes, startedMinutes]
     );
     return rows;
   },

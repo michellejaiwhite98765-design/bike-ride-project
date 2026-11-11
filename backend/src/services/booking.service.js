@@ -8,6 +8,7 @@ import { assertRideRequestTransition, assertBookingTransition } from "../utils/s
 import { audit } from "../utils/audit.js";
 import { notificationService } from "./notification.service.js";
 import { paymentService } from "./payment.service.js";
+import { liveJoinService } from "./liveJoin.service.js";
 
 /**
  * Accepting a request is the one place seats actually get reserved (spec section
@@ -36,9 +37,17 @@ export const bookingService = {
     const requestId = rideRequest.id;
     assertRideRequestTransition(rideRequest.status, "ACCEPTED");
 
+    // Trip under way: check again at accept time - the rider may have moved
+    // past the pickup or the half-way point since the request was sent.
+    const current = await rideRepository.findById(rideRequest.rideId);
+    if (current?.status === "STARTED") {
+      const live = await liveJoinService.check(current, { latitude: Number(rideRequest.pickupLatitude), longitude: Number(rideRequest.pickupLongitude) });
+      if (!live.allowed) throw ApiError.conflict(live.message);
+    }
+
     const { booking, updatedRequest } = await withTransaction(async (tx) => {
       const lockedRide = await rideRepository.lockForSeatUpdate(tx, rideRequest.rideId);
-      if (!lockedRide || lockedRide.status !== "PUBLISHED") {
+      if (!lockedRide || !["PUBLISHED", "STARTED"].includes(lockedRide.status)) {
         throw ApiError.conflict("Ride is no longer accepting requests");
       }
       if (lockedRide.availableSeats < rideRequest.seatsRequested) {

@@ -1,4 +1,5 @@
 import { drivingLicenceService } from "./drivingLicence.service.js";
+import { liveJoinService } from "./liveJoin.service.js";
 import { tripLifecycleService } from "./tripLifecycle.service.js";
 import { rideRepository } from "../repositories/ride.repository.js";
 import { bookingRepository } from "../repositories/booking.repository.js";
@@ -198,10 +199,22 @@ export const rideService = {
       // A route search (no explicit radius) uses each ride's pickup zones;
       // an explicit radius (home page "near me") is a plain browse.
       zones: search.radius ? null : env.pickupZone,
+      includeStarted: env.liveJoin.enabled,
     });
     if (candidates.length === 0) return [];
 
-    const rides = await rideRepository.findManyByIds(candidates.map((c) => c.id));
+    // Trips already under way show only while the passenger can still join:
+    // the rider is less than half way and hasn't passed the pickup.
+    const liveById = new Map();
+    for (const c of candidates.filter((x) => x.status === "STARTED")) {
+      const ride = await rideRepository.findById(c.id);
+      const live = ride ? await liveJoinService.check(ride, { latitude: search.sourceLatitude, longitude: search.sourceLongitude }) : null;
+      if (live?.allowed) liveById.set(c.id, live);
+    }
+    const open = candidates.filter((c) => c.status !== "STARTED" || liveById.has(c.id));
+    if (open.length === 0) return [];
+
+    const rides = await rideRepository.findManyByIds(open.map((c) => c.id));
     const distanceById = new Map(candidates.map((c) => [c.id, c]));
 
     const riderIds = [...new Set(rides.map((r) => r.riderId))];
@@ -228,6 +241,8 @@ export const rideService = {
         matchScore,
         matchPercentage,
         matchBreakdown: breakdown,
+        // Set on a trip already under way: how far along it is and how far ahead the pickup is.
+        live: liveById.get(ride.id) ?? null,
       };
     });
 

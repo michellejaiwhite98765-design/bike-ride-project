@@ -74,6 +74,19 @@ export const env = {
     paymentDeadlineMinutes: Number(process.env.PAYMENT_DEADLINE_MINUTES || 30),
     sweepIntervalMs: Number(process.env.LIFECYCLE_SWEEP_INTERVAL_MS || 60 * 1000),
   },
+  // Joining a trip that has already started (services/liveJoin.service.js).
+  // Uses the rider's live location from the tracking WebSocket.
+  liveJoin: {
+    enabled: process.env.LIVE_JOIN_ENABLED !== "false",
+    // No new passengers once the rider has covered this share of the route (0.5 = half way).
+    maxProgress: Number(process.env.LIVE_JOIN_MAX_PROGRESS || 0.5),
+    // The pickup must still be at least this many km ahead of the rider.
+    minAheadKm: Number(process.env.LIVE_JOIN_MIN_AHEAD_KM || 2),
+    // The rider's location must be newer than this, or we can't tell where they are.
+    staleAfterMs: Number(process.env.LIVE_JOIN_STALE_AFTER_MS || 60 * 1000),
+    // A passenger who joins a moving trip must pay within this many minutes.
+    paymentDeadlineMinutes: Number(process.env.LIVE_JOIN_PAYMENT_MINUTES || 10),
+  },
   // Road routing (OSRM) to save a ride's real road route.
   routing: {
     enabled: (process.env.ROUTING_ENABLED ?? "true") !== "false",

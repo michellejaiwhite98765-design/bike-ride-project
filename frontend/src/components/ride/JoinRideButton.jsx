@@ -47,7 +47,9 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
       </Button>
     );
   }
-  if (ride.status !== "PUBLISHED" || Number(ride.availableSeats) < 1) return null;
+  if (!["PUBLISHED", "STARTED"].includes(ride.status) || Number(ride.availableSeats) < 1) return null;
+  // A trip already under way: the rider accepts each join themselves.
+  const onTheWay = ride.status === "STARTED";
 
   async function send() {
     setSending(true);
@@ -68,7 +70,9 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
               title: "You've joined the ride",
               description: created.booking?.paymentStatus === "PENDING" ? "Pay now to confirm your seat." : "Your seat is confirmed. The rider has been told.",
             }
-          : { title: "Success", description: "Request sent to the rider" }
+          : onTheWay
+            ? { title: "Request sent", description: "The rider is on the way. They'll accept when it's safe to stop." }
+            : { title: "Success", description: "Request sent to the rider" }
       );
       onRequested?.(created);
     } catch (err) {
@@ -99,6 +103,10 @@ export default function JoinRideButton({ ride, pickup, drop, size = "middle", bl
       return;
     }
     setSending(false);
+    if (zone.live && !zone.live.allowed) {
+      notification.error({ title: "Can't join this trip", description: zone.live.message });
+      return;
+    }
     if (zone.zone === "TOO_FAR") {
       notification.error({ title: "Error", description: zone.message });
       return;

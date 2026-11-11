@@ -21,13 +21,18 @@ async function dispatch({ userId, type, title, message, data }) {
 export const notificationService = {
   dispatch,
 
-  async notifyRequestCreated(rideRequest) {
+  async notifyRequestCreated(rideRequest, live = null) {
     const ride = await rideRepository.findById(rideRequest.rideId);
+    // A request on a trip that's already moving says how far ahead the pickup is.
+    const onTheWay = ride.status === "STARTED";
+    const ahead = live?.pickupAheadKm != null ? ` (${live.pickupAheadKm} km ahead)` : "";
     await dispatch({
       userId: ride.riderId,
       type: "RIDE_REQUEST_CREATED",
-      title: "New ride request",
-      message: `You have a new request for your ride to ${ride.destinationName}`,
+      title: onTheWay ? "Passenger wants to join on the way" : "New ride request",
+      message: onTheWay
+        ? `A passenger wants to join your trip to ${ride.destinationName}. Pickup: ${rideRequest.pickupName}${ahead}. Accept or decline when it's safe to.`
+        : `You have a new request for your ride to ${ride.destinationName}`,
       data: { rideId: ride.id, rideRequestId: rideRequest.id },
     });
   },

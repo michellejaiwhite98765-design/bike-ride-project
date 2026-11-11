@@ -7,6 +7,7 @@ import { notificationService } from "./notification.service.js";
 import { classifyPickup } from "../utils/pickupZone.js";
 import { bookingService } from "./booking.service.js";
 import { env } from "../config/env.js";
+import { liveJoinService } from "./liveJoin.service.js";
 
 async function classifyForRide(rideId, pickup, drop) {
   const geometry = await rideRepository.pickupGeometry(rideId, pickup, drop);
@@ -18,7 +19,7 @@ export const rideRequestService = {
   async create(passengerId, rideId, data) {
     const ride = await rideRepository.findById(rideId);
     if (!ride) throw ApiError.notFound("Ride not found");
-    if (ride.status !== "PUBLISHED") throw ApiError.conflict("This ride is not open for requests");
+    if (!["PUBLISHED", "STARTED"].includes(ride.status)) throw ApiError.conflict("This ride is not open for requests");
     if (ride.riderId === passengerId) throw ApiError.badRequest("You cannot request your own ride");
     if (data.seatsRequested > ride.availableSeats) {
       throw ApiError.conflict("Requested seats exceed the seats available on this ride");
@@ -36,6 +37,15 @@ export const rideRequestService = {
     );
     if (zone.zone === "TOO_FAR") throw ApiError.badRequest(zone.message, zone);
 
+    // Trip already under way: only while the rider is less than half way and
+    // hasn't passed the pickup (services/liveJoin.service.js).
+    const started = ride.status === "STARTED";
+    let live = null;
+    if (started) {
+      live = await liveJoinService.check(ride, { latitude: data.pickupLatitude, longitude: data.pickupLongitude });
+      if (!live.allowed) throw ApiError.conflict(live.message, live);
+    }
+
     const rideRequest = await rideRequestRepository.create(rideId, passengerId, {
       ...data,
       pickupZone: zone.zone,
@@ -44,8 +54,10 @@ export const rideRequestService = {
     });
     await audit(null, { userId: passengerId, action: "RIDE_REQUEST_CREATED", entityType: "RideRequest", entityId: rideRequest.id, metadata: { pickupZone: zone.zone, extraTip: zone.extraTip } });
 
-    if (!env.lifecycle.autoAcceptRequests) {
-      await notificationService.notifyRequestCreated(rideRequest);
+    // The rider is driving: a join on a moving trip always waits for them to
+    // accept it, so no stop is added without their say.
+    if (started || !env.lifecycle.autoAcceptRequests) {
+      await notificationService.notifyRequestCreated(rideRequest, live);
       return rideRequest;
     }
 
@@ -68,7 +80,12 @@ export const rideRequestService = {
    */
   async joinCheck(rideId, { pickupLatitude, pickupLongitude, dropLatitude, dropLongitude }) {
     const drop = dropLatitude != null && dropLongitude != null ? { latitude: dropLatitude, longitude: dropLongitude } : null;
-    return classifyForRide(rideId, { latitude: pickupLatitude, longitude: pickupLongitude }, drop);
+    const zone = await classifyForRide(rideId, { latitude: pickupLatitude, longitude: pickupLongitude }, drop);
+    const ride = await rideRepository.findById(rideId);
+    if (ride?.status === "STARTED") {
+      zone.live = await liveJoinService.check(ride, { latitude: pickupLatitude, longitude: pickupLongitude });
+    }
+    return zone;
   },
 
   async listForRide(userId, rideId) {

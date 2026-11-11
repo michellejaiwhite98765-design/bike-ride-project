@@ -30,7 +30,7 @@ export const ratingService = {
     return rating;
   },
 
-  listForUser(userId) {
-    return ratingRepository.findByReviewee(userId);
+  listForUser(userId, options) {
+    return ratingRepository.findByReviewee(userId, options);
   },
 };

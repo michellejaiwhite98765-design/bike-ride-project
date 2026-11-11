@@ -56,7 +56,7 @@ export const userController = {
   },
 
   async getRatings(req, res) {
-    const ratings = await ratingService.listForUser(req.params.id);
+    const ratings = await ratingService.listForUser(req.params.id, { asDriver: req.query.as === "driver" });
     ok(res, ratings);
   },
 };

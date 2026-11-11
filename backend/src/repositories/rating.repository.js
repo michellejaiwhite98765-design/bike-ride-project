@@ -30,10 +30,15 @@ export const ratingRepository = {
     return toCamelRow(rows[0]) || null;
   },
 
-  async findByReviewee(userId) {
+  /** Reviews a user received; asDriver keeps only those from trips they drove. */
+  async findByReviewee(userId, { asDriver = false } = {}) {
+    const driverOnly = asDriver
+      ? `AND EXISTS (SELECT 1 FROM "bookings" b JOIN "rides" rd ON rd."id" = b."ride_id"
+                     WHERE b."id" = r."booking_id" AND rd."rider_id" = r."reviewee_id")`
+      : "";
     const { rows } = await pool.query(
       `SELECT r.*, ${REVIEWER_COLUMNS} FROM "ratings" r JOIN "users" u ON u."id" = r."reviewer_id"
-       WHERE r."reviewee_id" = $1 ORDER BY r."created_at" DESC`,
+       WHERE r."reviewee_id" = $1 ${driverOnly} ORDER BY r."created_at" DESC`,
       [userId]
     );
     return rows.map((row) => nestPrefixed(row, { reviewer: "reviewer" }));

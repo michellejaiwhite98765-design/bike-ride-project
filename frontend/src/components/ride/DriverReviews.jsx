@@ -33,7 +33,7 @@ export function DriverReviewsSheet({ driver, open, onClose, action }) {
   useEffect(() => {
     if (!open || !driver?.id) return;
     setReviews(null);
-    userService.getRatings(driver.id).then(setReviews).catch(() => setReviews([]));
+    userService.getRatings(driver.id, { asDriver: true }).then(setReviews).catch(() => setReviews([]));
   }, [open, driver?.id]);
 
   const average = reviews?.length ? reviews.reduce((s, r) => s + r.score, 0) / reviews.length : null;

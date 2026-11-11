@@ -15,6 +15,7 @@ import {
   StarOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useRiderStatus } from "../../hooks/useRiderStatus.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { disconnectSocket } from "../../services/socket.js";
 import { LanguageSheet } from "../LanguagePicker.jsx";
@@ -32,6 +33,8 @@ export default function AccountMenu() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
+  // Ratings are reviews passengers give drivers, so only drivers get the link.
+  const { status: riderStatus } = useRiderStatus();
   const current = LANGUAGES.find((l) => l.code === i18n.language) || LANGUAGES[0];
 
   async function handleLogout() {
@@ -44,7 +47,7 @@ export default function AccountMenu() {
     { to: "/vehicles", icon: <CarOutlined />, label: t("menu.vehicles") },
     { to: "/profile/licence", icon: <IdcardOutlined />, label: t("menu.licence") },
     { to: "/history", icon: <HistoryOutlined />, label: t("menu.history") },
-    { to: "/ratings", icon: <StarOutlined />, label: t("menu.ratings") },
+    ...(riderStatus?.isRider ? [{ to: "/ratings", icon: <StarOutlined />, label: t("menu.ratings") }] : []),
     { to: "/safety", icon: <SafetyOutlined />, label: t("menu.safety") },
     { to: "/feedback", icon: <MessageOutlined />, label: t("menu.feedback", "Feedback") },
     ...(user?.role === "ADMIN" ? [{ to: "/admin", icon: <SettingOutlined />, label: t("menu.admin") }] : []),

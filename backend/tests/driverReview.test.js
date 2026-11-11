@@ -67,3 +67,23 @@ describe("Reviewing the driver after the drop", () => {
     expect(profile.body.data).toMatchObject({ rating: 4, ratingCount: 1 });
   });
 });
+
+describe("Driver-only ratings list", () => {
+  it("keeps only reviews from trips the user drove", async () => {
+    const { rider, passenger, booking } = await boardedPassenger();
+    await request(app).post(`/api/bookings/${booking.id}/drop-otp`).set(auth(rider));
+    await request(app).post(`/api/bookings/${booking.id}/verify-drop`).set(auth(passenger)).send({ otp: await otpOfType(passenger, "DROP_OTP") });
+    // Each side rates the other on the same booking.
+    expect((await rate(passenger, booking, rider.user.id, 5)).status).toBe(201);
+    expect((await rate(rider, booking, passenger.user.id, 3)).status).toBe(201);
+
+    const asDriver = await request(app).get(`/api/users/${rider.user.id}/ratings?as=driver`).set(auth(rider));
+    expect(asDriver.body.data.map((r) => r.score)).toEqual([5]);
+    // The passenger was never the driver, so nothing for them.
+    const passengerAsDriver = await request(app).get(`/api/users/${passenger.user.id}/ratings?as=driver`).set(auth(passenger));
+    expect(passengerAsDriver.body.data).toEqual([]);
+    // Without the filter, all reviews are still returned.
+    const all = await request(app).get(`/api/users/${passenger.user.id}/ratings`).set(auth(passenger));
+    expect(all.body.data).toHaveLength(1);
+  });
+});

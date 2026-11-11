@@ -50,7 +50,8 @@ export const userService = {
   getPublicProfile(id) {
     return api.get(`/users/${id}`).then((res) => res.data);
   },
-  getRatings(id) {
-    return api.get(`/users/${id}/ratings`).then((res) => res.data);
+  // { asDriver: true } = only reviews from trips the user drove.
+  getRatings(id, { asDriver = false } = {}) {
+    return api.get(`/users/${id}/ratings`, asDriver ? { params: { as: "driver" } } : undefined).then((res) => res.data);
   },
 };

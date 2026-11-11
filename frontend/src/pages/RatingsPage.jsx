@@ -1,24 +1,40 @@
 import { useEffect, useState } from "react";
-import { List, Card, Avatar, Rate, Empty } from "antd";
+import { List, Card, Avatar, Rate, Empty, Result, Button } from "antd";
+import { Link } from "react-router-dom";
 import { UserOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../context/AuthContext.jsx";
 import { userService } from "../services/userService.js";
+import { useRiderStatus } from "../hooks/useRiderStatus.js";
 import BrandLoader from "../components/ui/BrandLoader.jsx";
 
 export default function RatingsPage() {
   const { user } = useAuth();
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { status: riderStatus } = useRiderStatus();
+  const isDriver = Boolean(riderStatus?.isRider);
 
   useEffect(() => {
+    if (!isDriver) return;
+    // Only reviews passengers left on trips this user drove.
     userService
-      .getRatings(user.id)
+      .getRatings(user.id, { asDriver: true })
       .then(setRatings)
       .finally(() => setLoading(false));
-  }, [user.id]);
+  }, [user.id, isDriver]);
 
-  if (loading) return <BrandLoader label="Loading ratings…" />;
+  if (riderStatus && !isDriver) {
+    return (
+      <Result
+        icon={<UserOutlined />}
+        title="Ratings are for drivers"
+        subTitle="Passengers rate their driver after each trip. Add a vehicle to start offering rides and collecting ratings."
+        extra={<Link to="/vehicles"><Button type="primary">Add a vehicle</Button></Link>}
+      />
+    );
+  }
+  if (!riderStatus || loading) return <BrandLoader label="Loading ratings…" />;
 
   const average = ratings.length ? (ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1) : null;
 

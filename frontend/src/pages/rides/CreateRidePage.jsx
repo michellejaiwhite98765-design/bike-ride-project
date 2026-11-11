@@ -11,11 +11,9 @@ import {
   DollarCircleOutlined,
   FileTextOutlined,
   AimOutlined,
-  ReloadOutlined,
   SafetyCertificateOutlined,
   PlusOutlined,
   TeamOutlined,
-  PlayCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styled from "styled-components";
@@ -87,14 +85,10 @@ const ActionButtons = styled.div`
     margin: 0;
     max-width: none;
 
-    flex-wrap: wrap;
-
     button {
       flex: 1;
-    }
-    button.start-now {
-      flex-basis: 100%;
-      order: -1;
+      min-width: 0;
+      padding-inline: 8px;
     }
   }
 `;
@@ -239,10 +233,6 @@ export default function CreateRidePage() {
       if ((form.getFieldValue("availableSeats") || 1) > cap) form.setFieldValue("availableSeats", cap);
       notification.success({ title: "Vehicle added", description: `${fresh.brand} ${fresh.model} is selected for this trip.` });
     }
-  }
-
-  function handleReset() {
-    form.resetFields();
   }
 
   useEffect(() => {
@@ -647,16 +637,13 @@ export default function CreateRidePage() {
 
         {/* Action Buttons */}
         <ActionButtons>
-          <Button size="large" icon={<ReloadOutlined />} onClick={handleReset}>
-            Reset
-          </Button>
           <Button
             size="large"
             block
             loading={submittingAction === "draft"}
             disabled={Boolean(submittingAction && submittingAction !== "draft") || Boolean(openTrip && !isEdit)}
             onClick={() => submit("draft")}
-            style={{ background: colors.bgSecondary }}
+            style={{ background: "transparent", borderColor: colors.primary, color: colors.primary }}
           >
             Draft
           </Button>
@@ -676,10 +663,9 @@ export default function CreateRidePage() {
             type="primary"
             block
             className="start-now"
-            icon={<PlayCircleOutlined />}
             loading={submittingAction === "start"}
             disabled={Boolean(submittingAction && submittingAction !== "start") || Boolean(openTrip && !isEdit)}
-            style={{ background: "#16a34a" }}
+            style={{ background: colors.primary }}
             onClick={() => submit("start")}
           >
             Start trip
@@ -741,8 +727,8 @@ export default function CreateRidePage() {
         .cr-drawer .ant-drawer-header{background:transparent;border-color:var(--chrome-border)}
         .cr-drawer .ant-drawer-title{color:${colors.textPrimary}}
         .cr-drawer .ant-drawer-body{padding-bottom:24px}
-        /* Phones: Start trip + Reset/Draft/Publish are pinned to the bottom, so leave room for them. */
-        @media(max-width:600px){.cr-drawer .ant-drawer-body{padding-bottom:170px}}
+        /* Phones: Start trip + Draft/Publish are pinned to the bottom, so leave room for them. */
+        @media(max-width:600px){.cr-drawer .ant-drawer-body{padding-bottom:110px}}
       `}</style>
     </div>
   );

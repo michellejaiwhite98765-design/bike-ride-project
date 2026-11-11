@@ -1,3 +1,4 @@
+import { ratingRepository } from "../repositories/rating.repository.js";
 import { bookingService } from "../services/booking.service.js";
 import { boardingService } from "../services/boarding.service.js";
 import { ok } from "../utils/apiResponse.js";
@@ -10,6 +11,10 @@ export const bookingController = {
 
   async getById(req, res) {
     const booking = await bookingService.getById(req.user.id, req.params.id);
+    // The passenger's review of the driver, if given (drives the "Rate your driver" prompt).
+    if (booking && booking.passengerId === req.user.id) {
+      booking.myDriverRating = await ratingRepository.findExisting(booking.id, req.user.id, booking.ride.riderId);
+    }
     ok(res, booking);
   },
 

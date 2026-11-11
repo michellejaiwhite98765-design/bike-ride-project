@@ -5,7 +5,7 @@
 export function notificationLink(n) {
   const data = n?.data || {};
   if (data.bookingId) {
-    return { to: `/bookings/${data.bookingId}`, state: n.type === "PAYMENT_REQUIRED" ? { pay: true } : undefined };
+    return { to: `/bookings/${data.bookingId}`, state: n.type === "PAYMENT_REQUIRED" ? { pay: true } : n.type === "RATE_DRIVER" ? { rate: true } : undefined };
   }
   if (data.rideId) {
     return { to: n.type === "RIDE_REQUEST_CREATED" ? `/rides/${data.rideId}/requests` : `/rides/${data.rideId}` };

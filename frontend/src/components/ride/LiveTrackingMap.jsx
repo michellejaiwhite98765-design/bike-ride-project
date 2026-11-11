@@ -8,6 +8,7 @@ import { connectSocket, getSocket } from "../../services/socket.js";
 import { rideService } from "../../services/rideService.js";
 import { COLOR_TILE_URL, COLOR_TILE_ATTRIBUTION, DARK_TILE_FILTER } from "../../constants/mapTiles.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { DriverReviewsSheet, ratingLabel, useUserRating } from "./DriverReviews.jsx";
 import { bikeIcon, startIcon, endIcon, passengerIcon, pickupPinIcon } from "./mapIcons.js";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -150,6 +151,8 @@ const FULLSCREEN_CSS = `
   .ltm-full-person.is-focused{border-color:#2DD4BF}
   .ltm-full-person-dot{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:var(--chrome-tint-strong);color:var(--text-secondary)}
   .ltm-full-person-dot.is-live{background:#f59e0b;color:#fff;box-shadow:0 0 0 3px rgba(245,158,11,.25)}
+  .ltm-full-person-dot.is-driver{background:#2DD4BF;color:#fff}
+  .ltm-full-driver small{color:#eab308!important;font-weight:700}
   .ltm-full-person-text{min-width:0}
   .ltm-full-person-text strong{display:block;font-size:13px}
   .ltm-full-person-text small{display:block;font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -187,6 +190,10 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false, autoSh
   // Accepted passengers (rider's view) / the viewer's own request (passenger's view):
   // who they are and where they are to be picked up.
   const [participants, setParticipants] = useState([]);
+  // Passenger's view: the driver in the People strip, with their rating and reviews.
+  const driver = ride.rider ? { ...ride.rider, id: ride.rider.id || ride.riderId } : ride.riderId ? { id: ride.riderId } : null;
+  const driverRating = useUserRating(!isOwner && fullscreen ? driver?.id : null);
+  const [driverSheetOpen, setDriverSheetOpen] = useState(false);
 
   const destination = { latitude: Number(ride.destinationLatitude), longitude: Number(ride.destinationLongitude) };
   const source = { latitude: Number(ride.sourceLatitude), longitude: Number(ride.sourceLongitude) };
@@ -508,8 +515,17 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false, autoSh
             <div className="live-progress-fill" style={{ width: `${progressPct}%` }} />
             <div className="live-progress-rider" style={{ left: `${progressPct}%` }}><span className="live-progress-rider-dot" /></div>
           </div>
-          {people.length > 0 && (
+          {(people.length > 0 || (!isOwner && driver)) && (
             <div className="ltm-full-people">
+              {!isOwner && driver && (
+                <button type="button" className="ltm-full-person ltm-full-driver" onClick={() => setDriverSheetOpen(true)}>
+                  <span className="ltm-full-person-dot is-driver"><UserOutlined /></span>
+                  <span className="ltm-full-person-text">
+                    <strong>{[driver.firstName, driver.lastName].filter(Boolean).join(" ") || "Your driver"}</strong>
+                    <small>Driver{driverRating ? ` · ${ratingLabel(driverRating)}` : ""} · Reviews</small>
+                  </span>
+                </button>
+              )}
               {people.map((person) => {
                 const away = distanceFromBike(person.live);
                 return (
@@ -538,6 +554,7 @@ export default function LiveTrackingMap({ ride, isOwner, compact = false, autoSh
             <Button type="primary" block size="large" onClick={startSharing}>Share my location</Button>
           )}
         </div>
+        {!isOwner && driver && <DriverReviewsSheet driver={driver} open={driverSheetOpen} onClose={() => setDriverSheetOpen(false)} />}
         <style>{BASE_CSS + FULLSCREEN_CSS}</style>
       </div>
     );

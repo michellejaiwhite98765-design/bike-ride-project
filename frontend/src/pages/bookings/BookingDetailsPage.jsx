@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { Card, Descriptions, Button, App, Divider, Popconfirm, Modal, Form, Rate, Input } from "antd";
+import { Card, Descriptions, Button, App, Divider, Popconfirm, Rate } from "antd";
 import dayjs from "dayjs";
 import { bookingService } from "../../services/bookingService.js";
-import { ratingService } from "../../services/ratingService.js";
+import { RateDriverModal, DriverReviewsSheet } from "../../components/ride/DriverReviews.jsx";
 import StatusTag from "../../components/StatusTag.jsx";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
 import PaymentModal, { fareBreakdown } from "../../components/booking/PaymentModal.jsx";
@@ -16,11 +16,12 @@ export default function BookingDetailsPage() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   // Opened straight away when arriving from the ride page's "Pay" button.
-  const [payOpen, setPayOpen] = useState(Boolean(useLocation().state?.pay));
+  const navState = useLocation().state;
+  const [payOpen, setPayOpen] = useState(Boolean(navState?.pay));
   const [cancelling, setCancelling] = useState(false);
-  const [rateOpen, setRateOpen] = useState(false);
-  const [rateForm] = Form.useForm();
-  const [rating, setRating] = useState(false);
+  // Opened straight away from the "How was your ride?" notification.
+  const [rateOpen, setRateOpen] = useState(Boolean(navState?.rate));
+  const [reviewsOpen, setReviewsOpen] = useState(false);
 
   async function load() {
     // Full-page loader only the first time; later refreshes (after paying
@@ -40,6 +41,9 @@ export default function BookingDetailsPage() {
 
   // While the trip is on, keep the page current so an OTP the rider sends
   // (or a rider-side change) shows up without a manual refresh.
+  // The driver review opens as soon as the passenger is dropped off.
+  const canRate = booking?.bookingStatus === "CONFIRMED" && (booking.boardingStatus === "DROPPED" || booking.ride?.status === "COMPLETED");
+  const driverName = booking?.ride?.rider?.firstName || "your driver";
   const tripActive = booking && ["PUBLISHED", "STARTED"].includes(booking.ride?.status) && booking.bookingStatus !== "CANCELLED";
   useEffect(() => {
     if (!tripActive) return undefined;
@@ -128,20 +132,7 @@ export default function BookingDetailsPage() {
     setTimeout(() => document.body.removeChild(iframe), 1000);
   }
 
-  async function submitRating() {
-    try {
-      const values = await rateForm.validateFields();
-      setRating(true);
-      await ratingService.create({ bookingId: booking.id, revieweeId: booking.ride.riderId, ...values });
-      notification.success({ title: "Success", description: "Thanks for rating your ride!" });
-      setRateOpen(false);
-    } catch (err) {
-      if (err?.errorFields) return;
-      notification.error({ title: "Error", description: err.message });
-    } finally {
-      setRating(false);
-    }
-  }
+
 
   return (
     <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -199,11 +190,6 @@ export default function BookingDetailsPage() {
               </Button>
             </Popconfirm>
           )}
-          {booking.ride.status === "COMPLETED" && booking.bookingStatus === "CONFIRMED" && (
-            <Button size="large" onClick={() => setRateOpen(true)}>
-              Rate this ride
-            </Button>
-          )}
           {booking.bookingStatus === "CONFIRMED" && (
             <Button size="large" onClick={downloadReceipt}>
               Download Receipt
@@ -212,6 +198,27 @@ export default function BookingDetailsPage() {
         </div>
 
         <PassengerBoardingPanel booking={booking} onChanged={load} />
+
+        {canRate && (
+          <div className="bd-review">
+            {booking.myDriverRating ? (
+              <>
+                <div className="bd-review-title">Your review of {driverName}</div>
+                <Rate disabled value={booking.myDriverRating.score} />
+                {booking.myDriverRating.comment && <p className="bd-review-comment">{booking.myDriverRating.comment}</p>}
+              </>
+            ) : (
+              <>
+                <div className="bd-review-title">How was your ride with {driverName}?</div>
+                <Rate value={0} onChange={() => setRateOpen(true)} style={{ fontSize: 28 }} />
+                <Button type="primary" block size="large" style={{ marginTop: 10 }} onClick={() => setRateOpen(true)}>
+                  Rate your driver
+                </Button>
+              </>
+            )}
+            <Button type="link" onClick={() => setReviewsOpen(true)} style={{ paddingLeft: 0 }}>See all reviews of {driverName}</Button>
+          </div>
+        )}
       </Card>
 
       {tripActive && booking.boardingStatus !== "DROPPED" && (
@@ -233,20 +240,17 @@ export default function BookingDetailsPage() {
       />
 
       <style>{`
+        .bd-review{margin-top:16px;padding:14px;border-radius:14px;border:1px solid rgba(234,179,8,.4);background:rgba(234,179,8,.08);text-align:center}
+        .bd-review-title{font-weight:800;margin-bottom:6px}
+        .bd-review-comment{margin:6px 0 0;color:var(--text-secondary)}
         .bd-paid{margin-top:16px;padding:10px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#16a34a;font-weight:700}
         .bd-due{margin-top:16px;padding:10px 14px;border-radius:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#d97706;font-size:13px;font-weight:600}
       `}</style>
 
-      <Modal title="Rate your ride" open={rateOpen} onCancel={() => setRateOpen(false)} onOk={submitRating} confirmLoading={rating} okText="Submit">
-        <Form form={rateForm} layout="vertical">
-          <Form.Item name="score" label="Score" rules={[{ required: true, message: "Please select a rating" }]}>
-            <Rate />
-          </Form.Item>
-          <Form.Item name="comment" label="Comment (optional)">
-            <Input.TextArea rows={3} maxLength={500} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {canRate && !booking.myDriverRating && (
+        <RateDriverModal booking={booking} open={rateOpen} onClose={() => setRateOpen(false)} onDone={load} />
+      )}
+      <DriverReviewsSheet driver={booking.ride.rider} open={reviewsOpen} onClose={() => setReviewsOpen(false)} />
     </div>
   );
 }

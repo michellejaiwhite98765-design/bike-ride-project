@@ -142,6 +142,15 @@ async function verifyOtp(passengerId, bookingId, otp, stageName) {
     message: `${name} has been dropped off`,
     data: { rideId: booking.rideId, bookingId },
   });
+  // The passenger's part of the trip is over: ask them to review the driver.
+  const riderName = booking.ride.rider?.firstName || "your driver";
+  await notificationService.dispatch({
+    userId: passengerId,
+    type: "RATE_DRIVER",
+    title: "How was your ride?",
+    message: `You've been dropped off. Rate ${riderName} and leave a review.`,
+    data: { rideId: booking.rideId, bookingId },
+  });
   // Payment reaches the rider only now, once the passenger confirms the drop.
   if (dropped.riderPayoutStatus === "RELEASED") {
     await notificationService.dispatch({

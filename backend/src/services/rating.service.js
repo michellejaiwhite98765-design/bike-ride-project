@@ -8,9 +8,12 @@ export const ratingService = {
   async create(reviewerId, { bookingId, revieweeId, score, comment }) {
     const booking = await bookingRepository.findById(bookingId);
     if (!booking) throw ApiError.notFound("Booking not found");
-    if (booking.ride.status !== "COMPLETED") {
-      throw ApiError.conflict("You can only rate after the ride has been completed");
+    // A passenger is done once dropped off, so the review opens then -
+    // no need to wait for the rider to finish the whole trip.
+    if (booking.ride.status !== "COMPLETED" && booking.boardingStatus !== "DROPPED") {
+      throw ApiError.conflict("You can rate once you've been dropped off");
     }
+    if (booking.bookingStatus === "CANCELLED") throw ApiError.conflict("This booking was cancelled");
 
     const participants = [booking.passengerId, booking.ride.riderId];
     if (!participants.includes(reviewerId)) throw ApiError.forbidden("You were not part of this booking");

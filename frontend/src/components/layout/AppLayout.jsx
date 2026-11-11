@@ -350,6 +350,9 @@ const BottomNavItem = styled(Link)`
   .ant-badge {
     display: flex;
     line-height: 1;
+    /* antd's Badge sets its own text colour, which made the bell white
+       while the other tabs are grey - use the tab's colour instead. */
+    color: inherit;
   }
 `;
 

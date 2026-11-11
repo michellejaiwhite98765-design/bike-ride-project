@@ -65,6 +65,10 @@ describe("Reviewing the driver after the drop", () => {
     expect(reviews.body.data[0]).toMatchObject({ score: 4, comment: "Smooth ride" });
     const profile = await request(app).get(`/api/users/${rider.user.id}`).set(auth(passenger));
     expect(profile.body.data).toMatchObject({ rating: 4, ratingCount: 1 });
+
+    // Trip details show the driver's rating, so passengers see it before joining.
+    const details = await request(app).get(`/api/rides/${ride.id}`).set(auth(passenger));
+    expect(details.body.data.rider).toMatchObject({ rating: 4, ratingCount: 1 });
   });
 });
 

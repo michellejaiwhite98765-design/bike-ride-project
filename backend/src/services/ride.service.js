@@ -22,6 +22,17 @@ function assertOwner(ride, userId) {
   if (ride.riderId !== userId) throw ApiError.forbidden("You do not own this ride");
 }
 
+/** Puts the driver's rating (as a driver) on each ride's rider; returns riderId -> avg rating. */
+async function attachDriverRatings(rides) {
+  const stats = await ratingRepository.driverStatsByRiderIds([...new Set(rides.map((r) => r.riderId))]);
+  const byId = new Map(stats.map((st) => [st.riderId, st]));
+  for (const ride of rides) {
+    const st = byId.get(ride.riderId);
+    if (ride.rider && st) Object.assign(ride.rider, { rating: st.rating, ratingCount: st.ratingCount });
+  }
+  return new Map(stats.filter((st) => st.rating != null).map((st) => [st.riderId, st.rating]));
+}
+
 export const rideService = {
   async create(riderId, data) {
     await drivingLicenceService.assertVerified(riderId);
@@ -67,11 +78,13 @@ export const rideService = {
     const ride = await rideRepository.findById(rideId);
     if (!ride) throw ApiError.notFound("Ride not found");
 
-    const [ratingAgg, numberOfRides] = await Promise.all([
-      ratingRepository.aggregateForReviewee(ride.riderId),
+    const [[driverStats], numberOfRides] = await Promise.all([
+      ratingRepository.driverStatsByRiderIds([ride.riderId]),
       rideRepository.countCompletedByRider(ride.riderId),
     ]);
-    ride.rider.rating = ratingAgg.avgScore ? Number(ratingAgg.avgScore.toFixed(2)) : null;
+    // As a driver only - what a passenger wants to know before joining.
+    ride.rider.rating = driverStats.rating;
+    ride.rider.ratingCount = driverStats.ratingCount;
     ride.rider.numberOfRides = numberOfRides;
 
     return ride;
@@ -205,6 +218,7 @@ export const rideService = {
       const km = distanceById.get(ride.id);
       return { ...ride, distances: { sourceDistanceKm: km == null ? null : Number(km.toFixed(2)) } };
     });
+    await attachDriverRatings(results);
 
     // So the app can show "Requested" on rides the passenger already asked to join.
     if (userId) {
@@ -248,9 +262,7 @@ export const rideService = {
     const rides = await rideRepository.findManyByIds(open.map((c) => c.id));
     const distanceById = new Map(candidates.map((c) => [c.id, c]));
 
-    const riderIds = [...new Set(rides.map((r) => r.riderId))];
-    const ratings = await ratingRepository.avgScoresByRevieweeIds(riderIds);
-    const ratingByRiderId = new Map(ratings.map((r) => [r.revieweeId, r.avgScore]));
+    const ratingByRiderId = await attachDriverRatings(rides);
 
     const matchingConfig = { pickupRadiusKm, destinationRadiusKm, timeWindowMinutes: env.matching.timeWindowMinutes };
 

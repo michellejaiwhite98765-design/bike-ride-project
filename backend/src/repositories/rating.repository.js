@@ -57,6 +57,28 @@ export const ratingRepository = {
     };
   },
 
+  /**
+   * Drivers' ratings: only reviews left on trips each user drove.
+   * Returns [{ riderId, rating (avg, 2 dp) | null, ratingCount }].
+   */
+  async driverStatsByRiderIds(riderIds) {
+    if (riderIds.length === 0) return [];
+    const { rows } = await pool.query(
+      `SELECT r."reviewee_id" AS "riderId", AVG(r."score") AS "avg", COUNT(*) AS "count"
+         FROM "ratings" r
+         JOIN "bookings" b ON b."id" = r."booking_id"
+         JOIN "rides" rd ON rd."id" = b."ride_id" AND rd."rider_id" = r."reviewee_id"
+        WHERE r."reviewee_id" = ANY($1)
+        GROUP BY r."reviewee_id"`,
+      [riderIds]
+    );
+    const byId = new Map(rows.map((row) => [row.riderId, row]));
+    return riderIds.map((id) => {
+      const row = byId.get(id);
+      return { riderId: id, rating: row ? Number(Number(row.avg).toFixed(2)) : null, ratingCount: row ? Number(row.count) : 0 };
+    });
+  },
+
   /** Replaces prisma.rating.groupBy(...) used by ride.service.js#search. */
   async avgScoresByRevieweeIds(revieweeIds) {
     if (revieweeIds.length === 0) return [];

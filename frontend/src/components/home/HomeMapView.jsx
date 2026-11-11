@@ -283,6 +283,14 @@ export default function HomeMapView({ userLocation, nearbyRides, myBookings = []
                     <TeamOutlined /> {ride.availableSeats} left
                   </span>
                 </div>
+                <div className="hmv-popup-driver">
+                  {ride.rider?.firstName || "Driver"} ·{" "}
+                  {ride.rider?.ratingCount ? (
+                    <span className="hmv-popup-stars">★ {Number(ride.rider.rating).toFixed(1)} <em>({ride.rider.ratingCount})</em></span>
+                  ) : (
+                    <em>New driver</em>
+                  )}
+                </div>
                 {ride.pickupZone?.zone === "DETOUR" && (
                   <span className="hmv-popup-zone">Detour pickup · +₹{ride.pickupZone.extraTip}</span>
                 )}
@@ -358,6 +366,9 @@ export default function HomeMapView({ userLocation, nearbyRides, myBookings = []
 
         .hmv-popup{min-width:160px;display:flex;flex-direction:column;gap:4px}
         .hmv-popup strong{font-size:13px;color:#0f172a}
+        .hmv-popup-driver{font-size:11.5px;color:#334155;font-weight:600}
+        .hmv-popup-driver em{font-style:normal;color:#64748b;font-weight:500}
+        .hmv-popup-stars{color:#b45309;font-weight:800}
         .hmv-popup-meta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#475569}
         .hmv-popup-zone{font-size:11px;font-weight:700;color:#b45309}
         .hmv-popup .jrb{margin-top:4px}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, Avatar, Button, Modal, Form, App, Row, Col, Popconfirm, Alert, InputNumber, Input, Space, Divider } from "antd";
-import { UserOutlined, StarFilled, EnvironmentOutlined, ClockCircleOutlined, CarOutlined, FlagOutlined, CheckCircleOutlined, PhoneOutlined, MessageOutlined, CompassOutlined, TeamOutlined, WalletOutlined, CalendarOutlined } from "@ant-design/icons";
+import { UserOutlined, StarFilled, EnvironmentOutlined, ClockCircleOutlined, CarOutlined, FlagOutlined, CheckCircleOutlined, PhoneOutlined, MessageOutlined, CompassOutlined, TeamOutlined, WalletOutlined, CalendarOutlined, RightOutlined } from "@ant-design/icons";
+import { DriverReviewsSheet } from "../../components/ride/DriverReviews.jsx";
 import dayjs from "dayjs";
 import styled from "styled-components";
 import { rideService } from "../../services/rideService.js";
@@ -133,6 +134,11 @@ const DriverHeader = styled.div`
       font-size: 13px;
       color: ${dark.textSecondary};
     }
+    .rating-btn {
+      border: 0; background: none; padding: 2px 0; cursor: pointer; font: inherit; font-size: 13px; text-align: left; flex-wrap: wrap; gap: 4px 6px;
+    }
+    .rating-btn:hover { color: #faad14; }
+    .rating-btn span { white-space: nowrap; }
   }
 `;
 
@@ -381,6 +387,7 @@ export default function RideDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [driverReviewsOpen, setDriverReviewsOpen] = useState(false);
   const [pickupModalOpen, setPickupModalOpen] = useState(false);
   const [dropModalOpen, setDropModalOpen] = useState(false);
   const [requestForm] = Form.useForm();
@@ -599,6 +606,7 @@ export default function RideDetailsPage() {
             </MapSection>
           )}
 
+          <DriverReviewsSheet driver={{ ...ride.rider, id: ride.riderId }} open={driverReviewsOpen} onClose={() => setDriverReviewsOpen(false)} />
           {/* Driver Profile Section */}
           <DriverProfileCard>
             <DriverHeader>
@@ -610,12 +618,15 @@ export default function RideDetailsPage() {
                   {ride.rider?.firstName} {ride.rider?.lastName}
                   {ride.rider?.isVerified && <VerifiedBadge />}
                 </div>
-                <div className="rating">
+                {/* Driver's rating (as a driver) - tap to read the reviews before joining. */}
+                <button type="button" className="rating rating-btn" onClick={() => setDriverReviewsOpen(true)}>
                   <StarFilled style={{ color: "#faad14" }} />
-                  <span>{ride.rider?.rating ?? "New"}</span>
+                  <span>{ride.rider?.ratingCount ? Number(ride.rider.rating).toFixed(1) : "New"}</span>
+                  {ride.rider?.ratingCount ? <span>({ride.rider.ratingCount} review{ride.rider.ratingCount === 1 ? "" : "s"})</span> : null}
                   <span>·</span>
                   <span>{ride.rider?.numberOfRides ?? 0} rides</span>
-                </div>
+                  <RightOutlined style={{ fontSize: 10 }} />
+                </button>
               </div>
               <StatusTag status={ride.status} />
             </DriverHeader>

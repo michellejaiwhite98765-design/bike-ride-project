@@ -130,14 +130,15 @@ export const drivingLicenceService = {
 
   /**
    * Who can offer trips. A user with a vehicle is a rider; to create a trip
-   * they also need a verified, unexpired licence and a verified vehicle.
+   * they need a verified vehicle. The licence is strongly encouraged but can be
+   * added later - until then the rider shows as an "Unverified driver".
    */
   async riderStatus(userId) {
     const [licence, vehicles] = await Promise.all([this.get(userId), vehicleRepository.findByOwner(userId)]);
     const licenceVerified = licence.status === "VERIFIED";
     const hasVerifiedVehicle = vehicles.some((v) => v.verificationStatus === "VERIFIED");
+    // Only the vehicle blocks trips; the licence is optional (listed so the app can nudge).
     const missing = [];
-    if (!licenceVerified) missing.push("LICENCE");
     if (!hasVerifiedVehicle) missing.push("VEHICLE");
     return {
       isRider: vehicles.length > 0,
@@ -146,6 +147,7 @@ export const drivingLicenceService = {
       verifiedVehicleCount: vehicles.filter((v) => v.verificationStatus === "VERIFIED").length,
       canCreateTrip: missing.length === 0,
       missing,
+      licenceVerified,
     };
   },
 

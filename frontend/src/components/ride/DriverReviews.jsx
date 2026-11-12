@@ -3,6 +3,7 @@ import { App, Avatar, Button, Drawer, Empty, Input, Modal, Rate, Spin } from "an
 import { StarFilled, UserOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { userService } from "../../services/userService.js";
+import DriverLicenceTag from "./DriverLicenceTag.jsx";
 import { ratingService } from "../../services/ratingService.js";
 
 const fullName = (u) => [u?.firstName, u?.lastName].filter(Boolean).join(" ");
@@ -46,6 +47,7 @@ export function DriverReviewsSheet({ driver, open, onClose, action }) {
         </Avatar>
         <div>
           <div className="drv-name">{fullName(driver) || "Your driver"}</div>
+          <DriverLicenceTag rider={driver} compact />
           {reviews && (average != null ? (
             <div className="drv-avg"><StarFilled /> {average.toFixed(1)} <span>· {reviews.length} review{reviews.length === 1 ? "" : "s"}</span></div>
           ) : <div className="drv-avg"><span>No reviews yet</span></div>)}

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, Avatar, Button, Modal, Form, App, Row, Col, Popconfirm, Alert, InputNumber, Input, Space, Divider } from "antd";
 import { UserOutlined, StarFilled, EnvironmentOutlined, ClockCircleOutlined, CarOutlined, FlagOutlined, CheckCircleOutlined, PhoneOutlined, MessageOutlined, CompassOutlined, TeamOutlined, WalletOutlined, CalendarOutlined, RightOutlined } from "@ant-design/icons";
 import { DriverReviewsSheet } from "../../components/ride/DriverReviews.jsx";
+import DriverLicenceTag from "../../components/ride/DriverLicenceTag.jsx";
 import dayjs from "dayjs";
 import styled from "styled-components";
 import { rideService } from "../../services/rideService.js";
@@ -618,6 +619,7 @@ export default function RideDetailsPage() {
                   {ride.rider?.firstName} {ride.rider?.lastName}
                   {ride.rider?.isVerified && <VerifiedBadge />}
                 </div>
+                <DriverLicenceTag rider={ride.rider} />
                 {/* Driver's rating (as a driver) - tap to read the reviews before joining. */}
                 <button type="button" className="rating rating-btn" onClick={() => setDriverReviewsOpen(true)}>
                   <StarFilled style={{ color: "#faad14" }} />

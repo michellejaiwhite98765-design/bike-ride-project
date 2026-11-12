@@ -39,7 +39,7 @@ describe("Driving licence", () => {
     const res = await request(app).get("/api/users/me/licence").set("Authorization", `Bearer ${user.token}`);
     expect(res.body.data).toEqual({ status: "NOT_SUBMITTED" });
     const st = await status(user);
-    expect(st.body.data).toMatchObject({ isRider: false, canCreateTrip: false, missing: ["LICENCE", "VEHICLE"] });
+    expect(st.body.data).toMatchObject({ isRider: false, canCreateTrip: false, missing: ["VEHICLE"], licenceVerified: false });
   });
 
   it("is verified when the number is found on the document", async () => {
@@ -84,25 +84,31 @@ describe("Driving licence", () => {
     expect(res.status).toBe(409);
   });
 
-  it("creating a trip needs a verified licence and a verified vehicle", async () => {
+  it("a trip needs a verified vehicle; the licence can be added later (shown as an unverified driver)", async () => {
     const user = await registerUser();
     const vehicle = await createVehicle(user.token);
-    expect((await status(user)).body.data).toMatchObject({ isRider: true, canCreateTrip: false, missing: ["LICENCE", "VEHICLE"] });
+    expect((await status(user)).body.data).toMatchObject({ isRider: true, canCreateTrip: false, missing: ["VEHICLE"], licenceVerified: false });
 
     await vehicleRepository.update(vehicle.id, { verificationStatus: "VERIFIED" });
-    const noLicence = await request(app).post("/api/rides").set("Authorization", `Bearer ${user.token}`).send(ridePayload(vehicle.id));
-    expect(noLicence.status).toBe(403);
-    expect(noLicence.body.message).toMatch(/driving licence/);
+    expect((await status(user)).body.data).toMatchObject({ canCreateTrip: true, missing: [], licenceVerified: false });
 
+    // No licence: the trip is created and published, and the driver shows as unverified.
+    const created = await request(app).post("/api/rides").set("Authorization", `Bearer ${user.token}`).send(ridePayload(vehicle.id));
+    expect(created.status).toBe(201);
+    const published = await request(app).post(`/api/rides/${created.body.data.id}/publish`).set("Authorization", `Bearer ${user.token}`);
+    expect(published.status).toBe(200);
+    const passenger = await registerUser();
+    const seen = await request(app).get(`/api/rides/${created.body.data.id}`).set("Authorization", `Bearer ${passenger.token}`);
+    expect(seen.body.data.rider.licenceVerified).toBe(false);
+
+    // An expired licence still counts as unverified.
     await verifyLicence(user.user.id, { expiryDate: "2020-01-01" });
-    const expired = await request(app).post("/api/rides").set("Authorization", `Bearer ${user.token}`).send(ridePayload(vehicle.id));
-    expect(expired.status).toBe(403);
-    expect(expired.body.message).toMatch(/expired/);
+    expect((await request(app).get(`/api/rides/${created.body.data.id}`).set("Authorization", `Bearer ${passenger.token}`)).body.data.rider.licenceVerified).toBe(false);
 
+    // Once the licence is verified, the same trip shows a verified driver.
     await verifyLicence(user.user.id);
-    expect((await status(user)).body.data).toMatchObject({ canCreateTrip: true, missing: [] });
-    const ok = await request(app).post("/api/rides").set("Authorization", `Bearer ${user.token}`).send(ridePayload(vehicle.id));
-    expect(ok.status).toBe(201);
+    expect((await status(user)).body.data).toMatchObject({ licenceVerified: true });
+    expect((await request(app).get(`/api/rides/${created.body.data.id}`).set("Authorization", `Bearer ${passenger.token}`)).body.data.rider.licenceVerified).toBe(true);
   });
 
   it("public profiles don't show licence details", async () => {

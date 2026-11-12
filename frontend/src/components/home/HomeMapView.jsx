@@ -1,3 +1,4 @@
+import DriverLicenceTag from "../ride/DriverLicenceTag.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import MyBookingCard from "./MyBookingCard.jsx";
@@ -283,6 +284,7 @@ export default function HomeMapView({ userLocation, nearbyRides, myBookings = []
                     <TeamOutlined /> {ride.availableSeats} left
                   </span>
                 </div>
+                <DriverLicenceTag rider={ride.rider} compact />
                 <div className="hmv-popup-driver">
                   {ride.rider?.firstName || "Driver"} ·{" "}
                   {ride.rider?.ratingCount ? (

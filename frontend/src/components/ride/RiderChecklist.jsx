@@ -2,11 +2,15 @@ import { Link } from "react-router-dom";
 import { Button, Card } from "antd";
 import { CheckCircleFilled, ClockCircleFilled, ExclamationCircleFilled, IdcardOutlined, CarOutlined } from "@ant-design/icons";
 
+/** "Add later" for the licence is remembered per user on this device. */
+export const licenceLaterKey = (userId) => `bikeride_licence_later_${userId}`;
+
 /**
- * What a user still needs before they can create a trip: a verified driving
- * licence and a verified vehicle. `status` comes from useRiderStatus().
+ * Before creating a trip: a verified vehicle (required) and a driving licence
+ * (asked for, but can be added later - the rider then shows as an
+ * "Unverified driver"). `status` comes from useRiderStatus().
  */
-export default function RiderChecklist({ status, vehicles = [], next = "/rides/create" }) {
+export default function RiderChecklist({ status, vehicles = [], next = "/rides/create", onLicenceLater, licenceLater = false }) {
   const licence = status?.licence || { status: "NOT_SUBMITTED" };
   const licenceOk = licence.status === "VERIFIED";
   const vehicleOk = (status?.verifiedVehicleCount ?? 0) > 0;
@@ -26,14 +30,20 @@ export default function RiderChecklist({ status, vehicles = [], next = "/rides/c
       icon: <IdcardOutlined />,
       title: "Driving licence",
       done: licenceOk,
-      text: licenceText,
+      // Skipped for now: not a blocker any more, just a reminder.
+      pending: !licenceOk && licenceLater,
+      text: !licenceOk && licenceLater ? "You chose to add it later - you'll show as an Unverified driver" : licenceText,
       action: !licenceOk && (
-        <Link to={`/profile/licence?next=${encodeURIComponent(next)}`}>
-          <Button type="primary" style={{ background: "#0f766e" }}>
-            {licence.status === "NOT_SUBMITTED" ? "Add licence" : "Update licence"}
-          </Button>
-        </Link>
+        <div className="rcl-buttons">
+          <Link to={`/profile/licence?next=${encodeURIComponent(next)}`}>
+            <Button type="primary" style={{ background: "#0f766e" }}>
+              {licence.status === "NOT_SUBMITTED" ? "Add licence" : "Update licence"}
+            </Button>
+          </Link>
+          {onLicenceLater && !licenceLater && <Button onClick={onLicenceLater}>Add later</Button>}
+        </div>
       ),
+      note: !licenceOk && !licenceLater && "Without a verified licence, passengers see you as an Unverified driver.",
     },
     {
       key: "vehicle",
@@ -60,7 +70,7 @@ export default function RiderChecklist({ status, vehicles = [], next = "/rides/c
     <div className="rcl-wrap">
       <Card className="rcl-card">
         <h2>Before you create a trip</h2>
-        <p>For everyone's safety, riders verify their driving licence and vehicle once. Passengers don't need this.</p>
+        <p>For everyone's safety, riders verify their vehicle once. Adding your driving licence makes you a Verified driver - passengers trust it more.</p>
         {items.map((it) => (
           <div key={it.key} className={`rcl-item ${it.done ? "done" : ""}`}>
             <span className="rcl-icon">{it.icon}</span>
@@ -76,6 +86,7 @@ export default function RiderChecklist({ status, vehicles = [], next = "/rides/c
               <ExclamationCircleFilled className="rcl-state todo" />
             )}
             {it.action && <div className="rcl-action">{it.action}</div>}
+            {it.note && <div className="rcl-note">{it.note}</div>}
           </div>
         ))}
       </Card>
@@ -91,6 +102,8 @@ export default function RiderChecklist({ status, vehicles = [], next = "/rides/c
         .rcl-body span{display:block;font-size:12px;color:var(--text-secondary)}
         .rcl-state{font-size:20px}.rcl-state.ok{color:#22C55E}.rcl-state.wait{color:#F59E0B}.rcl-state.todo{color:#F97316}
         .rcl-action{grid-column:2/4}
+        .rcl-buttons{display:flex;gap:8px;flex-wrap:wrap}
+        .rcl-note{grid-column:2/4;font-size:12px;color:#d97706}
         @media(max-width:768px){.rcl-wrap{padding-top:84px}}
       `}</style>
     </div>

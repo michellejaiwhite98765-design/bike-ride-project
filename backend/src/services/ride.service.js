@@ -1,4 +1,4 @@
-import { drivingLicenceService } from "./drivingLicence.service.js";
+import { drivingLicenceRepository } from "../repositories/drivingLicence.repository.js";
 import { haversineKm } from "../utils/geo.js";
 import { liveJoinService } from "./liveJoin.service.js";
 import { tripLifecycleService } from "./tripLifecycle.service.js";
@@ -24,18 +24,24 @@ function assertOwner(ride, userId) {
 
 /** Puts the driver's rating (as a driver) on each ride's rider; returns riderId -> avg rating. */
 async function attachDriverRatings(rides) {
-  const stats = await ratingRepository.driverStatsByRiderIds([...new Set(rides.map((r) => r.riderId))]);
+  const riderIds = [...new Set(rides.map((r) => r.riderId))];
+  const [stats, licensed] = await Promise.all([
+    ratingRepository.driverStatsByRiderIds(riderIds),
+    drivingLicenceRepository.verifiedUserIds(riderIds),
+  ]);
   const byId = new Map(stats.map((st) => [st.riderId, st]));
   for (const ride of rides) {
     const st = byId.get(ride.riderId);
     if (ride.rider && st) Object.assign(ride.rider, { rating: st.rating, ratingCount: st.ratingCount });
+    // "Verified driver" badge: a verified, unexpired driving licence.
+    if (ride.rider) ride.rider.licenceVerified = licensed.has(ride.riderId);
   }
   return new Map(stats.filter((st) => st.rating != null).map((st) => [st.riderId, st.rating]));
 }
 
 export const rideService = {
   async create(riderId, data) {
-    await drivingLicenceService.assertVerified(riderId);
+    // No licence check: drivers can add it later (they show as "Unverified driver").
     const vehicle = await vehicleRepository.findById(data.vehicleId);
     if (!vehicle || vehicle.ownerId !== riderId) throw ApiError.badRequest("Vehicle not found");
     if (!vehicle.isActive) throw ApiError.badRequest("This vehicle has been removed. Please select another vehicle.");
@@ -84,6 +90,7 @@ export const rideService = {
     ]);
     // As a driver only - what a passenger wants to know before joining.
     ride.rider.rating = driverStats.rating;
+    ride.rider.licenceVerified = (await drivingLicenceRepository.verifiedUserIds([ride.riderId])).has(ride.riderId);
     ride.rider.ratingCount = driverStats.ratingCount;
     ride.rider.numberOfRides = numberOfRides;
 
@@ -138,7 +145,6 @@ export const rideService = {
     const ride = await this.getById(rideId);
     assertOwner(ride, userId);
     assertRideTransition(ride.status, "PUBLISHED");
-    await drivingLicenceService.assertVerified(userId);
 
     const vehicle = await vehicleRepository.findById(ride.vehicleId);
     if (!vehicle || vehicle.ownerId !== userId || !vehicle.isActive || vehicle.verificationStatus !== "VERIFIED") {

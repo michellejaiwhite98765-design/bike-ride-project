@@ -8,6 +8,17 @@ export const drivingLicenceRepository = {
   },
 
   /** Another account's VERIFIED licence with this number, if any. */
+  /** Of these users, the ones with a verified licence that hasn't expired. */
+  async verifiedUserIds(userIds) {
+    if (userIds.length === 0) return new Set();
+    const { rows } = await pool.query(
+      `SELECT "user_id" FROM "driving_licences"
+        WHERE "user_id" = ANY($1) AND "status" = 'VERIFIED' AND ("expiry_date" IS NULL OR "expiry_date" >= CURRENT_DATE)`,
+      [userIds]
+    );
+    return new Set(rows.map((r) => r.user_id));
+  },
+
   async findVerifiedByNumber(licenceNumber, exceptUserId) {
     const { rows } = await pool.query(
       `SELECT * FROM "driving_licences" WHERE "licence_number" = $1 AND "status" = 'VERIFIED' AND "user_id" <> $2 LIMIT 1`,

@@ -29,7 +29,8 @@ import { haversineKm, reverseGeocode, countryMismatch, UnknownLocationError, UNK
 import { locationService } from "../../services/locationService.js";
 import { tipRateForKm } from "../../constants/pricing.js";
 import BrandLoader from "../../components/ui/BrandLoader.jsx";
-import RiderChecklist from "../../components/ride/RiderChecklist.jsx";
+import RiderChecklist, { licenceLaterKey } from "../../components/ride/RiderChecklist.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import VehicleFormPage from "../vehicles/VehicleFormPage.jsx";
 import { useRiderStatus } from "../../hooks/useRiderStatus.js";
 
@@ -116,6 +117,15 @@ export default function CreateRidePage() {
   const [savedPath, setSavedPath] = useState(null);
   const isOnline = useOnlineStatus();
   const { status: riderStatus } = useRiderStatus();
+  // "Add later" on the licence step, remembered for this user on this device.
+  const { user } = useAuth();
+  const [licenceLater, setLicenceLater] = useState(() => {
+    try { return Boolean(user?.id && localStorage.getItem(licenceLaterKey(user.id))); } catch { return false; }
+  });
+  const skipLicence = () => {
+    try { if (user?.id) localStorage.setItem(licenceLaterKey(user.id), "1"); } catch { /* private mode: just this visit */ }
+    setLicenceLater(true);
+  };
   useAutoCurrentLocation(form, "source", { enabled: !isEdit && !loading });
   const rideType = Form.useWatch("rideType", form) || "WITHOUT_TIP";
   const vehicleId = Form.useWatch("vehicleId", form);
@@ -424,9 +434,20 @@ export default function CreateRidePage() {
 
   if (loading || !riderStatus) return <BrandLoader label="Loading your trip…" />;
 
-  // A verified driving licence and a verified vehicle are needed first.
-  if (!riderStatus.canCreateTrip && (!riderStatus.unknown || verifiedVehicles.length === 0)) {
-    return <RiderChecklist status={riderStatus} vehicles={vehicles} next={isEdit ? `/rides/${id}/edit` : "/rides/create"} />;
+  // A verified vehicle is needed first. The licence is asked for too, but the
+  // rider can choose "Add later" (they then show as an Unverified driver).
+  const needsVehicle = !riderStatus.canCreateTrip && (!riderStatus.unknown || verifiedVehicles.length === 0);
+  const askLicence = !isEdit && !riderStatus.unknown && riderStatus.licenceVerified === false && !licenceLater;
+  if (needsVehicle || askLicence) {
+    return (
+      <RiderChecklist
+        status={riderStatus}
+        vehicles={vehicles}
+        next={isEdit ? `/rides/${id}/edit` : "/rides/create"}
+        onLicenceLater={skipLicence}
+        licenceLater={licenceLater}
+      />
+    );
   }
 
   return (

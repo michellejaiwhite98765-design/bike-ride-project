@@ -22,6 +22,11 @@ export const vehicleController = {
     ok(res, vehicle, "Vehicle updated");
   },
 
+  async setPhoto(req, res) {
+    const vehicle = await vehicleService.setPhoto(req.user.id, req.params.id, req.file);
+    ok(res, vehicle, "Vehicle photo saved");
+  },
+
   async uploadRcDocument(req, res) {
     const vehicle = await vehicleService.uploadRcDocument(req.user.id, req.params.id, req.file);
     ok(res, vehicle, "RC document uploaded");

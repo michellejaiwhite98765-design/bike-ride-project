@@ -91,6 +91,8 @@ export const rideService = {
     // As a driver only - what a passenger wants to know before joining.
     ride.rider.rating = driverStats.rating;
     ride.rider.licenceVerified = (await drivingLicenceRepository.verifiedUserIds([ride.riderId])).has(ride.riderId);
+    // The vehicle photo (only on the trip page - lists stay light).
+    if (ride.vehicle) ride.vehicle.photo = (await vehicleRepository.findById(ride.vehicleId))?.photo || null;
     ride.rider.ratingCount = driverStats.ratingCount;
     ride.rider.numberOfRides = numberOfRides;
 

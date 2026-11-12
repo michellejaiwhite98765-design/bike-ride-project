@@ -13,6 +13,14 @@ export const vehicleService = {
   update(id, payload) {
     return api.put(`/vehicles/${id}`, payload).then((res) => res.data);
   },
+  // A photo of the vehicle (shown to passengers); the server resizes it.
+  setPhoto(id, file) {
+    const formData = new FormData();
+    formData.append("photo", file);
+    return api.put(`/vehicles/${id}/photo`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((res) => res.data);
+  },
   uploadRcDocument(id, file) {
     const formData = new FormData();
     formData.append("rcDocument", file);

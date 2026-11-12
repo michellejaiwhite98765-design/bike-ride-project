@@ -4,7 +4,7 @@ import { authenticate } from "../middleware/auth.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import { createVehicleSchema, updateVehicleSchema } from "../validators/vehicle.validator.js";
 import { idParamSchema } from "../validators/common.validator.js";
-import { uploadSingleRcDocument } from "../middleware/upload.js";
+import { uploadSingleRcDocument, uploadSingleVehiclePhoto } from "../middleware/upload.js";
 
 export const vehicleRoutes = Router();
 
@@ -65,6 +65,7 @@ vehicleRoutes.get("/", vehicleController.list);
  */
 vehicleRoutes.get("/:id", validateParams(idParamSchema), vehicleController.getById);
 vehicleRoutes.put("/:id", validateParams(idParamSchema), validateBody(updateVehicleSchema), vehicleController.update);
+vehicleRoutes.put("/:id/photo", validateParams(idParamSchema), uploadSingleVehiclePhoto, vehicleController.setPhoto);
 vehicleRoutes.post("/:id/rc-document", validateParams(idParamSchema), uploadSingleRcDocument, vehicleController.uploadRcDocument);
 vehicleRoutes.post("/:id/verify", validateParams(idParamSchema), vehicleController.verify);
 vehicleRoutes.delete("/:id", validateParams(idParamSchema), vehicleController.remove);

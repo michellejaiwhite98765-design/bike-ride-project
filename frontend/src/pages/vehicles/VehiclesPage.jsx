@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, Button, List, Empty, App, Popconfirm } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, CameraOutlined, CarOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
@@ -152,6 +152,21 @@ export default function VehiclesPage() {
     load();
   }, []);
 
+  const [photoBusy, setPhotoBusy] = useState(null); // vehicle id being uploaded
+  async function handlePhoto(id, file) {
+    if (!file) return;
+    setPhotoBusy(id);
+    try {
+      const updated = await vehicleService.setPhoto(id, file);
+      setVehicles((list) => list.map((x) => (x.id === id ? { ...x, photo: updated.photo } : x)));
+      notification.success({ title: "Success", description: "Vehicle photo saved" });
+    } catch (err) {
+      notification.error({ title: "Error", description: err.message });
+    } finally {
+      setPhotoBusy(null);
+    }
+  }
+
   async function handleDelete(id) {
     try {
       await vehicleService.remove(id);
@@ -196,6 +211,17 @@ export default function VehiclesPage() {
                     </VehicleTitle>
                   }
                 >
+                  {/* Vehicle photo - passengers see it on the trip page. */}
+                  <div className="vp-photo">
+                    {v.photo ? <img src={v.photo} alt={`${v.brand} ${v.model}`} /> : (
+                      <div className="vp-empty"><CarOutlined /><span>No photo yet</span></div>
+                    )}
+                    <label className={`vp-photo-btn${photoBusy === v.id ? " is-busy" : ""}`}>
+                      <CameraOutlined /> {photoBusy === v.id ? "Uploading…" : v.photo ? "Change photo" : "Add photo"}
+                      <input type="file" accept="image/*" capture="environment" hidden disabled={photoBusy === v.id}
+                        onChange={(e) => { handlePhoto(v.id, e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  </div>
                   <VehicleDetails>
                     <div className="detail">
                       <div className="label">Type</div>
@@ -233,6 +259,14 @@ export default function VehiclesPage() {
           }}
         />
       )}
+      <style>{`
+        .vp-photo{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:4/3;max-height:220px;margin-bottom:14px;background:var(--chrome-tint);border:1px solid var(--chrome-border)}
+        .vp-photo img{width:100%;height:100%;object-fit:cover;display:block}
+        .vp-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-secondary);font-size:13px}
+        .vp-empty .anticon{font-size:30px;opacity:.6}
+        .vp-photo-btn{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer}
+        .vp-photo-btn.is-busy{opacity:.7;cursor:wait}
+      `}</style>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { toVehiclePhoto } from "./profilePhoto.service.js";
 import { vehicleRepository } from "../repositories/vehicle.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { normalizeRegistrationNumber, registrationNumbersLookAlike } from "../utils/vehicle.utils.js";
@@ -142,6 +143,15 @@ export const vehicleService = {
     const vehicle = await vehicleRepository.update(vehicleId, data);
     await audit(null, { userId, action: "VEHICLE_UPDATED", entityType: "Vehicle", entityId: vehicleId });
     return vehicle;
+  },
+
+  /** A photo of the vehicle (shown to passengers). Doesn't change verification. */
+  async setPhoto(userId, vehicleId, file) {
+    await assertOwner(vehicleId, userId);
+    const photo = await toVehiclePhoto(file.buffer);
+    const updated = await vehicleRepository.update(vehicleId, { photo });
+    await audit(null, { userId, action: "VEHICLE_PHOTO_UPLOADED", entityType: "Vehicle", entityId: vehicleId });
+    return updated;
   },
 
   async uploadRcDocument(userId, vehicleId, file) {

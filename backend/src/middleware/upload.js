@@ -62,3 +62,13 @@ export const uploadSingleProfilePhoto = (req, res, next) => {
     next();
   });
 };
+
+// Vehicle photo: same picture rules as the profile photo.
+export const uploadSingleVehiclePhoto = (req, res, next) => {
+  photoUpload.single("photo")(req, res, (err) => {
+    if (err?.code === "LIMIT_FILE_SIZE") return next(ApiError.badRequest("This picture is too large to upload. Please choose another one"));
+    if (err) return next(err);
+    if (!req.file) return next(ApiError.badRequest("Please choose a photo of your vehicle"));
+    next();
+  });
+};

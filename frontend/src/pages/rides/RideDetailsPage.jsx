@@ -656,6 +656,14 @@ export default function RideDetailsPage() {
               {ride.vehicle?.verificationStatus === "VERIFIED" && <VerifiedBadge />}
             </div>
             <div className="section-body">
+              {/* Photo of the vehicle, so passengers can spot it at pickup. */}
+              {ride.vehicle?.photo && (
+                <img
+                  src={ride.vehicle.photo}
+                  alt={`${ride.vehicle.brand} ${ride.vehicle.model}`}
+                  style={{ width: "100%", aspectRatio: "4 / 3", maxHeight: 280, objectFit: "cover", borderRadius: 14, display: "block", marginBottom: 14 }}
+                />
+              )}
               <InfoCardsGrid>
                 <InfoCard>
                   <div className="info-icon">

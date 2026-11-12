@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Form, Input, InputNumber, Select, AutoComplete, Upload, App, Row, Col, Button as AntButton, Modal } from "antd";
-import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined, CarOutlined } from "@ant-design/icons";
+import { UploadOutlined, ArrowLeftOutlined, FileDoneOutlined, CloseCircleOutlined, ClockCircleOutlined, CarOutlined, CameraOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import { vehicleService } from "../../services/vehicleService.js";
 import colors from "../../theme/colors.js";
@@ -15,7 +15,7 @@ const ACCENT_DARK = "#14B8A6";
 
 const STEPS = [
   { key: "details", label: "Details" },
-  { key: "upload", label: "Upload RC" },
+  { key: "upload", label: "Photo & RC" },
   { key: "verify", label: "Verify" },
 ];
 
@@ -503,6 +503,16 @@ export default function VehicleFormPage({ embedded = false, onDone }) {
   const [vehicleId, setVehicleId] = useState(routeId || null);
   const [vehicle, setVehicle] = useState(null);
   const [rcDocumentFile, setRcDocumentFile] = useState(null);
+  // Vehicle photo: a new file picked here, previewed until it's uploaded.
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  useEffect(() => {
+    if (!photoFile) { setPhotoPreview(null); return undefined; }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
+  const shownPhoto = photoPreview || vehicle?.photo || null;
   const [verifyResult, setVerifyResult] = useState(null);
   const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
   const vehicleType = Form.useWatch("vehicleType", form);
@@ -547,12 +557,21 @@ export default function VehicleFormPage({ embedded = false, onDone }) {
   }
 
   async function handleUploadContinue() {
+    if (!shownPhoto) {
+      notification.error({ title: "Error", description: "Add a photo of your vehicle to continue" });
+      return;
+    }
     if (!rcDocumentFile) {
       notification.error({ title: "Error", description: "Select your RC document to continue" });
       return;
     }
     setSubmitting(true);
     try {
+      // Photo first (quick), then the RC check.
+      if (photoFile) {
+        setVehicle(await vehicleService.setPhoto(vehicleId, photoFile));
+        setPhotoFile(null);
+      }
       const updated = await vehicleService.uploadRcDocument(vehicleId, rcDocumentFile);
       setVehicle(updated);
       setStepIndex(1);
@@ -692,6 +711,30 @@ export default function VehicleFormPage({ embedded = false, onDone }) {
 
         {stepIndex === 1 && (
           <div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Vehicle photo</div>
+            <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 10 }}>
+              A clear photo of your vehicle, so passengers can spot it at pickup.
+            </div>
+            <div className="vf-photo">
+              {shownPhoto ? (
+                <div className="vf-photo-frame">
+                  <img src={shownPhoto} alt="Your vehicle" />
+                  <label className="vf-photo-change">
+                    <CameraOutlined /> Change photo
+                    <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && setPhotoFile(e.target.files[0])} />
+                  </label>
+                </div>
+              ) : (
+                <label className="vf-photo-pick">
+                  <CameraOutlined className="drop-icon" />
+                  <span className="drop-title">Take or choose a photo</span>
+                  <span className="drop-hint">Show the whole vehicle, in good light</span>
+                  <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && setPhotoFile(e.target.files[0])} />
+                </label>
+              )}
+            </div>
+
+            <div style={{ fontWeight: 700, margin: "18px 0 6px" }}>Registration Certificate (RC)</div>
             <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 14 }}>
               Upload a clear photo or scan of your Registration Certificate.
             </div>
@@ -729,6 +772,16 @@ export default function VehicleFormPage({ embedded = false, onDone }) {
             {submitting && (
               <BrandLoader variant="inline" label="Reading the registration number from your RC - this can take up to a minute." />
             )}
+            <style>{`
+              .vf-photo-pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:150px;border:1.5px dashed var(--chrome-border);border-radius:16px;cursor:pointer;text-align:center;padding:16px;background:var(--chrome-tint)}
+              .vf-photo-pick:hover{border-color:#2DD4BF}
+              .vf-photo-pick .drop-icon{font-size:28px;color:#2DD4BF}
+              .vf-photo-pick .drop-title{font-weight:700}
+              .vf-photo-pick .drop-hint{font-size:12px;color:var(--text-secondary)}
+              .vf-photo-frame{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--chrome-border);aspect-ratio:4/3;max-height:260px}
+              .vf-photo-frame img{width:100%;height:100%;object-fit:cover;display:block}
+              .vf-photo-change{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer}
+            `}</style>
           </div>
         )}
 
